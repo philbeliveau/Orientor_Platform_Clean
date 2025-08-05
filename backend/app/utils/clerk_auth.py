@@ -6,7 +6,7 @@ from typing import Optional, Dict, Any
 from fastapi import HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import clerk_backend_api as clerk
-from clerk_backend_api.exceptions import ClerkAPIError
+from clerk_backend_api.models import ClerkErrors
 import logging
 
 logger = logging.getLogger(__name__)
@@ -27,16 +27,16 @@ async def verify_clerk_token(credentials: HTTPAuthorizationCredentials = Depends
         # Verify the token with Clerk
         try:
             # Use the Sessions API to verify the token
-            session = clerk_client.sessions.verify_session_token(token)
+            session = clerk_client.sessions.verify_token(token)
             
-            if not session:
+            if not session or not hasattr(session, 'user_id'):
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid or expired token"
                 )
             
             # Get user information
-            user = clerk_client.users.get_user(user_id=session.user_id)
+            user = clerk_client.users.get(user_id=session.user_id)
             
             if not user:
                 raise HTTPException(
@@ -44,28 +44,44 @@ async def verify_clerk_token(credentials: HTTPAuthorizationCredentials = Depends
                     detail="User not found"
                 )
             
+            # Safely extract email address
+            email = None
+            if user.email_addresses and len(user.email_addresses) > 0:
+                email = user.email_addresses[0].email_address
+            
             # Return user data in the format expected by the app
             return {
                 "id": user.id,
-                "email": user.email_addresses[0].email_address if user.email_addresses else None,
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "username": user.username,
+                "email": email,
+                "first_name": user.first_name or "",
+                "last_name": user.last_name or "",
+                "username": user.username or "",
                 "clerk_user_id": user.id,
-                "session_id": session.id
+                "session_id": session.id if hasattr(session, 'id') else None
             }
             
-        except ClerkAPIError as e:
+        except ClerkErrors as e:
             logger.error(f"Clerk API error: {e}")
-            if e.status_code == 401:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid or expired token"
-                )
+            if hasattr(e, 'status_code'):
+                if e.status_code == 401 or e.status_code == 403:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Invalid or expired token"
+                    )
+                elif e.status_code == 404:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="User not found"
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Authentication service error"
+                    )
             else:
                 raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Authentication service error"
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token verification failed"
                 )
                 
     except Exception as e:
@@ -103,9 +119,14 @@ async def clerk_health_check() -> Dict[str, str]:
     Check if Clerk service is accessible
     """
     try:
-        # Try to get organization list as a health check
-        # This is a lightweight operation that verifies API connectivity
-        clerk_client.organizations.list_organizations(limit=1)
+        # Check if Clerk secret key is configured
+        if not os.getenv("CLERK_SECRET_KEY"):
+            logger.warning("CLERK_SECRET_KEY not configured")
+            return {"status": "unhealthy", "service": "clerk", "error": "CLERK_SECRET_KEY not configured"}
+        
+        # Try to access Clerk API with a lightweight operation
+        # Using users endpoint to verify API connectivity
+        clerk_client.users.list()
         return {"status": "healthy", "service": "clerk"}
     except Exception as e:
         logger.error(f"Clerk health check failed: {e}")

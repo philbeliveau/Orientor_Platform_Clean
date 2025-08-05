@@ -40,7 +40,7 @@ from app.routers.courses import router as courses_router
 from app.routers.enhanced_chat import router as enhanced_chat_router
 from app.routers.socratic_chat import router as socratic_chat_router
 from app.routers.career_goals import router as career_goals_router
-from app.api.endpoints.job_recommendations import router as job_recommendations_router
+# from app.api.endpoints.job_recommendations import router as job_recommendations_router  # Module not found
 from app.routers.llm_career_advisor import router as llm_career_advisor_router
 from app.routers.orientator import router as orientator_router
 from app.routers.auth_clerk import router as auth_clerk_router
@@ -63,7 +63,7 @@ app = FastAPI(
 )
 
 # Configure static files for avatars
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="backend/static"), name="static")
 
 # Configure CORS
 origins = [
@@ -74,7 +74,9 @@ origins = [
     "https://localhost:3000",  # HTTPS local development
     "https://localhost:5173",  # HTTPS Vite development
     "https://*.up.railway.app",  # Railway domains
-    "https://*.railway.app",    # Railway domains
+    "https://*.railway.app",    # Railway domains  
+    "https://*.clerk.accounts.dev",  # Clerk development domains
+    "https://*.clerk.com",  # Clerk production domains
 ]
 
 app.add_middleware(
@@ -158,7 +160,7 @@ app.include_router(courses_router)
 app.include_router(enhanced_chat_router, prefix="/api/v1")
 app.include_router(socratic_chat_router)
 app.include_router(career_goals_router)
-app.include_router(job_recommendations_router, prefix="/api/v1/jobs")
+# app.include_router(job_recommendations_router, prefix="/api/v1/jobs")  # Module not found
 app.include_router(llm_career_advisor_router)
 app.include_router(orientator_router, prefix="/api")
 app.include_router(auth_clerk_router)  # New Clerk authentication router
