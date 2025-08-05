@@ -13,6 +13,7 @@
     "postbuild": "cp public/404.html .next/404.html && cp public/index.html .next/index.html"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.28.1",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@headlessui/react": "^2.2.4",

@@ -1,6 +1,6 @@
-'use client';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
+import { ClerkProvider } from '@clerk/nextjs';
 import { Providers } from './providers';
 import MainLayout from '@/components/layout/MainLayout';
 import './globals.css';
@@ -53,17 +53,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`scroll-smooth ${departureMono.variable} ${technor.variable}`}>
-      <head>
-        <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
-      </head>
-      <Providers>
-        <body className="min-h-screen antialiased">
-          {children}
-          <Analytics />
-          <SpeedInsights />
-        </body>
-      </Providers>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`scroll-smooth ${departureMono.variable} ${technor.variable}`}>
+        <head>
+          <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+        </head>
+        <Providers>
+          <body className="min-h-screen antialiased">
+            {children}
+            <Analytics />
+            <SpeedInsights />
+          </body>
+        </Providers>
+      </html>
+    </ClerkProvider>
   );
 }

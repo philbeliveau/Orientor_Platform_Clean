@@ -43,6 +43,7 @@ from app.routers.career_goals import router as career_goals_router
 from app.api.endpoints.job_recommendations import router as job_recommendations_router
 from app.routers.llm_career_advisor import router as llm_career_advisor_router
 from app.routers.orientator import router as orientator_router
+from app.routers.auth_clerk import router as auth_clerk_router
 from fastapi import FastAPI, HTTPException
 from pathlib import Path
 # from scripts.model_loader import load_models
@@ -160,6 +161,7 @@ app.include_router(career_goals_router)
 app.include_router(job_recommendations_router, prefix="/api/v1/jobs")
 app.include_router(llm_career_advisor_router)
 app.include_router(orientator_router, prefix="/api")
+app.include_router(auth_clerk_router)  # New Clerk authentication router
 logger.info("All routers included successfully")
 
 # Explicitly capture route after including it

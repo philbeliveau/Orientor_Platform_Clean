@@ -21,10 +21,14 @@ logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+frontend.log
+frontend_dev.log
 
 # Dependencies
 node_modules/
 bower_components/
+package-lock.json
+yarn.lock
 
 # Runtime data
 pids
@@ -47,10 +51,51 @@ coverage/
 dist/
 build/
 *.tgz
+.next/
+out/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python package distribution files - these should be installed via requirements.txt
+*.dist-info/
+PyJWT-*/
+annotated_types-*/
+anyio-*/
+certifi-*/
+cffi-*/
+clerk_backend_api-*/
+cryptography-*/
+h11-*/
+httpcore-*/
+httpx-*/
+idna-*/
+pycparser-*/
+pydantic-*/
+pydantic_core-*/
+sniffio-*/
+typing_extensions-*/
+typing_inspection-*/
+jwt/
+bin/
+
+# Python binaries and compiled files
+*.cpython-*-darwin.so
+_cffi_backend.cpython-*-darwin.so
 
 # Claude Flow generated files
-.claude/settings.local.json
-.mcp.json
+.claude/
+.claude-flow/
 claude-flow.config.json
 .swarm/
 .hive-mind/
@@ -73,8 +118,19 @@ claude-flow.bat
 claude-flow.ps1
 hive-mind-prompt-*.txt
 
-# Temporary files
+# Test and temporary files
 tmp/
 temp/
 *.tmp
 *.temp
+*.test.html
+*.output.html
+login-output.html
+login-test.html
+
+# Vercel
+.vercel/
+vercel
+
+# Development scripts
+start-dev.sh
