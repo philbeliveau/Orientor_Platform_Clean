@@ -1,0 +1,143 @@
+<html>
+  <head>
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin="" />
+    <link
+      rel="stylesheet"
+      as="style"
+      onload="this.rel='stylesheet'"
+      href="https://fonts.googleapis.com/css2?display=swap&amp;family=Inter%3Awght%40400%3B500%3B700%3B900&amp;family=Noto+Sans%3Awght%40400%3B500%3B700%3B900"
+    />
+
+    <title>Stitch Design</title>
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64," />
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  </head>
+  <body>
+    <div class="relative flex size-full min-h-screen flex-col bg-slate-50 group/design-root overflow-x-hidden" style='font-family: Inter, "Noto Sans", sans-serif;'>
+      <div class="layout-container flex h-full grow flex-col">
+        <header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#e7edf4] px-10 py-3">
+          <div class="flex items-center gap-4 text-[#0d141c]">
+            <div class="size-4">
+              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6H42L36 24L42 42H6L12 24L6 6Z" fill="currentColor"></path></svg>
+            </div>
+            <h2 class="text-[#0d141c] text-lg font-bold leading-tight tracking-[-0.015em]">Reflect.ai</h2>
+          </div>
+          <div class="flex flex-1 justify-end gap-8">
+            <div class="flex items-center gap-9">
+              <a class="text-[#0d141c] text-sm font-medium leading-normal" href="#">Dashboard</a>
+              <a class="text-[#0d141c] text-sm font-medium leading-normal" href="#">Reflect</a>
+              <a class="text-[#0d141c] text-sm font-medium leading-normal" href="#">Learn</a>
+              <a class="text-[#0d141c] text-sm font-medium leading-normal" href="#">Community</a>
+            </div>
+            <button
+              class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 bg-[#e7edf4] text-[#0d141c] gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 px-2.5"
+            >
+              <div class="text-[#0d141c]" data-icon="Bell" data-size="20px" data-weight="regular">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" fill="currentColor" viewBox="0 0 256 256">
+                  <path
+                    d="M221.8,175.94C216.25,166.38,208,139.33,208,104a80,80,0,1,0-160,0c0,35.34-8.26,62.38-13.81,71.94A16,16,0,0,0,48,200H88.81a40,40,0,0,0,78.38,0H208a16,16,0,0,0,13.8-24.06ZM128,216a24,24,0,0,1-22.62-16h45.24A24,24,0,0,1,128,216ZM48,184c7.7-13.24,16-43.92,16-80a64,64,0,1,1,128,0c0,36.05,8.28,66.73,16,80Z"
+                  ></path>
+                </svg>
+              </div>
+            </button>
+            <div
+              class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10"
+              style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBqnSDiqV_y-BMhVj79AhDAgaBCHI_W-ZaS3ne8tgGwBNBlS51ujzYJ2Rrjh-kkO1tJgZGLUUVGcnCgorNOrv-UoEZUMpgWo045zMp-XtWopsGYuAiG9P392XjSuh_dsy0FlceB6XazTVuHHrMpGvA-4-LOsGu_PvTioVFZXcs9J_zthI4winf5_-eMIkYFV_fcN9b_Pm7droYQwuVepVBk5UgwnLeo5T5hq2HQGBxGzTpYVZM0x8sLXanOhjGTQioMLJk4SjaxsSlw");'
+            ></div>
+          </div>
+        </header>
+        <div class="px-40 flex flex-1 justify-center py-5">
+          <div class="layout-content-container flex flex-col max-w-[960px] flex-1">
+            <div class="flex flex-wrap justify-between gap-3 p-4">
+              <p class="text-[#0d141c] tracking-light text-[32px] font-bold leading-tight min-w-72">Your Reflection Summary</p>
+            </div>
+            <div class="p-4">
+              <div class="flex items-stretch justify-between gap-4 rounded-lg">
+                <div class="flex flex-col gap-1 flex-[2_2_0px]">
+                  <p class="text-[#0d141c] text-base font-bold leading-tight">Summary of Your Reflection</p>
+                  <p class="text-[#49739c] text-sm font-normal leading-normal">
+                    Based on your responses, your personality profile aligns closely with the Artistic and Social types in the RIASEC model, and shows a strong preference for
+                    Extraversion and Agreeableness in the HEXACO model. This suggests you are likely creative, expressive, and enjoy working with others, while also being sociable,
+                    outgoing, and empathetic.
+                  </p>
+                </div>
+                <div
+                  class="w-full bg-center bg-no-repeat aspect-video bg-cover rounded-lg flex-1"
+                  style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAZZ0eWFZebrzvtMuXxT1XV1XrBMh8qkT19am7ZC7AnZo2N9xvsGoFLmR8Ak3Dr2jdNEp404tyi79eRAgd_6adMZxuDs6-7KmtOxH5T2SgVJChNZDyTzon6GW7B20UUAmidT-_716C9N5ZfaaaE1iIvJ_Zdf8K1KF-g762jROhfH_VLBKl36lJLaDrcqM3-y7ME8hkuS9Rdhez-dHymkJBZMz0pyav7A1O-Jmye2qqZLWHsirAx1vTVxPsn3zRK4ExlmqKdDLI3abZZ");'
+                ></div>
+              </div>
+            </div>
+            <h2 class="text-[#0d141c] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Insights</h2>
+            <div class="p-4 @container">
+              <div class="flex flex-1 flex-col items-start justify-between gap-4 rounded-lg border border-[#cedbe8] bg-slate-50 p-5 @[480px]:flex-row @[480px]:items-center">
+                <div class="flex flex-col gap-1">
+                  <p class="text-[#0d141c] text-base font-bold leading-tight">Philosophical Reflection</p>
+                  <p class="text-[#49739c] text-base font-normal leading-normal">
+                    Your personality profile resonates with the existentialist philosophy, which emphasizes individual freedom, responsibility, and the search for meaning in life.
+                    This perspective encourages you to embrace your unique experiences and values, and to actively shape your own path.
+                  </p>
+                </div>
+                <button
+                  class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-8 px-4 bg-[#0c7ff2] text-slate-50 text-sm font-medium leading-normal"
+                >
+                  <span class="truncate">Learn More</span>
+                </button>
+              </div>
+            </div>
+            <h2 class="text-[#0d141c] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Personality Breakdown</h2>
+            <div class="p-4 grid grid-cols-2">
+              <div class="flex flex-col gap-1 border-t border-solid border-t-[#cedbe8] py-4 pr-2">
+                <p class="text-[#49739c] text-sm font-normal leading-normal">RIASEC</p>
+                <p class="text-[#0d141c] text-sm font-normal leading-normal">Model focusing on career interests</p>
+              </div>
+              <div class="flex flex-col gap-1 border-t border-solid border-t-[#cedbe8] py-4 pl-2">
+                <p class="text-[#49739c] text-sm font-normal leading-normal">HEXACO</p>
+                <p class="text-[#0d141c] text-sm font-normal leading-normal">Model focusing on personality traits</p>
+              </div>
+              <div class="flex flex-col gap-1 border-t border-solid border-t-[#cedbe8] py-4 pr-2">
+                <p class="text-[#49739c] text-sm font-normal leading-normal">Key Traits</p>
+                <p class="text-[#0d141c] text-sm font-normal leading-normal">Highlights of your profile</p>
+              </div>
+              <div class="flex flex-col gap-1 border-t border-solid border-t-[#cedbe8] py-4 pl-2">
+                <p class="text-[#49739c] text-sm font-normal leading-normal">Artistic, Social</p>
+                <p class="text-[#0d141c] text-sm font-normal leading-normal"></p>
+              </div>
+              <div class="flex flex-col gap-1 border-t border-solid border-t-[#cedbe8] py-4 pr-2">
+                <p class="text-[#49739c] text-sm font-normal leading-normal">Extraversion, Agreeableness</p>
+                <p class="text-[#0d141c] text-sm font-normal leading-normal"></p>
+              </div>
+              <div class="flex flex-col gap-1 border-t border-solid border-t-[#cedbe8] py-4 pl-2">
+                <p class="text-[#49739c] text-sm font-normal leading-normal">Creative, Expressive, Sociable, Empathetic</p>
+                <p class="text-[#0d141c] text-sm font-normal leading-normal"></p>
+              </div>
+            </div>
+            <h2 class="text-[#0d141c] text-[22px] font-bold leading-tight tracking-[-0.015em] px-4 pb-3 pt-5">Your Responses</h2>
+            <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+              <label class="flex flex-col min-w-40 flex-1">
+                <p class="text-[#0d141c] text-base font-medium leading-normal pb-2">Your Reflection Responses</p>
+                <textarea
+                  class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-[#0d141c] focus:outline-0 focus:ring-0 border border-[#cedbe8] bg-slate-50 focus:border-[#cedbe8] min-h-36 placeholder:text-[#49739c] p-[15px] text-base font-normal leading-normal"
+                ></textarea>
+              </label>
+            </div>
+            <div class="flex justify-stretch">
+              <div class="flex flex-1 gap-3 flex-wrap px-4 py-3 justify-start">
+                <button
+                  class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#e7edf4] text-[#0d141c] text-sm font-bold leading-normal tracking-[0.015em]"
+                >
+                  <span class="truncate">Regenerate Insights</span>
+                </button>
+                <button
+                  class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-[#0c7ff2] text-slate-50 text-sm font-bold leading-normal tracking-[0.015em]"
+                >
+                  <span class="truncate">Save Feedback</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

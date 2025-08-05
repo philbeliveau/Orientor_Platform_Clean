@@ -1,0 +1,429 @@
+// Updated Landing Page Flow: Clear structure of problem, solution, and feature purpose
+
+'use client';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useState, useEffect, useRef } from 'react';
+import './landing-page.css';
+
+
+
+export default function LandingPage() {
+  const router = useRouter();
+  const [isVisible, setIsVisible] = useState<Record<string, boolean>>({});
+  const observerRef = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const elementId = entry.target.id;
+            setIsVisible(prev => ({
+              ...prev,
+              [elementId]: true
+            }));
+            // Add visible class for CSS animations
+            entry.target.classList.add('visible');
+          }
+        });
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+
+    // Observe sections with slight delay to ensure DOM is ready
+    setTimeout(() => {
+      const sections = document.querySelectorAll('.animate-on-scroll');
+      sections.forEach(section => {
+        if (section) {
+          observer.observe(section);
+        }
+      });
+    }, 100);
+
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-white">
+
+      {/* Blank Paper Section - "Everything Yet to Be Written" */}
+      <section className="relative min-h-screen flex items-center justify-center px-6 lg:px-12 py-20 overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="floating-dots"></div>
+        </div>
+        
+        {/* Large Paper Sheet */}
+        <div className="paper-container relative">
+          <div className="paper-sheet animate-on-scroll" id="paper-sheet">
+            {/* Paper lines */}
+            <div className="paper-lines"></div>
+            
+            {/* Content on the paper */}
+            <div className={`paper-content ${isVisible['paper-sheet'] ? 'fade-in-up' : ''}`}>
+              <div className="text-center space-y-8">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center mb-4">
+                    <div className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 tracking-tight">
+                      Navigo
+                    </div>
+                  </div>
+                  <h1 className="handwritten-title text-4xl lg:text-6xl font-bold text-gray-800 mb-6">
+                    Your story starts here
+                  </h1>
+                  <div className="ink-pen-line"></div>
+                </div>
+                
+                <p className="handwritten-text text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+                  Every career journey begins with a blank page. Let's discover what you'll write on yours.
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12">
+                  <Link href="/register" className="ink-button bg-black text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 hover:bg-gray-800 hover:scale-105 hover:shadow-lg">
+                    Begin Your Story
+                  </Link>
+                  <Link href="/demo" className="text-gray-600 hover:text-gray-900 transition-colors px-8 py-4 font-medium text-lg border border-gray-300 rounded-lg hover:border-gray-400 hover:shadow-md">
+                    Explore First
+                  </Link>
+                </div>
+              </div>
+            </div>
+            
+            {/* Floating writing elements */}
+            <div className="writing-elements">
+              <div className="pencil floating"></div>
+              <div className="eraser floating-slow"></div>
+              <div className="pen floating-reverse"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      {/* Features Section */}
+      <section className="px-6 lg:px-12 py-20 bg-gradient-to-b from-white to-gray-50 animate-on-scroll" id="features-section">
+        <div className="max-w-7xl mx-auto">
+          <div className={`text-center mb-16 transition-all duration-1000 delay-300 ${isVisible['features-section'] ? 'fade-in-up' : 'opacity-0 translate-y-12'}`}>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+              How your story unfolds
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Every great story has chapters. Here's how we help you write yours, one discovery at a time.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Feature 1 */}
+            <div className={`feature-card bg-white p-8 rounded-2xl border border-gray-200 transition-all duration-700 delay-500 ${isVisible['features-section'] ? 'fade-in-up' : 'opacity-0 translate-y-8'}`}>
+              <div className="feature-icon text-4xl mb-4">🤔</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Chapter 1: Self-Discovery</h3>
+              <p className="text-gray-600">
+                Start with deep reflection. Understand your strengths, values, and what truly motivates you.
+              </p>
+              <div className="progress-dots mt-4">
+                <span className="dot active"></span>
+                <span className="dot"></span>
+                <span className="dot"></span>
+              </div>
+            </div>
+            
+            {/* Feature 2 */}
+            <div className={`feature-card bg-white p-8 rounded-2xl border border-gray-200 transition-all duration-700 delay-700 ${isVisible['features-section'] ? 'fade-in-up' : 'opacity-0 translate-y-8'}`}>
+              <div className="feature-icon text-4xl mb-4">🎨</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Chapter 2: Path Creation</h3>
+              <p className="text-gray-600">
+                Build your unique journey with personalized recommendations that adapt to your evolving interests.
+              </p>
+              <div className="progress-dots mt-4">
+                <span className="dot active"></span>
+                <span className="dot active"></span>
+                <span className="dot"></span>
+              </div>
+            </div>
+            
+            {/* Feature 3 */}
+            <div className={`feature-card bg-white p-8 rounded-2xl border border-gray-200 transition-all duration-700 delay-900 ${isVisible['features-section'] ? 'fade-in-up' : 'opacity-0 translate-y-8'}`}>
+              <div className="feature-icon text-4xl mb-4">📈</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Chapter 3: Growth & Evolution</h3>
+              <p className="text-gray-600">
+                Watch your story unfold as you track progress, celebrate milestones, and write new chapters.
+              </p>
+              <div className="progress-dots mt-4">
+                <span className="dot active"></span>
+                <span className="dot active"></span>
+                <span className="dot active"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      {/* Interactive Demo Section */}
+      <section className="px-6 lg:px-12 py-20 animate-on-scroll" id="demo-section">
+        <div className="max-w-7xl mx-auto">
+          <div className={`text-center mb-12 transition-all duration-1000 delay-200 ${isVisible['demo-section'] ? 'fade-in-up' : 'opacity-0 translate-y-12'}`}>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+              Meet your writing companion
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Like having a thoughtful friend who asks the right questions, Navigo helps you discover what you want to write on your career page.
+            </p>
+          </div>
+          
+          <div className="grid lg:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
+            {/* Phone Mockup with Messages */}
+            <div className={`phone-mockup-container transition-all duration-1000 delay-400 ${isVisible['demo-section'] ? 'fade-in-scale' : 'opacity-0 scale-95'}`}>
+              <div className="phone-mockup relative mx-auto">
+                <div className="w-80 h-[600px] bg-gray-900 rounded-[3rem] p-2 shadow-2xl relative overflow-hidden">
+                  {/* Phone Screen */}
+                  <div className="w-full h-full bg-white rounded-[2.5rem] overflow-hidden relative">
+                    {/* Status Bar */}
+                    <div className="flex items-center justify-between px-6 py-3 bg-gray-50">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"></div>
+                        <div className="font-semibold text-gray-800">Navigo Chat</div>
+                      </div>
+                      <div className="text-sm text-gray-500">9:41 AM</div>
+                    </div>
+                    
+                    {/* Chat Messages */}
+                    <div className="chat-messages p-4 space-y-4 h-full overflow-hidden">
+                      <div className="message-left animate-slide-in-left">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">N</div>
+                          <div className="bg-gray-100 rounded-2xl rounded-tl-md px-4 py-3 max-w-xs">
+                            <p className="text-sm text-gray-800">Hi! I'm here to help you discover your career path. What excites you most about your future?</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="message-right animate-slide-in-right delay-500">
+                        <div className="flex items-start gap-3 justify-end">
+                          <div className="bg-blue-500 rounded-2xl rounded-tr-md px-4 py-3 max-w-xs">
+                            <p className="text-sm text-white">I love solving complex problems and creating things that help people!</p>
+                          </div>
+                          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 text-sm font-bold">You</div>
+                        </div>
+                      </div>
+                      
+                      <div className="message-left animate-slide-in-left delay-1000">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">N</div>
+                          <div className="bg-gray-100 rounded-2xl rounded-tl-md px-4 py-3 max-w-xs">
+                            <p className="text-sm text-gray-800">That's amazing! Problem-solving and helping people are great foundations. Have you thought about which fields interest you most?</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="typing-indicator animate-fade-in delay-1500">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-bold">N</div>
+                          <div className="bg-gray-100 rounded-2xl px-4 py-3">
+                            <div className="flex space-x-1">
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{animationDelay: '0.2s'}}></div>
+                              <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Input Area */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <input type="text" placeholder="Type your message..." className="flex-1 px-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:border-blue-500" />
+                        <button className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white hover:bg-blue-600 transition-colors">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Chat Description */}
+            <div className={`transition-all duration-1000 delay-600 ${isVisible['demo-section'] ? 'fade-in-up' : 'opacity-0 translate-y-8'}`}>
+              <div className="space-y-6">
+                <h3 className="text-3xl font-bold text-gray-900">Meet Navigo, Your Career Guide</h3>
+                <p className="text-lg text-gray-600 leading-relaxed">
+                  Like having a thoughtful career counselor in your pocket, Navigo asks the right questions to help you discover your unique path. Our AI understands your aspirations and guides you through meaningful conversations that reveal your true potential.
+                </p>
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="text-green-500 mt-1">✓</div>
+                    <span className="text-gray-700">Personalized career conversations</span>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="text-green-500 mt-1">✓</div>
+                    <span className="text-gray-700">Deep insights from your responses</span>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="text-green-500 mt-1">✓</div>
+                    <span className="text-gray-700">Guidance that evolves with you</span>
+                  </div>
+                </div>
+                <Link href="/chat" className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold hover:scale-105 hover:shadow-lg">
+                  Start Your Conversation
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      {/* Problems We Solve Section */}\n      <section className=\"px-6 lg:px-12 py-20 bg-white animate-on-scroll\" id=\"problems-section\">\n        <div className=\"max-w-7xl mx-auto\">\n          <div className={`text-center mb-16 transition-all duration-1000 delay-200 ${isVisible['problems-section'] ? 'fade-in-up' : 'opacity-0 translate-y-12'}`}>\n            <h2 className=\"text-3xl lg:text-4xl font-bold text-gray-900 mb-4\">\n              The Problems Navigo Solves\n            </h2>\n            <p className=\"text-xl text-gray-600 max-w-2xl mx-auto\">\n              We understand the real challenges students face when choosing their career path. Here's how Navigo helps.\n            </p>\n          </div>\n          \n          <div className=\"grid md:grid-cols-2 lg:grid-cols-3 gap-8\">\n            {/* Problem Card 1 */}\n            <div className={`problem-card group relative max-w-sm mx-auto transition-all duration-700 delay-400 ${isVisible['problems-section'] ? 'fade-in-up' : 'opacity-0 translate-y-8'}`}>\n              <div className=\"bg-red-50 border border-red-100 hover:border-red-200 transition-all duration-300 cursor-pointer relative overflow-hidden rounded-lg p-8\">\n                <div className=\"absolute top-0 right-0 w-8 h-8 bg-red-500 flex items-center justify-center rounded-bl-lg\">\n                  <div className=\"text-white font-bold text-sm\">→</div>\n                </div>\n                <h3 className=\"text-xl font-bold text-gray-900 mb-3 group-hover:text-white transition-all duration-300\">\n                  \"I'm completely lost...\"\n                </h3>\n                <p className=\"text-gray-600 group-hover:text-red-100 transition-all duration-300\">\n                  Feeling overwhelmed by endless career options without knowing where to start or what fits your personality.\n                </p>\n                <div className=\"mt-4 text-red-600 group-hover:text-white transition-all duration-300\">\n                  <span className=\"text-sm font-semibold\">Navigo provides clarity →</span>\n                </div>\n                <div className=\"absolute inset-0 bg-red-500 transform scale-0 group-hover:scale-110 transition-transform duration-300 -z-10 rounded-lg\"></div>\n              </div>\n            </div>\n            \n            {/* Problem Card 2 */}\n            <div className={`problem-card group relative max-w-sm mx-auto transition-all duration-700 delay-600 ${isVisible['problems-section'] ? 'fade-in-up' : 'opacity-0 translate-y-8'}`}>\n              <div className=\"bg-orange-50 border border-orange-100 hover:border-orange-200 transition-all duration-300 cursor-pointer relative overflow-hidden rounded-lg p-8\">\n                <div className=\"absolute top-0 right-0 w-8 h-8 bg-orange-500 flex items-center justify-center rounded-bl-lg\">\n                  <div className=\"text-white font-bold text-sm\">→</div>\n                </div>\n                <h3 className=\"text-xl font-bold text-gray-900 mb-3 group-hover:text-white transition-all duration-300\">\n                  \"What if I choose wrong?\"\n                </h3>\n                <p className=\"text-gray-600 group-hover:text-orange-100 transition-all duration-300\">\n                  Fear of making the wrong choice and wasting years studying something that doesn't align with your true interests.\n                </p>\n                <div className=\"mt-4 text-orange-600 group-hover:text-white transition-all duration-300\">\n                  <span className=\"text-sm font-semibold\">Navigo builds confidence →</span>\n                </div>\n                <div className=\"absolute inset-0 bg-orange-500 transform scale-0 group-hover:scale-110 transition-transform duration-300 -z-10 rounded-lg\"></div>\n              </div>\n            </div>\n            \n            {/* Problem Card 3 */}\n            <div className={`problem-card group relative max-w-sm mx-auto transition-all duration-700 delay-800 ${isVisible['problems-section'] ? 'fade-in-up' : 'opacity-0 translate-y-8'}`}>\n              <div className=\"bg-blue-50 border border-blue-100 hover:border-blue-200 transition-all duration-300 cursor-pointer relative overflow-hidden rounded-lg p-8\">\n                <div className=\"absolute top-0 right-0 w-8 h-8 bg-blue-500 flex items-center justify-center rounded-bl-lg\">\n                  <div className=\"text-white font-bold text-sm\">→</div>\n                </div>\n                <h3 className=\"text-xl font-bold text-gray-900 mb-3 group-hover:text-white transition-all duration-300\">\n                  \"I don't know myself yet...\"\n                </h3>\n                <p className=\"text-gray-600 group-hover:text-blue-100 transition-all duration-300\">\n                  Struggling to understand your own strengths, values, and what truly motivates you in life and work.\n                </p>\n                <div className=\"mt-4 text-blue-600 group-hover:text-white transition-all duration-300\">\n                  <span className=\"text-sm font-semibold\">Navigo enables discovery →</span>\n                </div>\n                <div className=\"absolute inset-0 bg-blue-500 transform scale-0 group-hover:scale-110 transition-transform duration-300 -z-10 rounded-lg\"></div>\n              </div>\n            </div>\n          </div>\n          \n          {/* Solution Summary */}\n          <div className={`text-center mt-16 transition-all duration-1000 delay-1000 ${isVisible['problems-section'] ? 'fade-in-up' : 'opacity-0 translate-y-8'}`}>\n            <div className=\"bg-gray-50 rounded-2xl border border-gray-200 p-8 max-w-4xl mx-auto shadow-lg\">\n              <h3 className=\"text-2xl font-bold text-gray-900 mb-4\">How Navigo Transforms Confusion into Clarity</h3>\n              <p className=\"text-lg text-gray-600 mb-6\">\n                Through personalized assessments, meaningful conversations, and data-driven insights, we help you understand yourself and navigate toward a career that truly fits who you are.\n              </p>\n              <Link href=\"/register\" className=\"inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold hover:scale-105 hover:shadow-lg\">\n                Start Your Journey to Clarity\n              </Link>\n            </div>\n          </div>\n        </div>\n      </section>\n      \n      {/* Skill Development Section */}
+      <section className="px-6 lg:px-12 py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+              Visualize Your Growth Path with Navigo
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              See how your skills connect and discover new opportunities through Navigo's intelligent career mapping system powered by AI insights.
+            </p>
+          </div>
+          
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <div className="aspect-square bg-white rounded-2xl border border-gray-200 flex items-center justify-center">
+                <div className="text-center space-y-4">
+                  <div className="text-6xl">🌳</div>
+                  <p className="text-gray-500 font-medium">Interactive Skill Tree</p>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-6">
+              <h3 className="text-2xl font-bold text-gray-900">Track Your Development</h3>
+              <p className="text-gray-600 text-lg">
+                From foundational skills to advanced expertise, visualize your learning journey and discover new paths based on market trends and your interests.
+              </p>
+              <ul className="space-y-3">
+                <li className="flex items-start space-x-3">
+                  <div className="text-green-500 mt-1">✓</div>
+                  <span className="text-gray-700">Personalized skill recommendations</span>
+                </li>
+                <li className="flex items-start space-x-3">
+                  <div className="text-green-500 mt-1">✓</div>
+                  <span className="text-gray-700">Market-driven career insights</span>
+                </li>
+                <li className="flex items-start space-x-3">
+                  <div className="text-green-500 mt-1">✓</div>
+                  <span className="text-gray-700">Progress tracking and milestones</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      {/* Assessment Section */}
+      <section className="px-6 lg:px-12 py-20 bg-gray-50 animate-on-scroll" id="assessment-section">
+        <div className="max-w-7xl mx-auto">
+          <div className={`text-center mb-12 transition-all duration-1000 delay-200 ${isVisible['assessment-section'] ? 'fade-in-up' : 'opacity-0 translate-y-12'}`}>
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
+              Tools to understand your story
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Like a good editor, these tools help you understand your unique voice, style, and what makes your story worth telling.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className={`assessment-card bg-white p-8 rounded-2xl border border-gray-200 text-center transition-all duration-700 delay-400 hover:shadow-lg hover:scale-105 ${isVisible['assessment-section'] ? 'fade-in-up' : 'opacity-0 translate-y-8'}`}>
+              <div className="assessment-icon text-4xl mb-6 animate-pulse-slow">🧠</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Your Character Profile</h3>
+              <p className="text-gray-600 mb-6">Discover your core traits and what makes you uniquely you</p>
+              <Link href="/hexaco-test" className="assessment-btn inline-block bg-blue-50 text-blue-700 px-6 py-3 rounded-lg hover:bg-blue-100 transition-all font-medium">Discover Your Profile</Link>
+            </div>
+            
+            <div className={`assessment-card bg-white p-8 rounded-2xl border border-gray-200 text-center transition-all duration-700 delay-600 hover:shadow-lg hover:scale-105 ${isVisible['assessment-section'] ? 'fade-in-up' : 'opacity-0 translate-y-8'}`}>
+              <div className="assessment-icon text-4xl mb-6 animate-pulse-slow">🎨</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Your Passion Compass</h3>
+              <p className="text-gray-600 mb-6">Find what genuinely excites and motivates you</p>
+              <Link href="/holland-test" className="assessment-btn inline-block bg-green-50 text-green-700 px-6 py-3 rounded-lg hover:bg-green-100 transition-all font-medium">Find Your Passions</Link>
+            </div>
+            
+            <div className={`assessment-card bg-white p-8 rounded-2xl border border-gray-200 text-center transition-all duration-700 delay-800 hover:shadow-lg hover:scale-105 ${isVisible['assessment-section'] ? 'fade-in-up' : 'opacity-0 translate-y-8'}`}>
+              <div className="assessment-icon text-4xl mb-6 animate-pulse-slow">📝</div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Your Reflection Space</h3>
+              <p className="text-gray-600 mb-6">A quiet place to think deeply about your aspirations</p>
+              <Link href="/self-reflection" className="assessment-btn inline-block bg-purple-50 text-purple-700 px-6 py-3 rounded-lg hover:bg-purple-100 transition-all font-medium">Start Reflecting</Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA Section */}
+      <section className="px-6 lg:px-12 py-24 bg-gradient-to-br from-gray-900 via-black to-gray-800 animate-on-scroll relative overflow-hidden" id="cta-section">
+        {/* Animated background stars */}
+        <div className="stars-container absolute inset-0">
+          <div className="star star-1"></div>
+          <div className="star star-2"></div>
+          <div className="star star-3"></div>
+          <div className="star star-4"></div>
+          <div className="star star-5"></div>
+        </div>
+        
+        <div className="max-w-4xl mx-auto text-center relative z-10">
+          <div className={`transition-all duration-1000 delay-200 ${isVisible['cta-section'] ? 'fade-in-up' : 'opacity-0 translate-y-12'}`}>
+            <h2 className="text-3xl lg:text-5xl font-bold text-white mb-6 leading-tight">
+              Your story is waiting
+            </h2>
+            <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto leading-relaxed">
+              The blank page isn't empty—it's full of possibilities. Let's start writing your next chapter together.
+            </p>
+          </div>
+          
+          <div className={`flex flex-col sm:flex-row gap-6 justify-center transition-all duration-1000 delay-500 ${isVisible['cta-section'] ? 'fade-in-up' : 'opacity-0 translate-y-8'}`}>
+            <Link href="/register" className="cta-primary bg-white text-black px-10 py-4 rounded-lg hover:bg-gray-100 transition-all duration-300 font-bold text-lg hover:scale-105 hover:shadow-2xl">
+              Begin Writing Today
+            </Link>
+            <Link href="/demo" className="cta-secondary border-2 border-gray-400 text-white px-10 py-4 rounded-lg hover:border-white hover:bg-white hover:text-black transition-all duration-300 font-medium text-lg hover:scale-105">
+              Preview the Journey
+            </Link>
+          </div>
+          
+          {/* Floating elements */}
+          <div className={`mt-16 transition-all duration-1500 delay-1000 ${isVisible['cta-section'] ? 'fade-in' : 'opacity-0'}`}>
+            <p className="text-sm text-gray-400">
+              Join 10,000+ students already writing their stories
+            </p>
+          </div>
+        </div>
+      </section>
+      
+      {/* Footer */}
+      <footer className="px-6 lg:px-12 py-12 bg-gray-50 border-t border-gray-200">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-6 md:space-y-0">
+            <div className="flex items-center space-x-2">
+              <Image
+                src="/Logo.png"
+                alt="Navigo"
+                width={24}
+                height={24}
+                className="object-contain"
+              />
+              <span className="font-semibold text-gray-900">Navigo</span>
+            </div>
+            <div className="flex flex-wrap gap-8">
+              <Link href="/privacy" className="text-gray-600 hover:text-gray-900 transition-colors text-sm">Privacy</Link>
+              <Link href="/terms" className="text-gray-600 hover:text-gray-900 transition-colors text-sm">Terms</Link>
+              <Link href="/support" className="text-gray-600 hover:text-gray-900 transition-colors text-sm">Support</Link>
+              <Link href="/about" className="text-gray-600 hover:text-gray-900 transition-colors text-sm">About</Link>
+            </div>
+          </div>
+          <div className="mt-8 pt-8 border-t border-gray-200 text-center">
+            <p className="text-gray-500 text-sm">
+              © 2025 Navigo. All rights reserved. Empowering students to discover their potential.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+

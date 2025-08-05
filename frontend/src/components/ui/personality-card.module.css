@@ -1,0 +1,46 @@
+.card {
+  width: 100%;
+  height: 254px;
+  border-radius: 4px;
+  background: var(--card);
+  display: flex;
+  gap: 5px;
+  padding: .4em;
+}
+
+.cardItem {
+  height: 100%;
+  flex: 1;
+  overflow: hidden;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all .5s;
+  background: var(--card);
+  border: 1px solid var(--accent);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+  position: relative;
+}
+
+.cardItem:hover {
+  flex: 4;
+  background: var(--card-hover);
+}
+
+.cardItem span {
+  min-width: 14em;
+  padding: .5em;
+  text-align: center;
+  transform: rotate(-90deg);
+  transition: all .5s;
+  text-transform: uppercase;
+  color: var(--accent);
+  letter-spacing: .1em;
+  font-weight: 500;
+}
+
+.cardItem:hover span {
+  transform: rotate(0);
+} 

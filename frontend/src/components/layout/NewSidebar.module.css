@@ -1,0 +1,116 @@
+.sidebar {
+    width: 80px;
+    height: calc(100vh - 64px); /* Subtract the height of the navigation bar */
+    background-color: #ffffff;
+    border-right: 1px solid #e5e5e5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem 0;
+    position: fixed;
+    left: 0;
+    top: 64px; /* Position below the navigation bar */
+    z-index: 40;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .navContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+    padding: 0 0.5rem;
+    flex: 1;
+  }
+  
+  .profileContainer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    padding: 0 0.5rem;
+    margin-top: auto;
+    margin-bottom: 1rem;
+  }
+  
+  .navItem {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    transition: all 0.3s ease;
+    color: var(--text-color);
+  }
+  
+  .navItem:hover {
+    background-color: #f5f5f5;
+    transform: translateY(-2px);
+  }
+  
+  .iconWrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .icon {
+    width: 24px;
+    height: 24px;
+    transition: all 0.3s ease;
+  }
+  
+  .tooltip {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%) translateX(10px);
+    background-color: rgba(255, 254, 254, 0.9);
+    color: var(--text-color);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(236, 235, 235, 0.2);
+    margin-left: 0.5rem;
+    border: 1px solid var(--border-color);
+    pointer-events: none;
+    z-index: 50;
+  }
+  
+  .navItem:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(-50%) translateX(0);
+  }
+  
+  /* Chat mode styling - full height sidebar */
+  .chatMode {
+    height: 100vh !important;
+    top: 0 !important;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .sidebar {
+      width: 60px;
+      height: calc(100vh - 56px); /* Adjust for smaller nav bar on mobile */
+      top: 56px;
+    }
+  
+    .icon {
+      width: 20px;
+      height: 20px;
+    }
+    
+    .chatMode {
+      height: 100vh !important;
+      top: 0 !important;
+    }
+  }

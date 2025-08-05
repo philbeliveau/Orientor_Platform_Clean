@@ -1,0 +1,292 @@
+'use client';
+import ReactFlow, {
+  Node,
+  Edge,
+  Controls,
+  Background,
+  MiniMap,
+  Position,
+  ReactFlowProvider,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+import { motion } from 'framer-motion';
+import {SkillNode} from '@/components/branches/career_growth_skill';
+import { MarkerType } from 'reactflow';
+
+function getNodeStyle(type: string) {
+  switch (type) {
+    case 'root':
+      return 'bg-gradient-to-r from-amber-600 to-yellow-400 text-white shadow-lg';
+    case 'outcome':
+      return 'bg-white text-gray-800 border border-gray-300 shadow-md';
+    default:
+      return 'bg-gradient-to-r from-gray-700 to-gray-900 text-white shadow-md group relative';
+  }
+}
+
+function convertToFlowGraph(root: SkillNode): { nodes: Node[]; edges: Edge[] } {
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
+  let yGap = 250;
+  let xGap = 300;
+  let queue: { node: SkillNode; depth: number; column: number; parentId?: string; type?: string }[] = [
+    { node: root, depth: 0, column: 2, type: 'root' },
+  ];
+
+  while (queue.length > 0) {
+    const { node, depth, column, parentId, type = 'skill' } = queue.shift()!;
+    const id = node.id;
+    const position = { x: column * xGap, y: depth * yGap };
+
+    nodes.push({
+      id,
+      type: 'default',
+      position,
+      data: {
+        label: (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+            className={`text-sm font-medium text-center rounded-xl px-4 py-3 ${getNodeStyle(type)}`}
+          >
+            {node.skillDescription}
+            {node.improvementSuggestion && (
+              <div className="text-xs italic mt-2 text-white/80">
+                {node.improvementSuggestion}
+              </div>
+            )}
+            {node.taskSuggestion && (
+              <div className="absolute hidden group-hover:block text-[11px] bg-black/90 text-white px-2 py-1 rounded bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap z-50">
+                💡 {node.taskSuggestion}
+              </div>
+            )}
+          </motion.div>
+        ),
+      },
+      sourcePosition: Position.Bottom,
+      targetPosition: Position.Top,
+    });
+
+    if (parentId) {
+      edges.push({
+        id: `${parentId}-${id}`,
+        source: parentId,
+        target: id,
+        animated: true,
+        type: 'smoothstep',
+        style: { stroke: '#6b7280' },
+        markerEnd: {
+          type: 'arrowclosed' as MarkerType,
+        },
+      });
+    }
+
+    node.nextSkills?.forEach((child: SkillNode, index: number) => {
+      queue.push({
+        node: child,
+        depth: depth + 1,
+        column: column + index - Math.floor((node.nextSkills?.length ?? 1) / 2),
+        parentId: id,
+      });
+    });
+
+    if (node.reachableJobs && node.reachableJobs.length > 0) {
+      const jobId = `${id}-outcome`;
+      const metaSkillId = `${id}-meta-skill`;
+      const finalId = `${id}-final-outcome`;
+
+      const jobY = position.y + 150;
+      const metaY = jobY + 150;
+      const finalY = metaY + 150;
+
+      nodes.push({
+        id: jobId,
+        type: 'default',
+        position: { x: position.x, y: jobY },
+        data: {
+          label: (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className={`rounded-xl px-4 py-3 text-sm text-center ${getNodeStyle('outcome')}`}
+            >
+              <strong className="text-md font-semibold">Outcome</strong>
+              <div className="mt-1">
+                {node.reachableJobs.map((j) => (
+                  <div key={j.jobTitle} className="text-xs text-gray-600">
+                    {j.jobTitle} in {j.jobDomain}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          ),
+        },
+        sourcePosition: Position.Top,
+        targetPosition: Position.Bottom,
+      });
+
+      edges.push({
+        id: `${id}-${jobId}`,
+        source: id,
+        target: jobId,
+        type: 'smoothstep',
+        style: { stroke: '#d1d5db', strokeDasharray: '4 2' },
+        markerEnd: {
+          type: 'arrowclosed' as MarkerType,
+        },
+      });
+
+      // Ensure that the edges are only created if the next skills exist
+      if (node.nextSkills && node.nextSkills.length > 0) {
+        edges.push({
+          id: `${jobId}-${metaSkillId}`,
+          source: jobId,
+          target: metaSkillId,
+          type: 'smoothstep',
+          markerEnd: {
+            type: 'arrowclosed' as MarkerType,
+          },
+        });
+
+        edges.push({
+          id: `${metaSkillId}-${finalId}`,
+          source: metaSkillId,
+          target: finalId,
+          type: 'smoothstep',
+          markerEnd: {
+            type: 'arrowclosed' as MarkerType,
+          },
+        });
+      }
+    }
+  }
+  return { nodes, edges };
+}
+
+const root: SkillNode = {
+  id: 'root',
+  skillDescription: 'Root, initial condition of the user',
+  nextSkills: [
+    {
+      id: 's1',
+      skillDescription: 'You listen and help',
+      improvementSuggestion: 'Show some support to others',
+      taskSuggestion: 'Organize a peer support circle',
+      nextSkills: [
+        {
+          id: 's1-1',
+          skillDescription: 'You step up when others need it',
+          improvementSuggestion: 'Show some leadership',
+          taskSuggestion: 'Volunteer to coordinate a community event',
+          reachableJobs: [
+            { jobTitle: 'Youth Counselor', jobDomain: 'Community Services', requiredSkills: [] },
+            { jobTitle: 'Volunteer Program Coordinator', jobDomain: 'Non-profit Organizations', requiredSkills: [] },
+          ],
+        },
+        {
+          id: 's1-2',
+          skillDescription: 'You care deeply about social equity',
+          taskSuggestion: 'Write a reflection about systemic barriers in your community',
+          reachableJobs: [
+            { jobTitle: 'Social Worker', jobDomain: 'Public Health', requiredSkills: [] },
+            { jobTitle: 'Community Outreach Officer', jobDomain: 'Municipal Services', requiredSkills: [] },
+          ],
+        },
+      ],
+    },
+    {
+      id: 's2',
+      skillDescription: 'You thrive in fast-paced settings',
+      improvementSuggestion: 'Improve your stress tolerance',
+      taskSuggestion: 'Take a First Aid or CPR course',
+      nextSkills: [
+        {
+          id: 's2-1',
+          skillDescription: 'You act fast in emergencies',
+          taskSuggestion: 'Join a local emergency preparedness drill',
+          reachableJobs: [
+            { jobTitle: 'Paramedic', jobDomain: 'Emergency Services', requiredSkills: [] },
+            { jobTitle: 'Disaster Response Officer', jobDomain: 'Crisis Management', requiredSkills: [] },
+          ],
+        },
+      ],
+    },
+    {
+      id: 's3',
+      skillDescription: 'You express ideas clearly',
+      improvementSuggestion: 'Improve communication skills',
+      taskSuggestion: 'Host a lunch & learn session at school or work',
+      nextSkills: [
+        {
+          id: 's3-1',
+          skillDescription: 'You understand your audience deeply',
+          taskSuggestion: 'interview 5 people from different backgrounds about their needs',
+          reachableJobs: [
+            { jobTitle: 'UX Designer', jobDomain: 'Tech & Accessibility', requiredSkills: [] },
+            { jobTitle: 'Workshop Facilitator', jobDomain: 'Adult Learning & Training', requiredSkills: [] },
+          ],
+        },
+        {
+          id: 's2-1',
+          skillDescription: 'You act fast in emergencies',
+          taskSuggestion: 'Join a local emergency preparedness drill',
+          reachableJobs: [
+            { jobTitle: 'Paramedic', requiredSkills: ['Stress tolerance'] },
+          ],
+        },
+      ],
+    },
+    {
+      id: 's4',
+      skillDescription: 'You write with clarity and voice',
+      improvementSuggestion: 'Improve your writing skills',
+      taskSuggestion: 'Publish 3 thought pieces on a topic you care about',
+      nextSkills: [
+        {
+          id: 's4-1',
+          skillDescription: 'You shape ideas into structured arguments',
+          taskSuggestion: 'Debate or present at a local event or Toastmasters club',
+          reachableJobs: [
+            { jobTitle: 'Content Creator', jobDomain: 'Digital Media', requiredSkills: [] },
+          ],
+          nextSkills: [
+            {
+              id: 's4-1-a',
+              skillDescription: 'You craft narratives that inspire action',
+              taskSuggestion: 'Build a campaign with a clear call to action',
+              reachableJobs: [
+                { jobTitle: 'Brand Storyteller', jobDomain: 'Strategic Marketing', requiredSkills: [] },
+              ],
+            },
+            {
+              id: 's4-1-b',
+              skillDescription: 'You simplify technical language for wide audiences',
+              taskSuggestion: 'Write a user manual for a product you use',
+              reachableJobs: [
+                { jobTitle: 'UX Writer', jobDomain: 'Product Design', requiredSkills: [] },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+export default function SkillTreeFlow() {
+  const { nodes, edges } = convertToFlowGraph(root);
+
+  return (
+    <div style={{ width: '100%', height: '100vh' }}>
+      <ReactFlowProvider>
+        <ReactFlow nodes={nodes} edges={edges} fitView panOnScroll zoomOnScroll fitViewOptions={{ padding: 0.4 }}>
+          <MiniMap nodeStrokeWidth={3} zoomable pannable />
+          <Background color="#f3f4f6" gap={24} />
+          <Controls showinteractive={false} />
+        </ReactFlow>
+      </ReactFlowProvider>
+    </div>
+  );
+}

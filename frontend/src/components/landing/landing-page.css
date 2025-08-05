@@ -1,0 +1,886 @@
+/* OpenNote-inspired Typography and Layout with Animations */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&display=swap');
+
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+  color: #1f2937;
+  font-feature-settings: 'cv11', 'ss01';
+  font-variant-numeric: oldstyle-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Paper Container and Sheet */
+.paper-container {
+  max-width: 900px;
+  margin: 0 auto;
+  perspective: 1000px;
+}
+
+.paper-sheet {
+  background: linear-gradient(145deg, #ffffff 0%, #fafafa 100%);
+  border-radius: 8px;
+  padding: 4rem 3rem;
+  position: relative;
+  box-shadow: 
+    0 4px 6px rgba(0, 0, 0, 0.05),
+    0 20px 25px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  transform: rotateX(2deg) rotateY(-1deg);
+  transition: all 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+  min-height: 600px;
+  border: 1px solid #e5e7eb;
+}
+
+.paper-sheet:hover {
+  transform: rotateX(0deg) rotateY(0deg) scale(1.02);
+  box-shadow: 
+    0 8px 12px rgba(0, 0, 0, 0.08),
+    0 32px 50px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Paper lines */
+.paper-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(transparent 59px, #e5e7eb 59px, #e5e7eb 61px, transparent 61px),
+    linear-gradient(90deg, #fca5a5 79px, #e5e7eb 79px, #e5e7eb 81px, transparent 81px);
+  background-size: 100% 60px, 100% 100%;
+  opacity: 0.3;
+  pointer-events: none;
+  border-radius: 8px;
+}
+
+/* Paper content */
+.paper-content {
+  position: relative;
+  z-index: 2;
+  padding: 2rem 0;
+}
+
+/* Handwritten style fonts */
+.handwritten-title {
+  font-family: 'Caveat', cursive;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1.1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.handwritten-text {
+  font-family: 'Caveat', cursive;
+  font-weight: 500;
+  font-size: 1.4rem !important;
+  line-height: 1.6;
+}
+
+/* Ink pen line */
+.ink-pen-line {
+  width: 120px;
+  height: 3px;
+  background: linear-gradient(90deg, #4f46e5, #7c3aed, #ec4899);
+  margin: 1rem auto;
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ink-pen-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+  animation: shimmer 3s infinite;
+}
+
+/* Floating background elements */
+.floating-dots {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(circle at 20% 20%, #ddd6fe 2px, transparent 2px),
+    radial-gradient(circle at 80% 40%, #fce7f3 2px, transparent 2px),
+    radial-gradient(circle at 40% 80%, #dbeafe 2px, transparent 2px);
+  background-size: 80px 80px, 60px 60px, 100px 100px;
+  animation: float 20s ease-in-out infinite;
+}
+
+/* Writing elements floating around paper */
+.writing-elements {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.pencil, .eraser, .pen {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  font-size: 2rem;
+}
+
+.pencil {
+  top: 20%;
+  right: -50px;
+  animation: floating 6s ease-in-out infinite;
+}
+
+.pencil::before {
+  content: '✏️';
+}
+
+.eraser {
+  bottom: 30%;
+  left: -60px;
+  animation: floating-slow 8s ease-in-out infinite;
+}
+
+.eraser::before {
+  content: '🧽';
+}
+
+.pen {
+  top: 60%;
+  right: -40px;
+  animation: floating-reverse 7s ease-in-out infinite;
+}
+
+.pen::before {
+  content: '🖊️';
+}
+
+/* Ink button effect */
+.ink-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.ink-button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, transparent 70%);
+  transition: all 0.6s ease;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.ink-button:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Animation keyframes */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(2deg); }
+}
+
+@keyframes floating {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(5deg); }
+}
+
+@keyframes floating-slow {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(-3deg); }
+}
+
+@keyframes floating-reverse {
+  0%, 100% { transform: translateY(-10px) rotate(-2deg); }
+  50% { transform: translateY(0px) rotate(2deg); }
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Scroll-triggered animations */
+.fade-in-up {
+  animation: fadeInUp 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.fade-in-scale {
+  animation: fadeInScale 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.fade-in {
+  animation: fadeIn 0.8s ease forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Feature cards with enhanced interactions */
+.feature-card {
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
+  transition: left 0.6s ease;
+}
+
+.feature-card:hover::before {
+  left: 100%;
+}
+
+.feature-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.feature-icon {
+  transition: transform 0.4s ease;
+}
+
+.feature-card:hover .feature-icon {
+  transform: scale(1.2) rotate(5deg);
+}
+
+/* Progress dots */
+.progress-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  transition: all 0.3s ease;
+}
+
+.dot.active {
+  background: #4f46e5;
+  transform: scale(1.2);
+}
+
+/* Chat interface */
+.chat-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.chat-avatar {
+  transition: transform 0.4s ease;
+}
+
+.chat-container:hover .chat-avatar {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.chat-bubbles {
+  margin: 2rem 0;
+}
+
+.chat-bubble {
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  margin: 0.5rem 0;
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.chat-bubble.left {
+  background: #f3f4f6;
+  margin-right: auto;
+  border-bottom-left-radius: 0.25rem;
+}
+
+.chat-bubble.right {
+  background: #4f46e5;
+  color: white;
+  margin-left: auto;
+  border-bottom-right-radius: 0.25rem;
+}
+
+/* Assessment cards */
+.assessment-card {
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  cursor: pointer;
+  position: relative;
+}
+
+.assessment-card:hover {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+}
+
+.assessment-icon {
+  transition: all 0.4s ease;
+}
+
+.assessment-card:hover .assessment-icon {
+  transform: scale(1.15) rotateY(10deg);
+}
+
+.assessment-btn {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.assessment-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transition: all 0.5s ease;
+  transform: translate(-50%, -50%);
+}
+
+.assessment-btn:hover::before {
+  width: 200px;
+  height: 200px;
+}
+
+/* Stars background for CTA */
+.stars-container {
+  overflow: hidden;
+}
+
+.star {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  opacity: 0.7;
+}
+
+.star-1 {
+  width: 2px;
+  height: 2px;
+  top: 20%;
+  left: 10%;
+  animation: twinkle 3s infinite;
+}
+
+.star-2 {
+  width: 3px;
+  height: 3px;
+  top: 30%;
+  right: 20%;
+  animation: twinkle 4s infinite 1s;
+}
+
+.star-3 {
+  width: 2px;
+  height: 2px;
+  bottom: 40%;
+  left: 30%;
+  animation: twinkle 5s infinite 2s;
+}
+
+.star-4 {
+  width: 1px;
+  height: 1px;
+  top: 60%;
+  right: 10%;
+  animation: twinkle 3.5s infinite 0.5s;
+}
+
+.star-5 {
+  width: 2px;
+  height: 2px;
+  bottom: 20%;
+  right: 40%;
+  animation: twinkle 4.5s infinite 1.5s;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* CTA buttons */
+.cta-primary, .cta-secondary {
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-primary::before, .cta-secondary::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(59, 130, 246, 0.2);
+  border-radius: 50%;
+  transition: all 0.6s ease;
+  transform: translate(-50%, -50%);
+}
+
+.cta-primary:hover::before, .cta-secondary:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Slow animations */
+.animate-bounce-slow {
+  animation: bounce-slow 3s infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s infinite;
+}
+
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.9; }
+}
+
+/* Slide in animations for chat */
+.animate-slide-in-left {
+  animation: slideInLeft 0.8s ease forwards;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.8s ease forwards;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Delay classes */
+.delay-1000 { animation-delay: 1s; }
+.delay-1200 { animation-delay: 1.2s; }
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .paper-sheet {
+    padding: 2rem 1.5rem;
+    min-height: 500px;
+    transform: none;
+  }
+  
+  .paper-sheet:hover {
+    transform: scale(1.01);
+  }
+  
+  .handwritten-title {
+    font-size: 2.5rem;
+  }
+  
+  .handwritten-text {
+    font-size: 1.2rem !important;
+  }
+  
+  .writing-elements {
+    display: none;
+  }
+  
+  .floating-dots {
+    opacity: 0.3;
+  }
+}
+
+/* Enhanced transitions between sections */
+section {
+  position: relative;
+  overflow: hidden;
+}
+
+section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(79, 70, 229, 0.3), transparent);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+section.animate-on-scroll::before {
+  opacity: 1;
+}
+
+/* Smooth section reveals */
+.animate-on-scroll {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.animate-on-scroll.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+/* Phone Mockup Animations */
+.phone-mockup {
+  animation: float 3s ease-in-out infinite;
+}
+
+.phone-mockup-container {
+  position: relative;
+}
+
+.message-left {
+  animation: slideInLeft 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.message-right {
+  animation: slideInRight 0.6s ease-out forwards;
+  opacity: 0;
+}
+
+.typing-indicator {
+  animation: fadeIn 0.5s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(1deg);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Problem Card Animations */
+.problem-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.problem-card:hover {
+  transform: translateY(-8px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced pulse animation */
+.animate-pulse-slow {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+/* Enhanced bounce */
+.animate-bounce-slow {
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% {
+    animation-timing-function: cubic-bezier(0.215, 0.61, 0.355, 1);
+    transform: translate3d(0, 0, 0);
+  }
+  40%, 43% {
+    animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    transform: translate3d(0, -8px, 0);
+  }
+  70% {
+    animation-timing-function: cubic-bezier(0.755, 0.05, 0.855, 0.06);
+    transform: translate3d(0, -4px, 0);
+  }
+  90% {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+/* 3D Book Animation from UIverse */
+.book {
+  position: relative;
+  border-radius: 15px;
+  width: 280px;
+  height: 360px;
+  background-color: whitesmoke;
+  -webkit-box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  -webkit-transform: preserve-3d;
+  -ms-transform: preserve-3d;
+  transform: preserve-3d;
+  -webkit-perspective: 2000px;
+  perspective: 2000px;
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  color: #000;
+  margin: 3rem auto;
+  z-index: 20;
+  cursor: pointer;
+}
+
+.book .cover {
+  top: 0;
+  position: absolute;
+  background: linear-gradient(135deg, #6366F1 0%, #38BDF8 100%);
+  width: 100%;
+  height: 100%;
+  border-radius: 15px;
+  cursor: pointer;
+  -webkit-transition: all 0.6s;
+  transition: all 0.6s;
+  -webkit-transform-origin: 0;
+  -ms-transform-origin: 0;
+  transform-origin: 0;
+  -webkit-box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  display: -webkit-box;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-box-align: center;
+  -ms-flex-align: center;
+  align-items: center;
+  -webkit-box-pack: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.book:hover .cover {
+  -webkit-transition: all 0.5s;
+  transition: all 0.5s;
+  -webkit-transform: rotatey(-80deg);
+  -ms-transform: rotatey(-80deg);
+  transform: rotatey(-80deg);
+}
+
+.book .cover .book-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: white;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  margin-bottom: 0.5rem;
+}
+
+.book .cover .book-subtitle {
+  font-size: 12px;
+  color: rgba(255,255,255,0.8);
+  text-align: center;
+}
+
+.book .book-content {
+  padding: 2rem;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.book .book-content h3 {
+  font-size: 16px;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.book .book-content p {
+  color: #666;
+  margin-bottom: 1rem;
+}
+
+/* Animated Feature Cards from UIverse */
+.feature-card-enhanced {
+  display: block;
+  position: relative;
+  max-width: 262px;
+  background-color: #f2f8f9 !important;
+  border-radius: 8px !important;
+  padding: 32px 24px !important;
+  margin: 12px;
+  text-decoration: none;
+  z-index: 0;
+  overflow: hidden;
+  border: 1px solid #f2f8f9 !important;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.feature-card-enhanced:before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -16px;
+  right: -16px;
+  background: #6366F1;
+  height: 32px;
+  width: 32px;
+  border-radius: 32px;
+  transform: scale(1);
+  transform-origin: 50% 50%;
+  transition: transform 0.25s ease-out;
+}
+
+.feature-card-enhanced:hover:before {
+  transform: scale(21);
+}
+
+.feature-card-enhanced:hover p {
+  transition: all 0.3s ease-out;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.feature-card-enhanced:hover h3 {
+  transition: all 0.3s ease-out;
+  color: #fff;
+}
+
+.feature-card-enhanced:hover .feature-icon {
+  filter: brightness(0) invert(1);
+}
+
+.feature-card-enhanced .go-corner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  top: 0;
+  right: 0;
+  background-color: #38BDF8;
+  border-radius: 0 4px 0 32px;
+}
+
+.feature-card-enhanced .go-arrow {
+  margin-top: -4px;
+  margin-right: -4px;
+  color: white;
+  font-family: courier, sans;
+}

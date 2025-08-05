@@ -1,0 +1,146 @@
+      {/* Problem & Solution Section */}
+      <section className="section">
+        <div className="card container-narrow">
+          <div className="text-center space-y-8">
+            <h2 className="text-3xl md:text-4xl font-bold gradient-text-secondary">What Problem Are We Solving?</h2>
+            <p className="text-xl text-neutral-500 leading-relaxed">
+              Young people feel overwhelmed, unsure how to navigate their future, and under-supported by traditional guidance. They're flooded with content but lack clarity, structure, and a sense of personal fit.
+            </p>
+            <p className="text-xl text-neutral-500 leading-relaxed">
+              Navigo addresses this gap by offering an interactive and reflective space to understand your strengths, map new skills, and see where your efforts could lead.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="card container-narrow">
+          <div className="text-center space-y-8">
+            <h2 className="text-3xl md:text-4xl font-bold gradient-text-secondary">Our Solution</h2>
+            <p className="text-xl text-neutral-500 leading-relaxed">
+              Navigo is a platform for self-guided growth. It uses AI to support self-discovery, helps students visualize skill growth like a branching tree, and simulates career outcomes based on your evolving profile.
+            </p>
+            <p className="text-xl text-neutral-500 leading-relaxed">
+              Every reflection, note, or nudge becomes part of a bigger picture—your map of potential.
+            </p>
+          </div>
+        </div>
+      </section>
+
+
+{/* Solution Section */}
+<section className="section bg-white py-16">
+        <div className="container-narrow">
+        <div className="bg-white border border-neutral-200 rounded-xl shadow-md p-10">
+          {/* <div className="bg-neutral-100 rounded-xl p-10 shadow-md border border-neutral-200"> */}
+            <h2 className="text-4xl font-bold mb-6 text-neutral-900">Our Solution</h2>
+            <p className="text-lg text-neutral-600 mb-8">
+              Navigo is a premium self-guided growth platform. Using AI and behavioral design, it helps students reflect, map their skills, and simulate career outcomes—like a personalized compass for the future.
+            </p>
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">🪞</span>
+                  <div>
+                    <h3 className="text-md font-semibold text-neutral-800">AI-Guided Self-Discovery</h3>
+                    <p className="text-sm text-neutral-600">Questions, tasks, and journaling surface deeper insights and values.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">🌳</span>
+                  <div>
+                    <h3 className="text-md font-semibold text-neutral-800">Visual Skill Graph</h3>
+                    <p className="text-sm text-neutral-600">Track growth in the form of a branching tree—each branch a new opportunity.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">✨</span>
+                  <div>
+                    <h3 className="text-md font-semibold text-neutral-800">Dynamic Recommendations</h3>
+                    <p className="text-sm text-neutral-600">We suggest micro-goals and prompts that evolve with you.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">🔭</span>
+                  <div>
+                    <h3 className="text-md font-semibold text-neutral-800">Career Path Simulation</h3>
+                    <p className="text-sm text-neutral-600">See multiple futures based on your evolving strengths and decisions.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <span className="text-2xl">📔</span>
+                  <div>
+                    <h3 className="text-md font-semibold text-neutral-800">Personal Space</h3>
+                    <p className="text-sm text-neutral-600">A private space to capture your thoughts, track progress, and revisit insights.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      {/* Problem Section */}
+      <section className="section bg-white py-16">
+        <div className="container-narrow">
+          <div className="bg-white border border-neutral-200 rounded-xl shadow-md p-10">
+            <h2 className="text-4xl font-bold mb-6 text-neutral-900">The Problem We're Tackling</h2>
+            <p className="text-lg text-neutral-600 mb-8">
+              Today’s students are navigating one of the most complex educational and career landscapes ever—and they’re doing it with outdated tools. Traditional systems focus on credentials, not clarity. Navigo exists because too many young people feel:
+            </p>
+            <div className="space-y-6">
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">❓</span>
+                <div>
+                  <h3 className="text-md font-semibold text-neutral-800">Directional Uncertainty</h3>
+                  <p className="text-sm text-neutral-600">They don’t know how to assess what they’re good at, what matters, or what’s even possible.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🧩</span>
+                <div>
+                  <h3 className="text-md font-semibold text-neutral-800">Fragmented Guidance</h3>
+                  <p className="text-sm text-neutral-600">Advice is scattered, anecdotal, and inconsistent—rarely grounded in data about the individual.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🧠</span>
+                <div>
+                  <h3 className="text-md font-semibold text-neutral-800">Lack of Self-Understanding</h3>
+                  <p className="text-sm text-neutral-600">Students are pushed to choose a path before they’ve explored who they are or what excites them.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">🚫</span>
+                <div>
+                  <h3 className="text-md font-semibold text-neutral-800">Passive Discovery Tools</h3>
+                  <p className="text-sm text-neutral-600">Job boards and course platforms don’t offer interaction, context, or personalized support.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-2xl">😔</span>
+                <div>
+                  <h3 className="text-md font-semibold text-neutral-800">Motivation Decay</h3>
+                  <p className="text-sm text-neutral-600">Without meaningful feedback or growth tracking, motivation drops off fast.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+                {/* Feature 3: Future Path Prediction */}
+          <div className="card hover-lift border-l-4 border-primary-purple bg-primary-teal/10">
+            <div className="mb-6 p-3 bg-primary-teal/20 rounded-full w-14 h-14 flex items-center justify-center">
+              <svg className="w-8 h-8 text-primary-purple" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5zm0 0v7" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-primary-purple mb-4">See Your Possible Futures</h3>
+            <p className="text-neutral-600">
+              Navigo predicts skill-based branches of what you could become. Think of it as a constellation of futures—mapped out based on your growth patterns and intentions.
+            </p>
+          </div>

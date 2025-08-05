@@ -1,0 +1,114 @@
+.card {
+  max-width: fit-content;
+  border-radius: 15px;
+  display: flex;
+  flex-direction: column;
+  align-content: center;
+  justify-content: flex-start;
+  gap: 2rem;
+  backdrop-filter: blur(15px);
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.192),
+    inset 0 0 5px rgba(255, 255, 255, 0.274), 0 5px 5px rgba(0, 0, 0, 0.164);
+  transition: 0.5s;
+  padding-top: 2rem;
+}
+
+.card:hover {
+  animation: ease-out 5s;
+  background: rgba(173, 173, 173, 0.05);
+}
+
+.card ul {
+  padding: 1rem;
+  display: flex;
+  list-style: none;
+  gap: 2rem;
+  align-items: center;
+  justify-content: center;
+  align-content: center;
+  flex-wrap: wrap;
+  flex-direction: column;
+}
+
+.card ul li {
+  cursor: pointer;
+}
+
+.svg {
+  transition: all 0.3s;
+  padding: 1.5rem;
+  height: 80px;
+  width: 80px;
+  border-radius: 100%;
+  color: rgb(31, 30, 26);
+  fill: currentColor;
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.3),
+    inset 0 0 5px rgba(255, 255, 255, 0.5), 0 5px 5px rgba(0, 0, 0, 0.164);
+}
+
+.text {
+  opacity: 0;
+  border-radius: 5px;
+  padding: 8px 12px;
+  transition: all 0.3s;
+  color: rgb(33, 32, 32);
+  background-color: rgba(255, 255, 255, 0.3);
+  position: absolute;
+  z-index: 9999;
+  font-size: 1.1rem;
+  box-shadow: -5px 0 1px rgba(153, 153, 153, 0.2),
+    -10px 0 1px rgba(153, 153, 153, 0.2),
+    inset 0 0 20px rgba(255, 255, 255, 0.3),
+    inset 0 0 5px rgba(255, 255, 255, 0.5), 0 5px 5px rgba(0, 0, 0, 0.082);
+}
+
+.isoPro {
+  transition: 0.5s;
+  position: relative;
+  margin-top: 1rem;
+}
+
+.isoPro:hover a > .svg {
+  transform: translate(15px, -15px);
+  border-radius: 100%;
+}
+
+.isoPro:hover .text {
+  opacity: 1;
+  transform: translate(35px, -2px) skew(-5deg);
+}
+
+.isoPro:hover .svg {
+  transform: translate(5px, -5px);
+}
+
+.isoPro span {
+  opacity: 0;
+  position: absolute;
+  color: #343a41;
+  border-color: #1877f2;
+  box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.3),
+    inset 0 0 5px rgba(255, 255, 255, 0.5), 0 5px 5px rgba(0, 0, 0, 0.164);
+  border-radius: 50%;
+  transition: all 0.3s;
+  height: 80px;
+  width: 80px;
+}
+
+.isoPro:hover span {
+  opacity: 1;
+}
+
+.isoPro:hover span:nth-child(1) {
+  opacity: 0.2;
+}
+
+.isoPro:hover span:nth-child(2) {
+  opacity: 0.4;
+  transform: translate(5px, -5px);
+}
+
+.isoPro:hover span:nth-child(3) {
+  opacity: 0.6;
+  transform: translate(10px, -10px);
+} 

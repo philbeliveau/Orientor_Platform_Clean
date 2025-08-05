@@ -1,0 +1,23 @@
+      {/* Hero Background Image */}
+      <div className="absolute inset-0 -z-10">
+        <Image
+          src="/navigo-hero.png"
+          alt="Navigo forest visual"
+          layout="fill"
+          objectFit="cover"
+          className="opacity-20"
+          priority
+        />
+      </div>
+
+
+                  <div className="absolute top-10 right-40 flex items-center justify-center p-4">
+              <Image
+                src="/navigo-hero.png"
+                alt="Navigo splash"
+                width={300}
+                height={150}
+                className="rounded-lg object-contain"
+                priority
+              />
+            </div>

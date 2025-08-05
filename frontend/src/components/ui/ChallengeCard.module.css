@@ -1,0 +1,58 @@
+.challengeCard {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.challengeCard:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.completed {
+  background-color: #e8f5e9;
+  border-left: 4px solid #4caf50;
+}
+
+.challengeContent {
+  margin-bottom: 10px;
+}
+
+.challengeContent p {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+}
+
+.rewardInfo {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 12px;
+  color: #666;
+}
+
+.completeButton {
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.completeButton:hover {
+  background-color: #1976d2;
+}
+
+.completedBadge {
+  display: inline-block;
+  background-color: #4caf50;
+  color: white;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+}

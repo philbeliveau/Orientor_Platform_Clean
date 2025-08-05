@@ -1,0 +1,78 @@
+{
+  "domains": {
+    "Honesty-Humility": {
+      "facets": ["Sincerity", "Fairness", "Greed-Avoidance", "Modesty"],
+      "description": "Tendance à être sincère, équitable, modeste et non matérialiste"
+    },
+    "Emotionality": {
+      "facets": ["Fearfulness", "Anxiety", "Dependence", "Sentimentality"],
+      "description": "Tendance à ressentir la peur, l'anxiété, la dépendance et la sentimentalité"
+    },
+    "Extraversion": {
+      "facets": ["Social Self-Esteem", "Social Boldness", "Sociability", "Liveliness"],
+      "description": "Tendance à être sociable, énergique, extraverti et assertif"
+    },
+    "Agreeableness": {
+      "facets": ["Forgiveness", "Gentleness", "Flexibility", "Patience"],
+      "description": "Tendance à être indulgent, tolérant, flexible et patient"
+    },
+    "Conscientiousness": {
+      "facets": ["Organization", "Diligence", "Perfectionism", "Prudence"],
+      "description": "Tendance à être organisé, travailleur, perfectionniste et prudent"
+    },
+    "Openness": {
+      "facets": ["Aesthetic Appreciation", "Inquisitiveness", "Creativity", "Unconventionality"],
+      "description": "Tendance à apprécier l'art, être curieux, créatif et non-conventionnel"
+    }
+  },
+  "versions": {
+    "hexaco_60_fr": {
+      "title": "Test HEXACO-PI-R (Version courte - Français)",
+      "description": "Évaluation complète de personnalité en 60 questions",
+      "item_count": 60,
+      "estimated_duration": 15,
+      "csv_file": "French_60_FULL.csv",
+      "language": "fr",
+      "active": true
+    },
+    "hexaco_100_fr": {
+      "title": "Test HEXACO-PI-R (Version complète - Français)",
+      "description": "Évaluation approfondie de personnalité en 100 questions",
+      "item_count": 100,
+      "estimated_duration": 25,
+      "csv_file": "French_100_FULL.csv",
+      "language": "fr",
+      "active": true
+    },
+    "hexaco_60_en": {
+      "title": "HEXACO-PI-R Test (Short Version - English)",
+      "description": "Comprehensive personality assessment in 60 questions",
+      "item_count": 60,
+      "estimated_duration": 15,
+      "csv_file": "English_60_FULL.csv",
+      "language": "en",
+      "active": true
+    },
+    "hexaco_100_en": {
+      "title": "HEXACO-PI-R Test (Full Version - English)",
+      "description": "In-depth personality assessment in 100 questions",
+      "item_count": 100,
+      "estimated_duration": 25,
+      "csv_file": "English_100_FULL.csv",
+      "language": "en",
+      "active": true
+    }
+  },
+  "languages": {
+    "fr": {
+      "name": "Français",
+      "flag": "🇫🇷",
+      "description": "Version française du test HEXACO-PI-R"
+    },
+    "en": {
+      "name": "English",
+      "flag": "🇺🇸",
+      "description": "English version of HEXACO-PI-R test"
+    }
+  }
+}

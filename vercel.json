@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "buildCommand": "cd frontend && npm run build",
+  "outputDirectory": "frontend/.next",
+  "framework": "nextjs",
+  "installCommand": "cd frontend && npm install",
+  "rewrites": [
+    {
+      "source": "/api/tests/(.*)",
+      "destination": "https://orientor-backend-production-7c13.up.railway.app/api/tests/$1"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "https://orientor-backend-production-7c13.up.railway.app/$1"
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_API_URL": "/api",
+    "NEXT_PUBLIC_BACKEND_URL": "https://orientor-backend-production-7c13.up.railway.app"
+  }
+}

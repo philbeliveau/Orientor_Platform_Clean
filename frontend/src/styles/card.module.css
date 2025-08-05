@@ -1,0 +1,419 @@
+/* UserCard following exact UI format with platform colors */
+.card {
+  width: 100%;
+  max-width: 320px;
+  height: 280px;
+  min-height: 280px;
+  background: var(--card, rgba(255, 255, 255, 0.9));
+  border-radius: 32px;
+  padding: 3px;
+  position: relative;
+  box-shadow: var(--glow-secondary, 0 0 15px rgba(0, 80, 157, 0.4)) 0px 70px 30px -50px;
+  transition: all 0.5s ease-in-out;
+  border: 1px solid var(--border, rgba(0, 80, 157, 0.3));
+  /* Touch optimization */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  cursor: pointer;
+}
+
+.card .mail {
+  position: absolute;
+  right: 2rem;
+  top: 1.4rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.card .mail svg {
+  stroke: var(--accent, #fdc500ff);
+  stroke-width: 3px;
+  transition: all 0.3s ease;
+}
+
+.card .mail svg:hover {
+  stroke: var(--accent-secondary, #ffd500ff);
+  transform: scale(1.1);
+}
+
+.card__avatar {
+  position: absolute;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+  top: 3px;
+  left: 3px;
+  border-radius: 29px;
+  z-index: 1;
+  border: 0px solid var(--accent, #fdc500ff);
+  overflow: hidden;
+  transition: all 0.5s ease-in-out 0.2s, z-index 0.5s ease-in-out 0.2s;
+}
+
+.avatar__image {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  object-position: 0px 0px;
+  transition: all 0.5s ease-in-out 0s;
+}
+
+.avatar__placeholder {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 0px 0px;
+  transform-origin: 45% 20%;
+  transition: all 0.5s ease-in-out 0s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--royal-blue-traditional, #00296bff), var(--polynesian-blue, #00509dff));
+  color: var(--text, white);
+}
+
+.avatar__loading {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--royal-blue-traditional, #00296bff), var(--polynesian-blue, #00509dff));
+}
+
+.avatar__spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgb(249, 246, 246);
+  border-top: 3px solid var(--accent, #fdc500ff);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.avatar__placeholder_text {
+  font-size: 14px;
+  margin-top: 8px;
+  text-align: center;
+  font-weight: 500;
+  color: var(--text, white);
+}
+
+.card .bottom {
+  position: absolute;
+  bottom: 3px;
+  left: 3px;
+  right: 3px;
+  background: var(--royal-blue-traditional, #00296bff);
+  top: 80%;
+  border-radius: 29px;
+  z-index: 2;
+  box-shadow: var(--glow-primary, 0 0 20px rgba(253, 197, 0, 0.3)) 0px 5px 5px 0px inset;
+  overflow: hidden;
+  transition: all 0.5s cubic-bezier(0.645, 0.045, 0.355, 1) 0s;
+}
+
+.card .bottom .content {
+  position: absolute;
+  bottom: 0;
+  left: 1.5rem;
+  right: 1.5rem;
+  height: 200px;
+  padding-top: 1rem;
+}
+
+.card__title {
+  display: block;
+  font-size: 1.3rem;
+  color: white;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.card__subtitle {
+  display: block;
+  font-size: 1rem;
+  color: white;
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+.card__description {
+  display: block;
+  font-size: 0.85rem;
+  color: white;
+  margin-top: 0.7rem;
+  line-height: 1.4;
+  font-style: italic;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: all 0.5s ease-in-out 0.3s;
+}
+
+.card__riasec {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: all 0.5s ease-in-out 0.4s;
+}
+
+.card__riasec_codes {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.card__riasec_code {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 13px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.card__riasec_label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: white;
+  text-align: left;
+}
+
+.card .bottom .bottom_bottom {
+  position: absolute;
+  bottom: 1rem;
+  left: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card .bottom .bottom_bottom .social_links_container {
+  display: flex;
+  gap: 1rem;
+}
+
+.card .bottom .bottom_bottom .social_links_container svg {
+  height: 20px;
+  fill: white;
+  filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.2));
+  transition: all 0.3s ease;
+}
+
+.card .bottom .bottom_bottom .social_links_container svg:hover {
+  fill: var(--accent, #fdc500ff);
+  transform: scale(1.2);
+}
+
+.card__btn {
+  background: white;
+  color: var(--royal-blue-traditional, #00296bff);
+  border: none;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  padding: 0.75rem 1.25rem;
+  min-height: 44px;
+  min-width: 100px;
+  box-shadow: var(--glow-primary, 0 0 20px rgba(253, 197, 0, 0.3)) 0px 5px 5px 0px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card__btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--royal-blue-traditional, #00296bff);
+  transform: translateY(-2px);
+  box-shadow: var(--glow-hover, 0 0 25px rgba(253, 197, 0, 0.5)) 0px 8px 15px 0px;
+}
+
+/* Touch and hover effects - mobile-first approach */
+.card:hover,
+.card:active,
+.card:focus {
+  outline: none;
+  border-top-left-radius: 55px;
+  box-shadow: var(--glow-hover, 0 0 25px rgba(253, 197, 0, 0.5)) 0px 70px 30px -50px;
+}
+
+.card:hover .bottom {
+  top: 20%;
+  border-radius: 80px 29px 29px 29px;
+  transition: all 0.5s cubic-bezier(0.645, 0.045, 0.355, 1) 0.2s;
+}
+
+.card:hover .card__avatar {
+  width: 120px;
+  height: 120px;
+  aspect-ratio: 1;
+  top: 10px;
+  left: 10px;
+  border-radius: 50%;
+  z-index: 3;
+  border: 7px solid var(--accent, #fdc500ff);
+  box-shadow: var(--glow-primary, 0 0 20px rgba(253, 253, 253, 0.724)) 0px 5px 5px 0px;
+  transition: all 0.5s ease-in-out, z-index 0.5s ease-in-out 0.1s;
+}
+
+.card:hover .card__avatar:hover {
+  transform: scale(1.3);
+  border-radius: 0px;
+}
+
+.card:hover .avatar__image {
+  transform: scale(2.5);
+  object-position: 0px 25px;
+  transition: all 0.5s ease-in-out 0.5s;
+}
+
+.card:hover .avatar__placeholder {
+  transform: scale(2.5);
+  transition: all 0.5s ease-in-out 0.5s;
+}
+
+/* Text unfolds on hover - exactly like the UI example */
+.card:hover .card__description {
+  max-height: 60px;
+  opacity: 1;
+  transition: all 0.5s ease-in-out 0.3s;
+}
+
+.card:hover .card__riasec {
+  max-height: 80px;
+  opacity: 1;
+  transition: all 0.5s ease-in-out 0.4s;
+}
+
+/* Avatar glow effect for fantasy avatars */
+.avatar__container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.avatar__glow {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: inherit;
+  background: linear-gradient(45deg, var(--accent, #fdc500ff), var(--polynesian-blue, #00509dff), var(--accent-secondary, #ffd500ff), var(--marian-blue, #003f88ff));
+  background-size: 400% 400%;
+  animation: glow 3s ease-in-out infinite;
+  z-index: -1;
+  opacity: 0.8;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes glow {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  .card {
+    width: 100%;
+    max-width: none;
+    height: 240px;
+    border-radius: 20px;
+    margin: 0 auto;
+  }
+  
+  .card__title {
+    font-size: 1.1rem;
+  }
+  
+  .card__subtitle {
+    font-size: 0.9rem;
+  }
+  
+  .card__btn {
+    font-size: 0.875rem;
+    padding: 0.75rem 1rem;
+    min-height: 44px;
+  }
+  
+  /* Reduce hover effects on mobile, focus on touch */
+  .card:hover .bottom {
+    top: 30%;
+    transition: all 0.3s ease;
+  }
+  
+  .card:hover .card__avatar {
+    width: 100px;
+    height: 100px;
+    transition: all 0.3s ease;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .card {
+    background: var(--card, rgba(0, 41, 107, 0.15));
+    border-color: var(--border, rgba(0, 80, 157, 0.3));
+  }
+  
+  .card:hover {
+    border-color: var(--border-hover, rgba(253, 197, 0, 0.5));
+  }
+}
+
+/* Light mode adjustments */
+:root.light .card {
+  background: var(--card, rgba(255, 255, 255, 0.9));
+  color: var(--text, #1e293b);
+}
+
+:root.light .card__title {
+  color: var(--text, #1e293b);
+}
+
+:root.light .card__subtitle {
+  color: var(--accent, #00296bff);
+}
+
+:root.light .card__btn {
+  background: var(--accent, #00296bff);
+  color: var(--text, white);
+}
+
+:root.light .card__btn:hover {
+  background: var(--accent-secondary, #003f88ff);
+}

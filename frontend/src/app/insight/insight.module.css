@@ -1,0 +1,196 @@
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: var(--font-family);
+}
+
+.title {
+  font-size: 2.5rem;
+  margin-bottom: 2rem;
+  color: var(--text);
+  text-align: center;
+}
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+}
+
+.loadingSpinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--accent);
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.insightContainer {
+  background-color: var(--card);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin-bottom: 2rem;
+  border: 1px solid var(--border);
+}
+
+.acceptSection {
+  background: var(--card);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.acceptSection h2 {
+  color: var(--accent);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.acceptText {
+  color: var(--text);
+  font-size: 1.1rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.fullTextSection {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.fullTextSection h2 {
+  color: var(--accent);
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.fullText {
+  color: var(--text);
+  font-size: 1.1rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.actionsSection {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 2rem;
+}
+
+.actionButton {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.saveButton {
+  background: var(--accent);
+  color: var(--background);
+}
+
+.saveButton:hover {
+  background: var(--accent-hover);
+}
+
+.rewriteSection {
+  margin-top: 2rem;
+}
+
+.rewriteSection h3 {
+  color: var(--accent);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.feedbackInput {
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--text);
+  margin-bottom: 1rem;
+  resize: vertical;
+}
+
+.rewriteButton {
+  background: var(--card-hover);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.rewriteButton:hover {
+  background: var(--accent);
+  color: var(--background);
+}
+
+.rewriteButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.backButton {
+  background-color: transparent;
+  border: 1px solid var(--text-secondary);
+  color: var(--text-secondary);
+  padding: 0.7rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  display: block;
+  margin: 0 auto;
+}
+
+.backButton:hover {
+  background-color: var(--text-secondary);
+  color: var(--background);
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  .title {
+    font-size: 2rem;
+  }
+  
+  .acceptSection,
+  .fullTextSection,
+  .actionsSection {
+    padding: 1.5rem;
+  }
+
+  .acceptSection h2,
+  .fullTextSection h2 {
+    font-size: 1.3rem;
+  }
+
+  .acceptText,
+  .fullText {
+    font-size: 1rem;
+  }
+}

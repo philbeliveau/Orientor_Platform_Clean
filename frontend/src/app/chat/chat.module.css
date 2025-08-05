@@ -1,0 +1,60 @@
+/* Chat Search Header Styles */
+.searchHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: center;
+  width: 100%;
+}
+
+.searchInput {
+  font-family: inherit;
+  font-size: 16px;
+  background-color: #0a0a0a;
+  border: solid 0.5px #525252;
+  color: #fcfafa;
+  padding: 0.7rem 1rem;
+  border-radius: 25px;
+  width: 100%;
+  height: 48px;
+  transition: all ease-in-out 0.5s;
+  margin-right: 1rem;
+  opacity: 1;
+  text-align: left;
+  flex: 1;
+}
+
+.searchInput:hover,
+.searchInput:focus {
+  box-shadow: 0 0 1em #00000013;
+}
+
+.searchInput:focus {
+  outline: none;
+  background-color: #0a0a0aad;
+}
+
+.searchInput::-webkit-input-placeholder {
+  font-weight: 100;
+  color: #3a3a3a;
+}
+
+.searchInput:focus + .searchButton {
+  background-color: transparent;
+}
+
+.searchButton {
+  border: none;
+  background-color: transparent;
+  margin-top: 0.1em;
+}
+
+.searchButton:hover {
+  cursor: pointer;
+}
+
+.searchIcon {
+  height: 1.3em;
+  width: 1.3em;
+  fill: #3a3a3a;
+}
