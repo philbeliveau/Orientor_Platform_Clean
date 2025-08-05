@@ -11,11 +11,18 @@ export default function Page() {
         <SignUp 
           appearance={{
             elements: {
-              formButtonPrimary: 'bg-blue-600 hover:bg-blue-700',
-              card: 'shadow-xl border-0',
+              formButtonPrimary: 'bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors',
+              card: 'shadow-xl border-0 rounded-xl bg-white p-8',
+              headerTitle: 'text-2xl font-bold text-gray-900',
+              headerSubtitle: 'text-gray-600',
+              socialButtonsBlockButton: 'border border-gray-300 rounded-lg hover:bg-gray-50',
+              formFieldInput: 'border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent',
             }
           }}
-          redirectUrl="/dashboard"
+          afterSignUpUrl="/dashboard"
+          signInUrl="/sign-in"
+          routing="path"
+          path="/sign-up"
         />
       </div>
     </div>

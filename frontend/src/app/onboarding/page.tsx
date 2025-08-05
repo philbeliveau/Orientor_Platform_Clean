@@ -4,18 +4,15 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ChatOnboard from '../../components/onboarding/ChatOnboard';
 import { onboardingService } from '../../services/onboardingService';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@clerk/nextjs';
 
 const OnboardingPage: React.FC = () => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(true);
   
-  // Protect this route - redirect unauthenticated users to landing page
-  const { isAuthenticated, isLoading: authLoading } = useAuth({ 
-    redirectTo: '/', 
-    redirectIfFound: false 
-  });
+  // Protect this route - redirect unauthenticated users to sign in
+  const { isLoaded, isSignedIn, user } = useUser();
 
   useEffect(() => {
     checkOnboardingStatus();
@@ -66,7 +63,7 @@ const OnboardingPage: React.FC = () => {
   };
 
   // Show loading while checking authentication or onboarding status
-  if (authLoading || isLoading) {
+  if (!isLoaded || isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -77,8 +74,9 @@ const OnboardingPage: React.FC = () => {
     );
   }
 
-  // Don't render if not authenticated (will be redirected)
-  if (!isAuthenticated) {
+  // Redirect to sign in if not authenticated
+  if (!isSignedIn) {
+    router.push('/sign-in');
     return null;
   }
 

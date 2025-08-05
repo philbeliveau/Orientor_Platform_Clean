@@ -8,7 +8,8 @@ class User(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
+    hashed_password = Column(String(255), nullable=True)  # Made nullable for Clerk users
+    clerk_user_id = Column(String(255), unique=True, index=True, nullable=True)  # New Clerk ID field
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     onboarding_completed = Column(Boolean, default=False, nullable=False)
     

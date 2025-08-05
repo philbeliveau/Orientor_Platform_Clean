@@ -37,7 +37,7 @@ class ComponentAction(BaseModel):
     params: Optional[Dict[str, Any]] = None
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "type": "save",
                 "label": "Save to My Space",
@@ -73,7 +73,7 @@ class MessageComponent(BaseModel):
         return v
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "id": "comp_123",
                 "type": "skill_tree",
@@ -108,7 +108,7 @@ class OrientatorResponse(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "content": "I'll help you explore the path to becoming a data scientist. Let me analyze the typical journey and required skills.",
                 "components": [
@@ -139,7 +139,7 @@ class OrientatorMessageRequest(BaseModel):
     conversation_id: int = Field(..., gt=0)
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "message": "I want to become a data scientist",
                 "conversation_id": 123
@@ -157,7 +157,7 @@ class OrientatorMessageResponse(BaseModel):
     created_at: datetime
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "message_id": 456,
                 "role": "assistant",
@@ -179,7 +179,7 @@ class SaveComponentRequest(BaseModel):
     note: Optional[str] = Field(None, max_length=500)
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "component_id": "comp_123",
                 "component_type": "skill_tree",
@@ -198,7 +198,7 @@ class SaveComponentResponse(BaseModel):
     message: str = Field(default="Component saved successfully", max_length=200)
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "success": True,
                 "saved_item_id": 789,
@@ -220,7 +220,7 @@ class UserJourneyResponse(BaseModel):
     challenges_completed: List[Dict[str, Any]] = Field(default_factory=list)
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "user_id": 123,
                 "journey_stages": [
@@ -259,7 +259,7 @@ class ToolInvocationResult(BaseModel):
     error: Optional[str] = Field(None, max_length=1000)
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "tool_name": "esco_skills",
                 "success": True,
@@ -279,7 +279,7 @@ class FeedbackRequest(BaseModel):
     rating: Optional[int] = Field(None, ge=1, le=5)
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "message_id": 456,
                 "feedback": "Very helpful response with clear next steps",
@@ -300,7 +300,7 @@ class ConversationSummary(BaseModel):
     is_archived: bool = False
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "id": 123,
                 "title": "Exploring Data Science Careers",
@@ -322,7 +322,7 @@ class ToolAnalytics(BaseModel):
     most_used_tools: List[Dict[str, Union[str, int]]] = Field(default_factory=list)
     
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {
                 "total_invocations": 150,
                 "tool_usage": {

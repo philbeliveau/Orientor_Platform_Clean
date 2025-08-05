@@ -8,8 +8,7 @@ import ThemeToggle from '../ui/ThemeToggle';
 import styles from '@/styles/patterns.module.css';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import NewSidebar from './NewSidebar';
-import { useAuth } from '@/hooks/useAuth';
-import { useAuthCheck } from '@/hooks/useAuthCheck';
+import { useUser, useClerk } from '@clerk/nextjs';
 import { logger } from '@/utils/logger';
 
 // Composants pour les menus déroulants
@@ -157,7 +156,7 @@ export default function MainLayout({
     children: React.ReactNode, 
     showNav?: boolean 
 }) {
-    const { isLoggedIn, isLoading, isPublicRoute } = useAuthCheck(showNav);
+    const { isLoaded, isSignedIn } = useUser();
     const [moreMenuOpen, setMoreMenuOpen] = useState(false);
     const [careerMenuOpen, setCareerMenuOpen] = useState(false);
     const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
@@ -166,7 +165,8 @@ export default function MainLayout({
     const workspaceMenuRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
     const pathname = usePathname();
-    const { logout } = useAuth();
+    const { user } = useUser();
+    const { signOut } = useClerk();
 
     // Navigation items for the sidebar
     const navItems = [
@@ -211,9 +211,10 @@ export default function MainLayout({
         setWorkspaceMenuOpen(false);
     }, [pathname]);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
         logger.debug('Logging out user');
-        logout();
+        await signOut();
+        router.push('/');
     };
 
     const toggleCareerDropdown = () => {
@@ -229,7 +230,8 @@ export default function MainLayout({
     };
 
     // For public routes, render immediately without checking auth
-    if (isPublicRoute) {
+    const publicRoutes = ['/', '/sign-in', '/sign-up', '/test-page'];
+    if (publicRoutes.includes(pathname || '')) {
         return (
             <div className="min-h-screen flex flex-col">
                 <main className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -240,19 +242,19 @@ export default function MainLayout({
     }
 
     // Show loading state while checking authentication
-    if (isLoading) {
+    if (!isLoaded) {
         return <LoadingScreen message="Loading..." />;
     }
 
     // Check if current path is in career path section
     const isCareerPath = ['/vector-search', '/find-your-way', '/cv', '/tree'].includes(pathname || '');
 
-    logger.debug('Rendering layout with isLoggedIn:', isLoggedIn);
+    logger.debug('Rendering layout with isSignedIn:', isSignedIn);
 
     return (
         <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#ffffff' }}>
             {/* Desktop Navigation Bar - Only visible on larger screens */}
-            {isLoggedIn && (
+            {isSignedIn && (
             //             <div className="min-h-screen bg-light-background dark:bg-dark-background">
             // {showNav && (
                 <header className="fixed top-0 left-0 right-0 w-full z-50 px-4 py-3 hidden md:block font-departure header" style={{ backgroundColor: '#ffffff' }}>
@@ -295,7 +297,7 @@ export default function MainLayout({
             {/* Main content area with sidebar */}
             <div className="flex w-full h-full grow relative z-10">
                 {/* Sidebar - hidden on chat page, shows on hover */}
-                {isLoggedIn && showNav && (
+                {isSignedIn && showNav && (
                     <>
                         {pathname === '/chat' ? (
                             <div className="hidden md:block group">
@@ -388,7 +390,7 @@ export default function MainLayout({
                 )}
                 
                 {/* Main content */}
-                <main className={`flex-1 w-full ${isLoggedIn && showNav && pathname !== '/chat' ? 'md:ml-20' : ''} ${isLoggedIn ? 'pt-0 md:pt-20 pb-50 md:pb-20' : 'py-20'}`} style={{ backgroundColor: '#ffffff' }}>
+                <main className={`flex-1 w-full ${isSignedIn && showNav && pathname !== '/chat' ? 'md:ml-20' : ''} ${isSignedIn ? 'pt-0 md:pt-20 pb-50 md:pb-20' : 'py-20'}`} style={{ backgroundColor: '#ffffff' }}>
                     <div className="w-full">
                         {children}
                     </div>
@@ -396,7 +398,7 @@ export default function MainLayout({
             </div>
 
             {/* Mobile Bottom Navigation (only visible on smaller screens) */}
-            {isLoggedIn && (
+            {isSignedIn && (
                 <div className="fixed bottom-0 left-0 right-0 w-full bg-white border-t border-gray-200 md:hidden z-50 font-departure shadow-lg">
                     <div className="grid grid-cols-4 py-1 px-2 safe-area-inset-bottom">
                         <Link 

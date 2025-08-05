@@ -4,22 +4,40 @@ Clerk-based authentication router for FastAPI
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Dict, Any
 import logging
+from sqlalchemy.orm import Session
 
-from ..utils.clerk_auth import get_current_user, clerk_health_check
+from ..utils.clerk_auth import get_current_user, clerk_health_check, create_clerk_user_in_db
+from ..utils.database import get_db
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
 
 @router.get("/me")
-async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user)):
+async def get_current_user_info(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
-    Get current authenticated user information
+    Get current authenticated user information and sync with local database
     """
-    return {
-        "user": current_user,
-        "message": "Successfully authenticated with Clerk"
-    }
+    try:
+        # Automatically create/update user in local database
+        local_user = create_clerk_user_in_db(current_user, db)
+        
+        return {
+            "user": current_user,
+            "local_user": local_user,
+            "message": "Successfully authenticated with Clerk"
+        }
+    except Exception as e:
+        logger.error(f"Error syncing user with database: {e}")
+        # Still return Clerk user info even if database sync fails
+        return {
+            "user": current_user,
+            "message": "Successfully authenticated with Clerk (database sync failed)",
+            "warning": str(e)
+        }
 
 @router.get("/health")
 async def auth_health():

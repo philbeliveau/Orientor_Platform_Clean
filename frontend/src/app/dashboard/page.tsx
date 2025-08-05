@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser, useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
 import UserCard from '@/components/ui/UserCard';
 import DailyQuestionCard from '@/components/ui/DailyQuestionCard';
@@ -24,6 +24,7 @@ import { Job } from '@/components/jobs/JobCard';
 import { fetchAllUserNotes, Note } from '@/services/spaceService';
 import axios from 'axios';
 import SaveJobButton from '@/components/common/SaveJobButton';
+import { useClerkApi } from '@/services/clerkApi';
 
 interface JobRecommendationsResponse {
   recommendations: Job[];
@@ -49,10 +50,9 @@ export default function Dashboard() {
   const router = useRouter();
   
   // Protect this route - redirect unauthenticated users to landing page
-  const { isAuthenticated, isLoading: authLoading } = useAuth({ 
-    redirectTo: '/', 
-    redirectIfFound: false 
-  });
+  const { isLoaded, isSignedIn, user } = useUser();
+  const { getToken } = useAuth();
+  const api = useClerkApi();
   
   // Define API URL with fallback and trim any trailing spaces
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -74,12 +74,12 @@ export default function Dashboard() {
   const [notesLoading, setNotesLoading] = useState(true);
   const [notesError, setNotesError] = useState<string | null>(null);
 
-  // Sample user data
+  // User data from Clerk
   const userData = {
-    name: 'Philippe B.',
+    name: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.username || 'User',
     role: 'Étudiant Msc. in Data Science',
     level: 3,
-    avatarUrl: '/Avatar.PNG',
+    avatarUrl: user?.imageUrl || '/Avatar.PNG',
     skills: ['UI Design', 'JavaScript', 'React', 'Node.js'],
     totalXP: 250,
   };
@@ -156,25 +156,16 @@ export default function Dashboard() {
   // Fetch top peers
   useEffect(() => {
     const fetchPeers = async () => {
+      if (!isLoaded || !isSignedIn) return;
+      
       try {
         setPeersLoading(true);
         setPeersError(null);
         
-        const token = localStorage.getItem('access_token');
-        if (!token) {
-          console.log('No auth token found for peer fetching');
-          setPeersError('Authentication required');
-          return;
-        }
-        
-        const response = await axios.get<EnhancedPeerProfile[]>(`${cleanApiUrl}/peers/compatible`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const peers = await api.get<EnhancedPeerProfile[]>('/peers/compatible');
         
         // Get top 3 peers for homepage
-        const topPeers = response.data.slice(0, 3);
+        const topPeers = peers.slice(0, 3);
         setPeers(topPeers);
       } catch (err: any) {
         console.error('Error fetching peers:', err);
@@ -185,7 +176,7 @@ export default function Dashboard() {
     };
 
     fetchPeers();
-  }, [cleanApiUrl]);
+  }, [isLoaded, isSignedIn, api]);
 
   // Fetch user notes
   useEffect(() => {
@@ -214,7 +205,7 @@ export default function Dashboard() {
   };
 
   // Show loading while checking authentication
-  if (authLoading) {
+  if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -223,8 +214,9 @@ export default function Dashboard() {
     );
   }
 
-  // Don't render dashboard if not authenticated (will be redirected)
-  if (!isAuthenticated) {
+  // Redirect to sign-in if not authenticated
+  if (!isSignedIn) {
+    router.push('/sign-in');
     return null;
   }
 

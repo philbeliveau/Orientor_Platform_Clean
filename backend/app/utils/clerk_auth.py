@@ -104,14 +104,57 @@ async def get_current_user_id(user_data: Dict[str, Any] = Depends(verify_clerk_t
     """
     return user_data["id"]
 
-def create_clerk_user_in_db(user_data: Dict[str, Any]) -> Dict[str, Any]:
+def create_clerk_user_in_db(user_data: Dict[str, Any], db) -> Dict[str, Any]:
     """
     Create or update user in local database based on Clerk user data
     This function should be called when a new user signs up via Clerk
     """
-    # TODO: Implement database user creation/update logic
-    # This would sync Clerk user data with your local user table
-    pass
+    from sqlalchemy.orm import Session
+    from ..models.user import User
+    
+    try:
+        # Check if user already exists by clerk_user_id
+        existing_user = db.query(User).filter(User.clerk_user_id == user_data["id"]).first()
+        
+        if existing_user:
+            # Update existing user
+            existing_user.email = user_data.get("email", existing_user.email)
+            db.commit()
+            db.refresh(existing_user)
+            logger.info(f"Updated existing user with Clerk ID: {user_data['id']}")
+            return {
+                "id": existing_user.id,
+                "email": existing_user.email,
+                "clerk_user_id": existing_user.clerk_user_id,
+                "created_at": existing_user.created_at,
+                "onboarding_completed": existing_user.onboarding_completed
+            }
+        else:
+            # Create new user
+            new_user = User(
+                email=user_data.get("email", ""),
+                clerk_user_id=user_data["id"],
+                hashed_password=None,  # Clerk handles authentication
+                onboarding_completed=False
+            )
+            
+            db.add(new_user)
+            db.commit()
+            db.refresh(new_user)
+            logger.info(f"Created new user with Clerk ID: {user_data['id']}")
+            
+            return {
+                "id": new_user.id,
+                "email": new_user.email,
+                "clerk_user_id": new_user.clerk_user_id,
+                "created_at": new_user.created_at,
+                "onboarding_completed": new_user.onboarding_completed
+            }
+            
+    except Exception as e:
+        logger.error(f"Error creating/updating user in database: {e}")
+        db.rollback()
+        raise e
 
 # Health check for Clerk service
 async def clerk_health_check() -> Dict[str, str]:

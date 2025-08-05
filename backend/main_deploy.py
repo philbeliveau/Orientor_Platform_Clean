@@ -212,8 +212,7 @@ def create_app():
     app = FastAPI(
         title="Orientor Platform - Phase 1A Migration",
         description="Critical router integration to fix 404 errors - profiles and space functionality", 
-        version="1A.0.1-critical-routers",
-        lifespan=lifespan
+        version="1A.0.1-critical-routers"
     )
 
     # Configure CORS - Enhanced for navigoproject.vercel.app
