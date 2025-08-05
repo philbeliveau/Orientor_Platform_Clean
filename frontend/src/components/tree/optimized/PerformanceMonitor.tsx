@@ -39,7 +39,7 @@ const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
   const frameTimesRef = useRef<number[]>([]);
   const lastFrameTimeRef = useRef<number>(performance.now());
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
 
   // Calculate FPS and frame times
   const measurePerformance = useCallback(() => {

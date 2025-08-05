@@ -16,7 +16,7 @@ interface ChatOnboardProps {
 const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' }) => {
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Add custom styles to override global focus styles
   React.useEffect(() => {
@@ -362,7 +362,7 @@ interface PaperMessageProps {
   message: ChatMessageType;
   isLast: boolean;
   onResponse: boolean;
-  inputRef: React.RefObject<HTMLTextAreaElement>;
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
   inputValue: string;
   setInputValue: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;

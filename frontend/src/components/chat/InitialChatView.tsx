@@ -32,7 +32,7 @@ interface InitialChatViewProps {
   handleCreateNewConversation: () => void;
   currentConversation: Conversation | null;
   refreshConversationList: number;
-  inputRef: React.RefObject<HTMLTextAreaElement>;
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
 }
 
 export default function InitialChatView({

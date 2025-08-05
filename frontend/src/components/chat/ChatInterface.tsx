@@ -176,7 +176,7 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
   
   const router = useRouter();
   const searchParams = useSearchParams();
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Persist chat mode changes to localStorage
   useEffect(() => {

@@ -83,7 +83,7 @@ const WebGLTreeRenderer: React.FC<WebGLTreeRendererProps> = ({
     indices: null
   });
   const textureRef = useRef<WebGLTexture | null>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
 
   // Aggressive viewport culling with spatial indexing
   const visibleNodes = useMemo(() => {

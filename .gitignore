@@ -127,6 +127,8 @@ temp/
 *.output.html
 login-output.html
 login-test.html
+test-results/
+*.backup
 
 # Vercel
 .vercel/
@@ -134,3 +136,12 @@ vercel
 
 # Development scripts
 start-dev.sh
+
+# Playwright
+playwright.config.ts
+
+# MCP Configuration
+.mcp.json
+
+# Package lock files (use npm ci in production)
+package-lock.json

@@ -15,7 +15,7 @@ interface Node {
 const StarConstellation: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const nodesRef = useRef<Node[]>([]);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number | undefined>(undefined);
   const { isDarkMode } = useTheme();
 
   // Pan and zoom state

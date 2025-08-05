@@ -37,7 +37,7 @@ const CanvasTreeRenderer: React.FC<CanvasTreeRendererProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoveredNodeRef = useRef<PositionedNode | null>(null);
-  const animationFrameRef = useRef<number>();
+  const animationFrameRef = useRef<number | undefined>(undefined);
 
   // Calculate viewport bounds for culling
   const viewportBounds = useMemo<ViewportBounds>(() => {

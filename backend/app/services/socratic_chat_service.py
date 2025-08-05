@@ -37,7 +37,12 @@ class SocraticChatService:
     def __init__(self):
         self.openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
         if ANTHROPIC_AVAILABLE:
-            self.claude_client = anthropic.AsyncAnthropic(api_key=os.environ.get("CLAUDE_KEY"))
+            try:
+                self.claude_client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+            except Exception as e:
+                logger.error(f"Failed to initialize Anthropic client: {str(e)}")
+                self.claude_client = None
+                logger.warning("Claude mode will be disabled due to initialization error.")
         else:
             self.claude_client = None
             logger.warning("Anthropic library not available. Claude mode will be disabled.")

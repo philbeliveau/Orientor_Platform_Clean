@@ -90,9 +90,18 @@ MODEL_LOADED = False
 try:
     if os.path.exists(CAREER_MODEL_PATH):
         with open(CAREER_MODEL_PATH, 'rb') as f:
-            CAREER_MODEL = pickle.load(f)
-        logger.info("Career recommendation model loaded successfully")
-        MODEL_LOADED = True
+            # Check if file is empty before loading
+            f.seek(0, 2)  # Seek to end
+            file_size = f.tell()
+            f.seek(0)  # Reset to beginning
+            
+            if file_size == 0:
+                logger.warning(f"Career recommendation model file is empty: {CAREER_MODEL_PATH}")
+                MODEL_LOADED = False
+            else:
+                CAREER_MODEL = pickle.load(f)
+                logger.info("Career recommendation model loaded successfully")
+                MODEL_LOADED = True
     else:
         logger.warning(f"Career recommendation model not found at {CAREER_MODEL_PATH}, using fallback method")
         MODEL_LOADED = False

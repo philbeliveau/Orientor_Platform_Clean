@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
+  // swcMinify is now default in Next.js 15+
   
   // Enable production optimizations
   productionBrowserSourceMaps: false,
@@ -103,10 +103,12 @@ const nextConfig = {
     return config;
   },
   
-  // Experimental features for better performance
+  // Experimental features (removed deprecated options for Next.js 15+)
   experimental: {
-    optimizeCss: true,
-    scrollRestoration: true,
+    // Most previous experimental features are now stable in Next.js 15
+    // scrollRestoration is now default behavior
+    // serverActions are now stable
+    // optimizeCss is now handled automatically
   },
   
   // Headers for better caching
