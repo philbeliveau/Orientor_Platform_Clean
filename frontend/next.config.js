@@ -1,9 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    // Enable server components and streaming
-    serverComponentsExternalPackages: ['axios'],
-  },
+  // Server external packages (moved from experimental)
+  serverExternalPackages: ['axios'],
   
   // Rewrite API calls to backend server
   async rewrites() {

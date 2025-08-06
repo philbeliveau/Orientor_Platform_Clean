@@ -56,7 +56,7 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
       </head>
       <Providers>
-        <body className="min-h-screen antialiased">
+        <body className="min-h-screen antialiased" suppressHydrationWarning={true}>
           {children}
           <Analytics />
           <SpeedInsights />

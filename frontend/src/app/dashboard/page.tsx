@@ -175,7 +175,7 @@ export default function Dashboard() {
         setPeersLoading(true);
         setPeersError(null);
         
-        const peers = await api.request<EnhancedPeerProfile[]>('/api/v1/peers/compatible', {
+        const peers = await api.request<EnhancedPeerProfile[]>('/peers/compatible', {
           method: 'GET'
         });
         
