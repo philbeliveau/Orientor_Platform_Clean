@@ -63,7 +63,7 @@ app = FastAPI(
 )
 
 # Configure static files for avatars
-app.mount("/static", StaticFiles(directory="backend/static"), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Configure CORS
 origins = [

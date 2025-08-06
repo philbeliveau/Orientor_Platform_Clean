@@ -16,7 +16,7 @@
 
 # # Get environment variables
 # REACTIVE_RESUME_API_URL = os.getenv("REACTIVE_RESUME_API_URL", "http://localhost:3100/api")
-# REACTIVE_RESUME_JWT_SECRET = os.getenv("REACTIVE_RESUME_JWT_SECRET", os.getenv("JWT_SECRET_KEY"))
+# REACTIVE_RESUME_JWT_SECRET = os.getenv("REACTIVE_RESUME_JWT_SECRET")
 # FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3100")
 
 # router = APIRouter(prefix="", tags=["resume"])

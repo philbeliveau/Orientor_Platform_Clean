@@ -7,7 +7,7 @@ from datetime import datetime
 import logging
 
 from ..utils.database import get_db
-from ..utils.clerk_auth import get_current_user
+from ..utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..models import User
 from ..schemas.job import SavedJob, SavedJobCreate, SavedJobResponse
 

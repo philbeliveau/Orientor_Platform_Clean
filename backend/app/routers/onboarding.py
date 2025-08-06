@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 
-from ..utils.clerk_auth import get_current_user
+from ..utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 
 async def get_current_user_with_onboarding(
     current_user: User = Depends(get_current_user),
