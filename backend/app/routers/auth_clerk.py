@@ -12,7 +12,7 @@ from ..models.user import User
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
+router = APIRouter(prefix="/auth", tags=["authentication"])
 
 @router.get("/me")
 async def get_current_user_info(

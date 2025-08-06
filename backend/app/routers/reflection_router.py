@@ -17,7 +17,7 @@ from ..schemas.reflection import (
 )
 from ..utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 
-router = APIRouter(prefix="/api/reflection", tags=["reflection"])
+router = APIRouter(prefix="/reflection", tags=["reflection"])
 
 def load_questions_from_csv() -> List[ReflectionQuestionBase]:
     """Charge les questions depuis le fichier CSV."""

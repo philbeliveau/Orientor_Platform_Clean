@@ -14,7 +14,7 @@ from ..models import User
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/job-chat", tags=["job-chat"])
+router = APIRouter(prefix="/job-chat", tags=["job-chat"])
 
 # Initialize service
 llm_service = JobCardLLMService()

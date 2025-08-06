@@ -13,7 +13,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Configuration du router
-router = APIRouter(prefix="/api/tests/hexaco", tags=["hexaco_test"])
+router = APIRouter(prefix="/tests/hexaco", tags=["hexaco_test"])
 
 # Initialisation des services
 hexaco_service = HexacoService()

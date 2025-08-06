@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Setup API router
-router = APIRouter(prefix="/api/tests/holland", tags=["holland_test"])
+router = APIRouter(prefix="/tests/holland", tags=["holland_test"])
 
 # Pydantic models for request/response
 class TestMetadata(BaseModel):

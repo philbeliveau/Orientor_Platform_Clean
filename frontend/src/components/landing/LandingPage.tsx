@@ -3,8 +3,12 @@
 // Maintains Navigo branding while adopting OpenNote's clean educational aesthetic
 
 import Link from 'next/link';
+import { useAuth } from '@clerk/nextjs';
+import { useClerk } from '@clerk/nextjs';
 
 export default function LandingPage() {
+  const { isLoaded, userId } = useAuth();
+  const { signOut } = useClerk();
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white relative overflow-hidden">
       
@@ -34,9 +38,23 @@ export default function LandingPage() {
             <Link href="/onboarding" className="text-gray-600 hover:text-gray-900 transition-colors">Tests</Link>
             <Link href="/career" className="text-gray-600 hover:text-gray-900 transition-colors">Carrières</Link>
             <Link href="/chat" className="text-gray-600 hover:text-gray-900 transition-colors">Chat IA</Link>
-            <Link href="/login" className="bg-gradient-to-r from-indigo-500 to-sky-400 text-white px-4 py-2 rounded-lg hover:from-indigo-600 hover:to-sky-500 transition-all ink-button">
-              Commencer
-            </Link>
+            {isLoaded && userId ? (
+              <div className="flex items-center space-x-4">
+                <Link href="/dashboard" className="bg-gradient-to-r from-indigo-500 to-sky-400 text-white px-4 py-2 rounded-lg hover:from-indigo-600 hover:to-sky-500 transition-all ink-button">
+                  Dashboard
+                </Link>
+                <button 
+                  onClick={() => signOut()}
+                  className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <Link href="/login" className="bg-gradient-to-r from-indigo-500 to-sky-400 text-white px-4 py-2 rounded-lg hover:from-indigo-600 hover:to-sky-500 transition-all ink-button">
+                Commencer
+              </Link>
+            )}
           </nav>
         </div>
       </header>
@@ -70,9 +88,15 @@ export default function LandingPage() {
                 </div>
                 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12">
-                  <Link href="/register" className="cta-primary bg-gradient-to-r from-indigo-500 to-sky-400 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 hover:from-indigo-600 hover:to-sky-500 hover:scale-105 hover:shadow-lg ink-button">
-                    Commencer mon exploration
-                  </Link>
+                  {isLoaded && userId ? (
+                    <Link href="/dashboard" className="cta-primary bg-gradient-to-r from-indigo-500 to-sky-400 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 hover:from-indigo-600 hover:to-sky-500 hover:scale-105 hover:shadow-lg ink-button">
+                      Aller au tableau de bord
+                    </Link>
+                  ) : (
+                    <Link href="/register" className="cta-primary bg-gradient-to-r from-indigo-500 to-sky-400 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all duration-300 hover:from-indigo-600 hover:to-sky-500 hover:scale-105 hover:shadow-lg ink-button">
+                      Commencer mon exploration
+                    </Link>
+                  )}
                   <Link href="/onboarding" className="cta-secondary text-gray-600 hover:text-gray-900 transition-colors px-8 py-4 font-medium text-lg border-2 border-gray-300 rounded-lg hover:border-gray-400 hover:shadow-md ink-button">
                     Voir comment ça marche
                   </Link>
@@ -198,9 +222,15 @@ export default function LandingPage() {
                   <span className="text-gray-700">Suivi de progression personnalisé</span>
                 </div>
               </div>
-              <Link href="/onboarding" className="inline-block cta-primary bg-gradient-to-r from-indigo-500 to-sky-400 text-white px-8 py-4 rounded-lg hover:from-indigo-600 hover:to-sky-500 transition-all duration-300 font-semibold hover:scale-105 hover:shadow-lg ink-button">
-                Commencer l'exploration
-              </Link>
+              {isLoaded && userId ? (
+                <Link href="/dashboard" className="inline-block cta-primary bg-gradient-to-r from-indigo-500 to-sky-400 text-white px-8 py-4 rounded-lg hover:from-indigo-600 hover:to-sky-500 transition-all duration-300 font-semibold hover:scale-105 hover:shadow-lg ink-button">
+                  Continuer l'exploration
+                </Link>
+              ) : (
+                <Link href="/onboarding" className="inline-block cta-primary bg-gradient-to-r from-indigo-500 to-sky-400 text-white px-8 py-4 rounded-lg hover:from-indigo-600 hover:to-sky-500 transition-all duration-300 font-semibold hover:scale-105 hover:shadow-lg ink-button">
+                  Commencer l'exploration
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -379,9 +409,15 @@ export default function LandingPage() {
             </div>
           </div>
           
-          <Link href="/register" className="cta-primary inline-block bg-white text-indigo-600 px-12 py-4 rounded-lg font-bold text-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 ink-button">
-            Essaie Navigo aujourd'hui
-          </Link>
+          {isLoaded && userId ? (
+            <Link href="/dashboard" className="cta-primary inline-block bg-white text-indigo-600 px-12 py-4 rounded-lg font-bold text-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 ink-button">
+              Aller au tableau de bord
+            </Link>
+          ) : (
+            <Link href="/register" className="cta-primary inline-block bg-white text-indigo-600 px-12 py-4 rounded-lg font-bold text-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 ink-button">
+              Essaie Navigo aujourd'hui
+            </Link>
+          )}
           <p className="handwritten-text text-white/80 mt-4 text-sm">Étudiants qui créent des outils pour étudiants • Gratuit pour commencer</p>
         </div>
       </section>

@@ -13,10 +13,9 @@ function HomePageContent() {
     if (isLoaded) {
       console.log('🔍 Root route auth check - User ID:', userId);
       
-      // If user is authenticated, redirect to dashboard
+      // Allow both authenticated and unauthenticated users to see root page
       if (userId) {
-        console.log('🔄 User authenticated, redirecting to dashboard');
-        router.push('/dashboard');
+        console.log('🏠 Authenticated user accessing root page');
       } else {
         console.log('🏠 Showing landing page for unauthenticated user');
       }
@@ -33,19 +32,9 @@ function HomePageContent() {
     );
   }
 
-  // Show landing page for unauthenticated users
-  if (!userId) {
-    return <LandingPage />;
-  }
-
-  // If we get here, user is authenticated but hasn't been redirected yet
-  // Show loading while redirecting
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      <p className="ml-3 text-gray-600">Redirecting to dashboard...</p>
-    </div>
-  );
+  // Show landing page for all users (authenticated and unauthenticated)
+  // The landing page can conditionally render different content based on auth state
+  return <LandingPage />;
 }
 
 export default function HomePage() {

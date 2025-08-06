@@ -9,7 +9,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/v1/user", tags=["user"])
+router = APIRouter(prefix="/user", tags=["user"])
 
 @router.get("/profile")
 async def get_profile(

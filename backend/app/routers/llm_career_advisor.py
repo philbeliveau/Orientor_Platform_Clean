@@ -9,7 +9,7 @@ from ..models import User, UserProfile, UserSkill, SavedRecommendation
 from ..services.llm_service import generate_career_advice
 import json
 
-router = APIRouter(prefix="/api/careers", tags=["career-advisor"])
+router = APIRouter(prefix="/careers", tags=["career-advisor"])
 logger = logging.getLogger(__name__)
 
 class LLMQueryRequest(BaseModel):
