@@ -19,12 +19,11 @@ import StarConstellation from '@/components/ui/StarConstellation';
 import VectorSearchCard from '@/components/search/VectorSearchCard';
 import CareerGoalCard from '@/components/ui/CareerGoalCard';
 import hollandTestService, { ScoreResponse } from '@/services/hollandTestService';
-import { getJobRecommendations } from '@/services/api';
+import { useClerkApi } from '@/services/api';
 import { Job } from '@/components/jobs/JobCard';
 import { fetchAllUserNotes, Note } from '@/services/spaceService';
 import axios from 'axios';
 import SaveJobButton from '@/components/common/SaveJobButton';
-import { useClerkApi } from '@/services/clerkApi';
 
 interface JobRecommendationsResponse {
   recommendations: Job[];
@@ -126,7 +125,7 @@ export default function Dashboard() {
         if (!token) {
           throw new Error('Authentication token not available');
         }
-        const response = await getJobRecommendations(token) as JobRecommendationsResponse;
+        const response = await api.getJobRecommendations(3) as JobRecommendationsResponse;
         
         if (response && response.recommendations) {
           const limitedRecommendations = response.recommendations.slice(0, 3);
@@ -172,7 +171,9 @@ export default function Dashboard() {
         setPeersLoading(true);
         setPeersError(null);
         
-        const peers = await api.get<EnhancedPeerProfile[]>('/api/v1/peers/compatible');
+        const peers = await api.request<EnhancedPeerProfile[]>('/api/v1/peers/compatible', {
+          method: 'GET'
+        });
         
         // Get top 3 peers for homepage
         const topPeers = peers.slice(0, 3);
