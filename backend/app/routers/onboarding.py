@@ -21,17 +21,14 @@ router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 from ..utils.clerk_auth import get_current_user
 
 async def get_current_user_with_onboarding(
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get user info from Clerk and sync with local database"""
     try:
-        # Get the actual User object from database using Clerk user ID
-        user = db.query(User).filter(User.clerk_user_id == current_user["id"]).first()
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found in database")
-            
-        return user
+        # The get_current_user already returns a User object, so we can return it directly
+        # No need for additional database lookup as it's already synced
+        return current_user
     except Exception as e:
         logger.error(f"Error getting user from Clerk: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid authentication")

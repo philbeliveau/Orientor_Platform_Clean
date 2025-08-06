@@ -6,7 +6,7 @@ import os
 import logging
 
 # Import routers directly
-from app.routers.user import router as auth_router, get_current_user
+from app.routers.user import router as auth_router
 from app.routers.chat import router as chat_router
 from app.routers.conversations import router as conversations_router
 from app.routers.share import router as share_router
@@ -93,7 +93,7 @@ app.add_middleware(
 try:
     logger.info("======= ROUTER REGISTRATION DETAILS =======")
     logger.info(f"auth_router import path: {auth_router.__module__}")
-    logger.info(f"get_current_user import path: {get_current_user.__module__}")
+    logger.info("get_current_user import removed to prevent circular dependencies")
     logger.info(f"profiles_router import path: {profiles_router.__module__}")
     
     logger.info(f"Registering auth_router routes: {[f'{route.path} [{route.methods}]' for route in auth_router.routes]}")

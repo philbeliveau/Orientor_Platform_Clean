@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Optional
 import logging
 
 from ..database import get_db
-from ..dependencies import get_current_user
+from ..utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..services.job_card_llm_service import JobCardLLMService, get_preset_queries
 from ..models import User
 
@@ -51,11 +51,11 @@ async def process_job_query(
             raise HTTPException(status_code=400, detail="Missing job_data or query")
         
         # Log the interaction
-        logger.info(f"Job chat query from user {current_user.id} about job {job_data.get('id')}")
+        logger.info(f"Job chat query from user {current_user.clerk_user_id} about job {job_data.get('id')}")
         
         # Process the query
         response = await llm_service.process_job_query(
-            user_id=current_user.id,
+            user_id=current_user.clerk_user_id,
             job_data=job_data,
             user_query=user_query,
             db=db
@@ -128,7 +128,7 @@ async def process_batch_job_queries(
         responses = []
         for query in queries[:5]:  # Limit to 5 queries per batch
             response = await llm_service.process_job_query(
-                user_id=current_user.id,
+                user_id=current_user.clerk_user_id,
                 job_data=job_data,
                 user_query=query,
                 db=db

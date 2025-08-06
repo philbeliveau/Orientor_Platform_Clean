@@ -6,8 +6,9 @@ from typing import Dict, Any
 import logging
 from sqlalchemy.orm import Session
 
-from ..utils.clerk_auth import get_current_user, clerk_health_check, create_clerk_user_in_db
+from ..utils.clerk_auth import get_current_user_with_db_sync as get_current_user, clerk_health_check, create_clerk_user_in_db
 from ..utils.database import get_db
+from ..models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
 
 @router.get("/me")
 async def get_current_user_info(
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -63,12 +64,12 @@ async def logout():
 
 # Test protected endpoint
 @router.get("/protected")
-async def protected_route(current_user: Dict[str, Any] = Depends(get_current_user)):
+async def protected_route(current_user: User = Depends(get_current_user)):
     """
     Test protected route to verify authentication
     """
     return {
-        "message": f"Hello {current_user.get('first_name', 'User')}! This is a protected route.",
+        "message": f"Hello {getattr(current_user, 'first_name', 'User')}! This is a protected route.",
         "user_id": current_user["id"],
         "authenticated": True
     }
