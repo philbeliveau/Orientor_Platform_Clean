@@ -1,43 +1,30 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useEffect, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import LandingPage from '@/components/landing/LandingPage';
 
 function HomePageContent() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { isLoaded, userId } = useAuth();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const checkAuth = () => {
-      try {
-        const token = localStorage.getItem('access_token');
-        console.log('🔍 Root route auth check - Token exists:', !!token);
-        
-        // If user is authenticated, redirect to dashboard
-        if (token) {
-          console.log('🔄 User authenticated, redirecting to dashboard');
-          router.push('/dashboard');
-          return;
-        }
-        
-        // If not authenticated, show landing page
-        setIsAuthenticated(false);
-      } catch (error) {
-        console.error('Error checking authentication:', error);
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
+    if (isLoaded) {
+      console.log('🔍 Root route auth check - User ID:', userId);
+      
+      // If user is authenticated, redirect to dashboard
+      if (userId) {
+        console.log('🔄 User authenticated, redirecting to dashboard');
+        router.push('/dashboard');
+      } else {
+        console.log('🏠 Showing landing page for unauthenticated user');
       }
-    };
+    }
+  }, [isLoaded, userId, router]);
 
-    checkAuth();
-  }, [router, searchParams]);
-
-  // Show loading while checking authentication
-  if (isLoading) {
+  // Show loading while Clerk is initializing
+  if (!isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -46,9 +33,19 @@ function HomePageContent() {
     );
   }
 
-  // Always show landing page for unauthenticated users at root
-  console.log('🏠 Showing landing page for unauthenticated user');
-  return <LandingPage />;
+  // Show landing page for unauthenticated users
+  if (!userId) {
+    return <LandingPage />;
+  }
+
+  // If we get here, user is authenticated but hasn't been redirected yet
+  // Show loading while redirecting
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <p className="ml-3 text-gray-600">Redirecting to dashboard...</p>
+    </div>
+  );
 }
 
 export default function HomePage() {

@@ -1,8 +1,6 @@
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
-import { ClerkProvider } from '@clerk/nextjs';
 import { Providers } from './providers';
-import MainLayout from '@/components/layout/MainLayout';
 import './globals.css';
 import localFont from 'next/font/local';
 
@@ -53,21 +51,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider
-      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-    >
-      <html lang="en" className={`scroll-smooth ${departureMono.variable} ${technor.variable}`}>
-        <head>
-          <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
-        </head>
-        <Providers>
-          <body className="min-h-screen antialiased">
-            {children}
-            <Analytics />
-            <SpeedInsights />
-          </body>
-        </Providers>
-      </html>
-    </ClerkProvider>
+    <html lang="en" className={`scroll-smooth ${departureMono.variable} ${technor.variable}`}>
+      <head>
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+      </head>
+      <Providers>
+        <body className="min-h-screen antialiased">
+          {children}
+          <Analytics />
+          <SpeedInsights />
+        </body>
+      </Providers>
+    </html>
   );
 }

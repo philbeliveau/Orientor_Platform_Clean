@@ -98,38 +98,38 @@ export interface NoteUpdate {
   content: string;
 }
 
-// Configure axios with the token
-const getAuthHeader = () => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+// Create auth headers with token (for internal use)
+const getAuthHeader = (token?: string) => {
   return {
     headers: {
-      Authorization: `Bearer ${token}`
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     }
   };
 };
 
 // Fetch saved recommendations
-export const fetchSavedRecommendations = async (): Promise<Recommendation[]> => {
+export const fetchSavedRecommendations = async (token: string): Promise<Recommendation[]> => {
   try {
     console.log('Fetching saved recommendations from:', `${API_URL}/careers/saved`);
-    const response = await axios.get<Recommendation[]>(`${API_URL}/api/v1/careers/saved`, getAuthHeader());
+    const response = await axios.get<Recommendation[]>(`${API_URL}/api/v1/careers/saved`, getAuthHeader(token));
     console.log('API response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching saved recommendations:', error);
     console.error('API URL used:', `${API_URL}/careers/saved`);
-    console.error('Auth header:', getAuthHeader());
+    console.error('Auth header:', getAuthHeader(token));
     throw error;
   }
 };
 
 // Save a recommendation
-export const saveRecommendation = async (recommendation: Recommendation): Promise<Recommendation> => {
+export const saveRecommendation = async (token: string, recommendation: Recommendation): Promise<Recommendation> => {
   try {
     const response = await axios.post<Recommendation>(
       `${API_URL}/api/v1/space/recommendations`,
       recommendation,
-      getAuthHeader()
+      getAuthHeader(token)
     );
     return response.data;
   } catch (error) {
@@ -140,6 +140,7 @@ export const saveRecommendation = async (recommendation: Recommendation): Promis
 
 // Save a recommendation with LLM analysis
 export const saveRecommendationWithLLMAnalysis = async (
+  token: string,
   recommendation: Recommendation,
   userProfile: {
     skills: UserSkills;
@@ -168,7 +169,7 @@ export const saveRecommendationWithLLMAnalysis = async (
     };
 
     // Sauvegarder la recommandation enrichie
-    return await saveRecommendation(enrichedRecommendation);
+    return await saveRecommendation(token, enrichedRecommendation);
   } catch (error) {
     console.error('Error saving recommendation with LLM analysis:', error);
     throw error;
@@ -176,11 +177,11 @@ export const saveRecommendationWithLLMAnalysis = async (
 };
 
 // Delete a saved recommendation
-export const deleteRecommendation = async (recommendationId: number | string): Promise<void> => {
+export const deleteRecommendation = async (token: string, recommendationId: number | string): Promise<void> => {
   try {
     await axios.delete(
       `${API_URL}/api/v1/space/recommendations/${recommendationId}`, 
-      getAuthHeader()
+      getAuthHeader(token)
     );
   } catch (error) {
     console.error('Error deleting recommendation:', error);
@@ -189,11 +190,11 @@ export const deleteRecommendation = async (recommendationId: number | string): P
 };
 
 // Fetch notes for a recommendation
-export const fetchNotes = async (recommendationId: number): Promise<Note[]> => {
+export const fetchNotes = async (token: string, recommendationId: number): Promise<Note[]> => {
   try {
     const response = await axios.get<Note[]>(
       `${API_URL}/api/v1/space/notes?saved_recommendation_id=${recommendationId}`, 
-      getAuthHeader()
+      getAuthHeader(token)
     );
     return response.data;
   } catch (error) {
@@ -203,11 +204,11 @@ export const fetchNotes = async (recommendationId: number): Promise<Note[]> => {
 };
 
 // Fetch all user notes (not tied to specific recommendations)
-export const fetchAllUserNotes = async (): Promise<Note[]> => {
+export const fetchAllUserNotes = async (token: string): Promise<Note[]> => {
   try {
     const response = await axios.get<Note[]>(
       `${API_URL}/api/v1/space/notes`, 
-      getAuthHeader()
+      getAuthHeader(token)
     );
     return response.data;
   } catch (error) {
@@ -217,12 +218,12 @@ export const fetchAllUserNotes = async (): Promise<Note[]> => {
 };
 
 // Create a standalone note (not tied to a recommendation)
-export const createStandaloneNote = async (content: string): Promise<Note> => {
+export const createStandaloneNote = async (token: string, content: string): Promise<Note> => {
   try {
     const response = await axios.post<Note>(
       `${API_URL}/api/v1/space/notes`, 
       { content }, 
-      getAuthHeader()
+      getAuthHeader(token)
     );
     return response.data;
   } catch (error) {
@@ -232,12 +233,12 @@ export const createStandaloneNote = async (content: string): Promise<Note> => {
 };
 
 // Create a new note
-export const createNote = async (note: NoteCreate): Promise<Note> => {
+export const createNote = async (token: string, note: NoteCreate): Promise<Note> => {
   try {
     const response = await axios.post<Note>(
       `${API_URL}/api/v1/space/notes`, 
       note, 
-      getAuthHeader()
+      getAuthHeader(token)
     );
     return response.data;
   } catch (error) {
@@ -247,12 +248,12 @@ export const createNote = async (note: NoteCreate): Promise<Note> => {
 };
 
 // Update a note
-export const updateNote = async (noteId: number, updates: NoteUpdate): Promise<Note> => {
+export const updateNote = async (token: string, noteId: number, updates: NoteUpdate): Promise<Note> => {
   try {
     const response = await axios.put<Note>(
       `${API_URL}/api/v1/space/notes/${noteId}`, 
       updates, 
-      getAuthHeader()
+      getAuthHeader(token)
     );
     return response.data;
   } catch (error) {
@@ -262,11 +263,11 @@ export const updateNote = async (noteId: number, updates: NoteUpdate): Promise<N
 };
 
 // Delete a note
-export const deleteNote = async (noteId: number): Promise<void> => {
+export const deleteNote = async (token: string, noteId: number): Promise<void> => {
   try {
     await axios.delete(
       `${API_URL}/api/v1/space/notes/${noteId}`, 
-      getAuthHeader()
+      getAuthHeader(token)
     );
   } catch (error) {
     console.error('Error deleting note:', error);
@@ -294,12 +295,12 @@ export interface LLMAnalysisResult {
 }
 
 // Generate LLM analysis for a recommendation by recommendation ID
-export const generateLLMAnalysisForRecommendation = async (recommendationId: number): Promise<Recommendation> => {
+export const generateLLMAnalysisForRecommendation = async (token: string, recommendationId: number): Promise<Recommendation> => {
   try {
     const response = await axios.post<Recommendation>(
       `${API_URL}/api/v1/space/recommendations/${recommendationId}/generate-analysis`,
       {},
-      getAuthHeader()
+      getAuthHeader(token)
     );
     return response.data;
   } catch (error) {
@@ -330,11 +331,11 @@ export const generateLLMAnalysis = async (input: LLMAnalysisInput): Promise<LLMA
 };
 
 // Get user skills
-export const getUserSkills = async (): Promise<UserSkills> => {
+export const getUserSkills = async (token: string): Promise<UserSkills> => {
   try {
     const response = await axios.get<UserSkills>(
       `${API_URL}/api/v1/space/skills`, 
-      getAuthHeader()
+      getAuthHeader(token)
     );
     return response.data;
   } catch (error) {
@@ -344,12 +345,12 @@ export const getUserSkills = async (): Promise<UserSkills> => {
 };
 
 // Update user skills
-export const updateUserSkills = async (skills: UserSkills): Promise<UserSkills> => {
+export const updateUserSkills = async (token: string, skills: UserSkills): Promise<UserSkills> => {
   try {
     const response = await axios.put<UserSkills>(
       `${API_URL}/api/v1/space/skills`, 
       skills, 
-      getAuthHeader()
+      getAuthHeader(token)
     );
     return response.data;
   } catch (error) {
@@ -359,11 +360,11 @@ export const updateUserSkills = async (skills: UserSkills): Promise<UserSkills> 
 };
 
 // Get skill comparison data
-export const getSkillComparison = async (oasisCode: string): Promise<any> => {
+export const getSkillComparison = async (token: string, oasisCode: string): Promise<any> => {
   try {
     const response = await axios.get(
       `${API_URL}/api/v1/space/recommendations/${oasisCode}/skill-comparison`, 
-      getAuthHeader()
+      getAuthHeader(token)
     );
     return response.data;
   } catch (error) {
@@ -375,11 +376,11 @@ export const getSkillComparison = async (oasisCode: string): Promise<any> => {
 // ===== SAVED JOBS FUNCTIONALITY =====
 
 // Fetch saved jobs from tree exploration
-export const fetchSavedJobs = async (): Promise<SavedJob[]> => {
+export const fetchSavedJobs = async (token: string): Promise<SavedJob[]> => {
   try {
     const response = await axios.get<{jobs: SavedJob[], total: number}>(
       `${API_URL}/api/v1/jobs/saved`, 
-      getAuthHeader()
+      getAuthHeader(token)
     );
     return response.data.jobs;
   } catch (error) {
@@ -389,11 +390,11 @@ export const fetchSavedJobs = async (): Promise<SavedJob[]> => {
 };
 
 // Delete a saved job
-export const deleteSavedJob = async (jobId: number): Promise<void> => {
+export const deleteSavedJob = async (token: string, jobId: number): Promise<void> => {
   try {
     await axios.delete(
       `${API_URL}/api/v1/jobs/${jobId}`, 
-      getAuthHeader()
+      getAuthHeader(token)
     );
   } catch (error) {
     console.error('Error deleting saved job:', error);
@@ -402,11 +403,11 @@ export const deleteSavedJob = async (jobId: number): Promise<void> => {
 };
 
 // Get job details from ESCO
-export const getJobDetails = async (escoId: string): Promise<any> => {
+export const getJobDetails = async (token: string, escoId: string): Promise<any> => {
   try {
     const response = await axios.get(
       `${API_URL}/api/v1/jobs/${escoId}/details`, 
-      getAuthHeader()
+      getAuthHeader(token)
     );
     return response.data;
   } catch (error) {
@@ -443,7 +444,7 @@ export interface CareerFitResponse {
 }
 
 // Analyze career fit for a job
-export const analyzeCareerFit = async (jobId: string, jobSource: 'esco' | 'oasis'): Promise<CareerFitResponse> => {
+export const analyzeCareerFit = async (token: string, jobId: string, jobSource: 'esco' | 'oasis'): Promise<CareerFitResponse> => {
   try {
     const response = await axios.post<CareerFitResponse>(
       `${API_URL}/api/v1/careers/fit-analysis`,
@@ -451,7 +452,7 @@ export const analyzeCareerFit = async (jobId: string, jobSource: 'esco' | 'oasis
         job_id: jobId,
         job_source: jobSource
       },
-      getAuthHeader()
+      getAuthHeader(token)
     );
     return response.data;
   } catch (error) {
@@ -461,11 +462,11 @@ export const analyzeCareerFit = async (jobId: string, jobSource: 'esco' | 'oasis
 };
 
 // Cleanup fake test jobs
-export const cleanupTestJobs = async (): Promise<{success: boolean, message: string, deleted_count: number}> => {
+export const cleanupTestJobs = async (token: string): Promise<{success: boolean, message: string, deleted_count: number}> => {
   try {
     const response = await axios.delete<{success: boolean, message: string, deleted_count: number}>(
       `${API_URL}/api/v1/careers/cleanup-test-jobs`,
-      getAuthHeader()
+      getAuthHeader(token)
     );
     return response.data;
   } catch (error) {

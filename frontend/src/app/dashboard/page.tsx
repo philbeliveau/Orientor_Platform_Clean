@@ -96,7 +96,11 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchHollandResults = async () => {
       try {
-        const results = await hollandTestService.getUserLatestResults();
+        if (!isLoaded || !user?.id) {
+          return;
+        }
+        
+        const results = await api.getHollandResults();
         setHollandResults(results);
       } catch (err) {
         console.error('Error fetching Holland results:', err);
@@ -107,24 +111,20 @@ export default function Dashboard() {
     };
 
     fetchHollandResults();
-  }, []);
+  }, [isLoaded, user?.id, api]);
 
   // Fetch job recommendations
   useEffect(() => {
     const fetchJobRecommendations = async () => {
       try {
-        setJobsLoading(true);
-        setJobsError(null);
-        
         // Wait for Clerk to be fully loaded
         if (!isLoaded || !user?.id) {
           return;
         }
         
-        const token = await getToken();
-        if (!token) {
-          throw new Error('Authentication token not available');
-        }
+        setJobsLoading(true);
+        setJobsError(null);
+        
         const response = await api.getJobRecommendations(3) as JobRecommendationsResponse;
         
         if (response && response.recommendations) {
@@ -160,12 +160,16 @@ export default function Dashboard() {
     };
     
     fetchJobRecommendations();
-  }, []);
+  }, [isLoaded, user?.id]); // Removed api from dependencies
 
   // Fetch top peers
   useEffect(() => {
+    let isCancelled = false;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
     const fetchPeers = async () => {
-      if (!isLoaded || !isSignedIn) return;
+      if (!isLoaded || !isSignedIn || !user?.id) return;
       
       try {
         setPeersLoading(true);
@@ -175,28 +179,54 @@ export default function Dashboard() {
           method: 'GET'
         });
         
-        // Get top 3 peers for homepage
-        const topPeers = peers.slice(0, 3);
-        setPeers(topPeers);
+        if (!isCancelled) {
+          // Get top 3 peers for homepage
+          const topPeers = peers.slice(0, 3);
+          setPeers(topPeers);
+        }
       } catch (err: any) {
-        console.error('Error fetching peers:', err);
-        setPeersError('Unable to fetch peer recommendations');
+        if (!isCancelled) {
+          console.error('Error fetching peers:', err);
+          
+          // Only retry on network errors or 500s, not on auth errors
+          if (retryCount < maxRetries && 
+              (!err.message?.includes('401') && !err.message?.includes('Unauthorized'))) {
+            retryCount++;
+            setTimeout(() => {
+              if (!isCancelled) {
+                fetchPeers();
+              }
+            }, 1000 * retryCount); // Exponential backoff
+          } else {
+            setPeersError('Unable to fetch peer recommendations');
+          }
+        }
       } finally {
-        setPeersLoading(false);
+        if (!isCancelled) {
+          setPeersLoading(false);
+        }
       }
     };
 
     fetchPeers();
-  }, [isLoaded, isSignedIn, api]);
+    
+    return () => {
+      isCancelled = true;
+    };
+  }, [isLoaded, isSignedIn, user?.id]); // Removed api from dependencies to prevent infinite loops
 
   // Fetch user notes
   useEffect(() => {
     const fetchNotes = async () => {
       try {
+        if (!isLoaded || !user?.id) {
+          return;
+        }
+        
         setNotesLoading(true);
         setNotesError(null);
         
-        const notes = await fetchAllUserNotes();
+        const notes = await api.getUserNotes();
         // Get top 3 most recent notes for home page
         const recentNotes = notes.slice(0, 3);
         setUserNotes(recentNotes);
@@ -209,7 +239,7 @@ export default function Dashboard() {
     };
 
     fetchNotes();
-  }, []);
+  }, [isLoaded, user?.id, api]);
 
   const handleSelectJob = (job: Job) => {
     setSelectedJob(job);

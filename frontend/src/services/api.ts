@@ -86,7 +86,7 @@ class ClerkApiService {
   }
 
   async getHollandResults(token: string) {
-    return this.request('/api/v1/api/tests/holland/user-results', {
+    return this.request('/api/v1/tests/holland/user-results', {
       method: 'GET',
       token,
     });
