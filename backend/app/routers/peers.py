@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from ..utils.database import get_db
 from ..models import User, UserProfile, SuggestedPeers
-from ..utils.auth import get_current_user_unified as get_current_user
+from ..utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..services.peer_matching_service import find_compatible_peers, generate_enhanced_peer_suggestions
 import logging
 import asyncio
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/peers", tags=["peers"])
 logger = logging.getLogger(__name__)
 
 class PeerResponse(BaseModel):
-    user_id: int
+    user_id: str
     name: Optional[str] = None
     major: Optional[str] = None
     year: Optional[int] = None
@@ -25,7 +25,7 @@ class PeerResponse(BaseModel):
         from_attributes = True
 
 class EnhancedPeerResponse(BaseModel):
-    user_id: int
+    user_id: str
     name: Optional[str] = None
     major: Optional[str] = None
     year: Optional[int] = None
@@ -39,7 +39,7 @@ class EnhancedPeerResponse(BaseModel):
         from_attributes = True
 
 class HomepagePeerResponse(BaseModel):
-    user_id: int
+    user_id: str
     name: Optional[str] = None
     major: Optional[str] = None
     year: Optional[int] = None
@@ -73,7 +73,7 @@ def get_suggested_peers(
                 UserProfile,
                 UserProfile.user_id == SuggestedPeers.suggested_id
             )
-            .filter(SuggestedPeers.user_id == current_user.id)
+            .filter(SuggestedPeers.user_id == current_user.clerk_user_id)
             .order_by(SuggestedPeers.similarity.desc())
             .limit(limit)
         )
@@ -121,7 +121,7 @@ async def get_compatible_peers(
     """Get compatible peers with detailed explanations."""
     try:
         # Find compatible peers using enhanced algorithm
-        compatible_peers = await find_compatible_peers(db, current_user.id, limit)
+        compatible_peers = await find_compatible_peers(db, current_user.clerk_user_id, limit)
         
         if not compatible_peers:
             logger.info(f"No compatible peers found for user {current_user.id}")
@@ -159,7 +159,7 @@ async def get_homepage_peers(
     """Get peer suggestions for homepage display."""
     try:
         # Find top 3 compatible peers for homepage
-        compatible_peers = await find_compatible_peers(db, current_user.id, 3)
+        compatible_peers = await find_compatible_peers(db, current_user.clerk_user_id, 3)
         
         if not compatible_peers:
             logger.info(f"No compatible peers found for homepage for user {current_user.id}")
@@ -199,7 +199,7 @@ async def refresh_peer_suggestions(
     """Refresh peer suggestions for the current user."""
     try:
         # Generate enhanced peer suggestions
-        success = await generate_enhanced_peer_suggestions(db, current_user.id, 5)
+        success = await generate_enhanced_peer_suggestions(db, current_user.clerk_user_id, 5)
         
         if not success:
             raise HTTPException(
@@ -214,4 +214,4 @@ async def refresh_peer_suggestions(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to refresh peer suggestions: {str(e)}"
-        ) 
+        )

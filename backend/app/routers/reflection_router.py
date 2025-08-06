@@ -15,7 +15,7 @@ from ..schemas.reflection import (
     ReflectionResponseUpdate,
     ReflectionResponseBatch
 )
-from ..utils.auth import get_current_user_unified as get_current_user
+from ..utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 
 router = APIRouter(prefix="/api/reflection", tags=["reflection"])
 

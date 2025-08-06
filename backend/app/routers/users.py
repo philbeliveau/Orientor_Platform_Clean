@@ -4,7 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from ..utils.database import get_db
 from ..models import User, UserProfile
-from ..utils.auth import get_current_user_unified as get_current_user
+from ..utils.clerk_auth import get_current_user
 
 router = APIRouter(
     prefix="/users",
@@ -47,4 +47,4 @@ def read_user_profile(
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     
-    return profile 
+    return profile

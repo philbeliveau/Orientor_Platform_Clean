@@ -127,43 +127,42 @@ logger.info("Auth router included successfully")
 app.include_router(profiles_router, prefix="/api/v1")
 logger.info("Profiles router included successfully")
 # Include remaining routers  
-app.include_router(test_router)
-# Mount conversations_router BEFORE chat_router to prioritize specific routes
-app.include_router(conversations_router)
-app.include_router(chat_router)
-app.include_router(share_router)
-app.include_router(chat_analytics_router)
-app.include_router(peers_router)
-app.include_router(messages_router)
-app.include_router(space_router)
-app.include_router(vector_router)
-app.include_router(recommendations_router)
-app.include_router(careers_router)
-app.include_router(tree_router)
-app.include_router(tree_paths_router)
-app.include_router(node_notes_router)
-app.include_router(user_progress_router)
+# Standardize all API routes with /api/v1 prefix
+app.include_router(test_router, prefix="/api/v1")
+app.include_router(conversations_router, prefix="/api/v1")
+app.include_router(chat_router, prefix="/api/v1")
+app.include_router(share_router, prefix="/api/v1")
+app.include_router(chat_analytics_router, prefix="/api/v1")
+app.include_router(peers_router, prefix="/api/v1")
+app.include_router(messages_router, prefix="/api/v1")
+app.include_router(space_router, prefix="/api/v1")
+app.include_router(vector_router, prefix="/api/v1")
+app.include_router(recommendations_router, prefix="/api/v1")
+app.include_router(careers_router, prefix="/api/v1")
+app.include_router(tree_router, prefix="/api/v1")
+app.include_router(tree_paths_router, prefix="/api/v1")
+app.include_router(node_notes_router, prefix="/api/v1")
+app.include_router(user_progress_router, prefix="/api/v1")
 app.include_router(jobs_router, prefix="/api/v1")
 app.include_router(program_recommendations_router, prefix="/api/v1")
-app.include_router(holland_test_router)
-app.include_router(hexaco_test_router)
-app.include_router(insight_router)
+app.include_router(holland_test_router, prefix="/api/v1")
+app.include_router(hexaco_test_router, prefix="/api/v1")
+app.include_router(insight_router, prefix="/api/v1")
 app.include_router(competence_tree_router, prefix="/api/v1")
 app.include_router(career_progression_router, prefix="/api/v1")
 app.include_router(users_router, prefix="/api/v1")
-app.include_router(reflection_router)
+app.include_router(reflection_router, prefix="/api/v1")
 app.include_router(avatar_router, prefix="/api/v1")
-app.include_router(onboarding_router)
-app.include_router(education_router)
-app.include_router(school_programs_router)
-app.include_router(courses_router)
+app.include_router(onboarding_router, prefix="/api/v1")
+app.include_router(education_router, prefix="/api/v1")
+app.include_router(school_programs_router, prefix="/api/v1")
+app.include_router(courses_router, prefix="/api/v1")
 app.include_router(enhanced_chat_router, prefix="/api/v1")
-app.include_router(socratic_chat_router)
-app.include_router(career_goals_router)
-# app.include_router(job_recommendations_router, prefix="/api/v1/jobs")  # Module not found
-app.include_router(llm_career_advisor_router)
-app.include_router(orientator_router, prefix="/api")
-app.include_router(auth_clerk_router)  # New Clerk authentication router
+app.include_router(socratic_chat_router, prefix="/api/v1")
+app.include_router(career_goals_router, prefix="/api/v1")
+app.include_router(llm_career_advisor_router, prefix="/api/v1")
+app.include_router(orientator_router, prefix="/api/v1")
+app.include_router(auth_clerk_router, prefix="/api/v1")
 logger.info("All routers included successfully")
 
 # Explicitly capture route after including it
@@ -254,6 +253,34 @@ def load_models():
 
 # if __name__ == "__main__":
 #     uvicorn.run("app.main:app", host="0.0.0.0", port=8000) #, reload=True)
+
+# Set default SECRET_KEY for development if not configured
+if not os.getenv("SECRET_KEY"):
+    os.environ["SECRET_KEY"] = "development-secret-key-change-in-production-12345678901234567890"
+    logger.warning("⚠️ Using default SECRET_KEY for development - change for production!")
+
+@app.on_event("startup")
+async def startup_event():
+    """Run security validation on startup"""
+    logger.info("🔍 Running security validation...")
+    
+    try:
+        from .utils.security_validation import validate_production_security
+        security_results = validate_production_security()
+        
+        if not security_results["deployment_safe"]:
+            critical_count = len(security_results["issues"]["critical"])
+            logger.error(f"🚨 SECURITY VALIDATION FAILED: {critical_count} critical issues found")
+            
+            # In production, we should consider failing startup
+            is_production = os.getenv("ENVIRONMENT") == "production" or os.getenv("RAILWAY_ENVIRONMENT") == "production"
+            if is_production and critical_count > 0:
+                logger.critical("❌ WARNING: Critical security issues detected in production")
+        else:
+            logger.info("✅ Security validation passed")
+            
+    except Exception as e:
+        logger.error(f"❌ Security validation error: {e}")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))  # Use Railway-assigned port

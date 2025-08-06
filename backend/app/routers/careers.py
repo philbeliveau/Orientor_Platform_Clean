@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional, Tuple
 from ..utils.database import get_db
-from ..utils.auth import get_current_user_unified as get_current_user
+from ..utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..models import User
 from ..services.Swipe_career_recommendation_service import (
     get_career_recommendations,

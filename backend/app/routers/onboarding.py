@@ -18,26 +18,23 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/onboarding", tags=["onboarding"])
 
-# Compatible authentication function that matches main_deploy.py
-async def get_current_user_with_onboarding(authorization: Optional[str] = Header(None), db: Session = Depends(get_db)):
-    """Extract user info including onboarding status from base64 token (compatible with main app)"""
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="No authorization token")
-    
+from ..utils.clerk_auth import get_current_user
+
+async def get_current_user_with_onboarding(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user info from Clerk and sync with local database"""
     try:
-        token = authorization.split(" ")[1]
-        decoded = base64.b64decode(token).decode()
-        email, user_id, onboarding_completed, timestamp = decoded.split(":", 3)
-        
-        # Get the actual User object from database for compatibility with existing code
-        user = db.query(User).filter(User.id == int(user_id)).first()
+        # Get the actual User object from database using Clerk user ID
+        user = db.query(User).filter(User.clerk_user_id == current_user["id"]).first()
         if not user:
-            raise HTTPException(status_code=401, detail="User not found")
+            raise HTTPException(status_code=401, detail="User not found in database")
             
         return user
     except Exception as e:
-        logger.error(f"Token decode error: {str(e)}")
-        raise HTTPException(status_code=401, detail="Invalid token")
+        logger.error(f"Error getting user from Clerk: {str(e)}")
+        raise HTTPException(status_code=401, detail="Invalid authentication")
 
 # Pydantic schemas for onboarding
 class OnboardingResponse(BaseModel):

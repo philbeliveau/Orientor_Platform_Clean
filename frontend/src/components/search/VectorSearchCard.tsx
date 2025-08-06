@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import axios from 'axios';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useClerkApi } from '@/services/clerkApi';
+import { useAuth } from '@clerk/nextjs';
 
 interface SearchResult {
   id: string;
@@ -15,6 +16,8 @@ interface SearchResult {
 }
 
 export default function VectorSearchCard() {
+  const api = useClerkApi();
+  const { isSignedIn } = useAuth();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -22,17 +25,16 @@ export default function VectorSearchCard() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim() || !isSignedIn) return;
     
     setLoading(true);
     setError(null);
 
     try {
-      const response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/vector/search`, {
+      const data = await api.post<{ results: SearchResult[] }>('/api/v1/vector/search', {
         query: query
       });
       
-      const data = response.data as { results: SearchResult[] };
       // Show only top 3 results for the compact card
       setResults(data.results.slice(0, 3));
     } catch (err) {

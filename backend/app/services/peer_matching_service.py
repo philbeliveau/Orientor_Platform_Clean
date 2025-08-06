@@ -101,13 +101,13 @@ def get_users_with_embeddings(db: Session) -> List[Dict[str, Any]]:
         logger.error(f"Error getting users with embeddings: {str(e)}")
         return []
 
-def find_similar_peers(db: Session, user_id: int, embedding: List[float], top_n: int = 5) -> List[Tuple[int, float]]:
+def find_similar_peers(db: Session, user_id: str, embedding: List[float], top_n: int = 5) -> List[Tuple[str, float]]:
     """
     Find similar peers for a given user
     
     Args:
         db: Database session
-        user_id: ID of the user
+        user_id: Clerk user ID of the user
         embedding: User's embedding
         top_n: Number of similar peers to find
         
@@ -116,7 +116,7 @@ def find_similar_peers(db: Session, user_id: int, embedding: List[float], top_n:
     """
     try:
         # Get all other users
-        other_profiles = db.query(UserProfile).filter(UserProfile.user_id != user_id).all()
+        other_profiles = db.query(UserProfile).join(User).filter(User.clerk_user_id != user_id).all()
         
         # Calculate similarities
         similarities = []
@@ -150,7 +150,7 @@ def find_similar_peers(db: Session, user_id: int, embedding: List[float], top_n:
         logger.error(f"Error finding similar peers: {str(e)}")
         return []
 
-def update_suggested_peers(db: Session, user_id: int, similar_peers: List[Tuple[int, float]]) -> bool:
+def update_suggested_peers(db: Session, user_id: str, similar_peers: List[Tuple[str, float]]) -> bool:
     """
     Update the suggested_peers table for a user
     
@@ -192,7 +192,7 @@ def update_suggested_peers(db: Session, user_id: int, similar_peers: List[Tuple[
         logger.error(f"Error updating suggested peers: {str(e)}")
         return False
 
-def generate_peer_suggestions(db: Session, user_id: int, top_n: int = 5) -> bool:
+def generate_peer_suggestions(db: Session, user_id: str, top_n: int = 5) -> bool:
     """
     Generate peer suggestions for a user
     
@@ -239,7 +239,7 @@ def generate_peer_suggestions(db: Session, user_id: int, top_n: int = 5) -> bool
         logger.error(f"Error generating peer suggestions: {str(e)}")
         return False
 
-async def ensure_compatibility_vector(db: Session, user_id: int) -> Optional[Dict[str, Any]]:
+async def ensure_compatibility_vector(db: Session, user_id: str) -> Optional[Dict[str, Any]]:
     """
     Ensure user has a compatibility vector, generating if needed.
     
@@ -420,9 +420,9 @@ def calculate_personality_compatibility(
 
 async def find_compatible_peers(
     db: Session, 
-    user_id: int, 
+    user_id: str, 
     top_n: int = 5
-) -> List[Tuple[int, float, Dict[str, Any]]]:
+) -> List[Tuple[str, float, Dict[str, Any]]]:
     """
     Find compatible peers using enhanced compatibility analysis.
     
@@ -583,8 +583,8 @@ def generate_compatibility_explanation(
 
 async def update_suggested_peers_enhanced(
     db: Session, 
-    user_id: int, 
-    compatible_peers: List[Tuple[int, float, Dict[str, Any]]]
+    user_id: str, 
+    compatible_peers: List[Tuple[str, float, Dict[str, Any]]]
 ) -> bool:
     """
     Update suggested_peers table with enhanced compatibility data.
@@ -628,7 +628,7 @@ async def update_suggested_peers_enhanced(
         logger.error(f"Error updating enhanced suggested peers: {e}")
         return False
 
-async def generate_enhanced_peer_suggestions(db: Session, user_id: int, top_n: int = 5) -> bool:
+async def generate_enhanced_peer_suggestions(db: Session, user_id: str, top_n: int = 5) -> bool:
     """
     Generate enhanced peer suggestions using compatibility analysis.
     
@@ -678,4 +678,4 @@ def run_peer_matching_script() -> bool:
         return True
     except Exception as e:
         logger.error(f"Error running peer matching script: {str(e)}")
-        return False 
+        return False

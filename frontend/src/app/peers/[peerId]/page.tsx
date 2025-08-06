@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import axios from 'axios';
+import { useAuth, useUser } from '@clerk/nextjs';
+import { useClerkApi } from '@/services/clerkApi';
 
 // Define API URL with fallback and trim any trailing spaces
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -24,6 +25,9 @@ interface PeerDetails {
 }
 
 const PeerDetailPage: React.FC = () => {
+  const { isLoaded, isSignedIn } = useUser();
+  const { getToken } = useAuth();
+  const api = useClerkApi();
   const [peer, setPeer] = useState<PeerDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,29 +36,50 @@ const PeerDetailPage: React.FC = () => {
   const peerId = params?.peerId as string;
 
   useEffect(() => {
-    if (peerId) {
+    if (peerId && isLoaded) {
       fetchPeerDetails();
     }
-  }, [peerId]);
+  }, [peerId, isLoaded, isSignedIn]);
+
+  // Show loading while checking authentication
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg animate-pulse">
+            <div className="p-8">
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded mb-4"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mb-8"></div>
+              <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to sign-in if not authenticated
+  if (!isSignedIn) {
+    router.push('/sign-in');
+    return null;
+  }
 
   const fetchPeerDetails = async () => {
+    if (!isLoaded || !isSignedIn) {
+      if (isLoaded && !isSignedIn) {
+        router.push('/sign-in');
+      }
+      return;
+    }
+
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        router.push('/login');
-        return;
-      }
 
       // Fetch from compatible peers endpoint and find the specific peer
-      const response = await axios.get<PeerDetails[]>(`${cleanApiUrl}/peers/compatible`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      const response = await api.get<PeerDetails[]>('/api/v1/peers/compatible');
 
-      const peerDetail = response.data.find((p: PeerDetails) => p.user_id.toString() === peerId);
+      const peerDetail = response.find((p: PeerDetails) => p.user_id.toString() === peerId);
       
       if (!peerDetail) {
         setError('Peer not found');
@@ -66,7 +91,7 @@ const PeerDetailPage: React.FC = () => {
     } catch (err: any) {
       console.error('Error fetching peer details:', err);
       if (err.response?.status === 401) {
-        router.push('/login');
+        router.push('/sign-in');
         return;
       }
       setError('Failed to load peer details');

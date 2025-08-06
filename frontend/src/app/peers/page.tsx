@@ -1,9 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
-import axios from 'axios';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuth, useUser } from '@clerk/nextjs';
+import { useClerkApi } from '@/services/clerkApi';
 
 // Define API URL with fallback and trim any trailing spaces
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -36,6 +37,9 @@ interface EnhancedPeerProfile {
 
 export default function SuggestedPeersPage() {
   const router = useRouter();
+  const { isLoaded, isSignedIn } = useUser();
+  const { getToken } = useAuth();
+  const api = useClerkApi();
   const [peers, setPeers] = useState<EnhancedPeerProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,27 +47,40 @@ export default function SuggestedPeersPage() {
 
   useEffect(() => {
     fetchPeers();
-  }, [router, viewMode]);
+  }, [isLoaded, isSignedIn, viewMode]);
+
+  // Show loading while checking authentication
+  if (!isLoaded) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p className="ml-3 text-gray-600">Loading...</p>
+      </div>
+    );
+  }
+
+  // Redirect to sign-in if not authenticated
+  if (!isSignedIn) {
+    router.push('/sign-in');
+    return null;
+  }
 
   const fetchPeers = async () => {
+    if (!isLoaded || !isSignedIn) {
+      if (isLoaded && !isSignedIn) {
+        router.push('/sign-in');
+      }
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
+      const endpoint = viewMode === 'compatible' ? '/api/v1/peers/compatible' : '/api/v1/peers/suggested';
+      const peers = await api.get<EnhancedPeerProfile[]>(endpoint);
       
-      const endpoint = viewMode === 'compatible' ? '/peers/compatible' : '/peers/suggested';
-      const response = await axios.get<EnhancedPeerProfile[]>(`${cleanApiUrl}${endpoint}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
-      setPeers(response.data);
+      setPeers(peers);
     } catch (err: any) {
       console.error('Error fetching peers:', err);
       setError(err.response?.data?.detail || 'Failed to load suggested peers');
@@ -73,15 +90,10 @@ export default function SuggestedPeersPage() {
   };
 
   const refreshSuggestions = async () => {
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) return;
+    if (!isSignedIn) return;
 
-      await axios.post(`${cleanApiUrl}/peers/refresh`, {}, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+    try {
+      await api.post('/api/v1/peers/refresh', {});
       
       // Refresh the peer list
       await fetchPeers();
@@ -237,4 +249,4 @@ export default function SuggestedPeersPage() {
       </div>
     </MainLayout>
   );
-} 
+}

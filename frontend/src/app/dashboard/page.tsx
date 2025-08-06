@@ -116,7 +116,17 @@ export default function Dashboard() {
       try {
         setJobsLoading(true);
         setJobsError(null);
-        const response = await getJobRecommendations() as JobRecommendationsResponse;
+        
+        // Wait for Clerk to be fully loaded
+        if (!isLoaded || !user?.id) {
+          return;
+        }
+        
+        const token = await getToken();
+        if (!token) {
+          throw new Error('Authentication token not available');
+        }
+        const response = await getJobRecommendations(token) as JobRecommendationsResponse;
         
         if (response && response.recommendations) {
           const limitedRecommendations = response.recommendations.slice(0, 3);
@@ -162,7 +172,7 @@ export default function Dashboard() {
         setPeersLoading(true);
         setPeersError(null);
         
-        const peers = await api.get<EnhancedPeerProfile[]>('/peers/compatible');
+        const peers = await api.get<EnhancedPeerProfile[]>('/api/v1/peers/compatible');
         
         // Get top 3 peers for homepage
         const topPeers = peers.slice(0, 3);
@@ -204,8 +214,15 @@ export default function Dashboard() {
     setSelectedJob(job);
   };
 
-  // Show loading while checking authentication
-  if (!isLoaded) {
+  // Set user ID once available
+  useEffect(() => {
+    if (user?.id && !currentUserId) {
+      setCurrentUserId(parseInt(user.id));
+    }
+  }, [user?.id]);
+
+  // Show loading while checking authentication or during SSR
+  if (typeof window === 'undefined' || !isLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -218,6 +235,16 @@ export default function Dashboard() {
   if (!isSignedIn) {
     router.push('/sign-in');
     return null;
+  }
+
+  // Ensure all Clerk data is loaded before rendering
+  if (!user || !currentUserId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p className="ml-3 text-gray-600">Loading user data...</p>
+      </div>
+    );
   }
 
   return (

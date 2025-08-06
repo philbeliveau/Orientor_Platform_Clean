@@ -21,10 +21,15 @@ class Settings(BaseSettings):
     RAILWAY_DATABASE_URL: Optional[str] = os.getenv("RAILWAY_DATABASE_URL")
     LOCAL_DATABASE_URL: Optional[str] = os.getenv("LOCAL_DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/orientor")
 
-    # JWT Settings
+    # JWT Settings with Security Validation
     SECRET_KEY: str = os.getenv("SECRET_KEY", "development-secret-key-replace-in-production")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    
+    # Clerk Configuration
+    CLERK_SECRET_KEY: Optional[str] = os.getenv("CLERK_SECRET_KEY")
+    CLERK_PUBLISHABLE_KEY: Optional[str] = os.getenv("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY")
+    CLERK_DOMAIN: Optional[str] = os.getenv("NEXT_PUBLIC_CLERK_DOMAIN")
 
     # OpenAI Settings
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
@@ -82,6 +87,20 @@ class Settings(BaseSettings):
         logger.info(f"Is Railway: {self.is_railway}")
         logger.info(f"Database URL configured: {bool(self.get_database_url)}")
         logger.info(f"OpenAI API Key configured: {bool(self.OPENAI_API_KEY)}")
+        
+        # Security Configuration Status
+        logger.info("=== Security Configuration ===")
+        logger.info(f"Clerk Secret Key configured: {bool(self.CLERK_SECRET_KEY)}")
+        logger.info(f"Clerk Publishable Key configured: {bool(self.CLERK_PUBLISHABLE_KEY)}")
+        logger.info(f"Clerk Domain configured: {bool(self.CLERK_DOMAIN)}")
+        
+        # Security Warnings
+        if self.is_production and self.SECRET_KEY == "development-secret-key-replace-in-production":
+            logger.error("🚨 CRITICAL: Using default SECRET_KEY in production!")
+        
+        if not self.CLERK_SECRET_KEY and self.is_production:
+            logger.error("🚨 CRITICAL: CLERK_SECRET_KEY not configured in production!")
+            
         logger.info("=============================")
 
     class Config:

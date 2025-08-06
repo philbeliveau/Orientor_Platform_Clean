@@ -10,6 +10,9 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=True)  # Made nullable for Clerk users
     clerk_user_id = Column(String(255), unique=True, index=True, nullable=True)  # New Clerk ID field
+    first_name = Column(String(100), nullable=True)  # Clerk user first name
+    last_name = Column(String(100), nullable=True)   # Clerk user last name
+    is_active = Column(Boolean, default=True, nullable=False)  # User account status
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     onboarding_completed = Column(Boolean, default=False, nullable=False)
     

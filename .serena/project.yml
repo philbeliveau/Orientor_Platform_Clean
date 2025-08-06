@@ -1,0 +1,45 @@
+name: Orientor_Platform_Clean
+description: Orientor Platform - Clean Version
+language: python  # Primary language for the project
+language_servers:
+  - python
+  - typescript
+  - javascript
+  - tsx
+  - jsx
+
+# Project-specific configurations
+project_type: fullstack
+main_directories:
+  - backend
+  - frontend
+  
+# Optional: specify which tools should be available for this project
+enabled_tools:
+  - read_file
+  - create_text_file
+  - list_dir
+  - find_file
+  - replace_regex
+  - delete_lines
+  - replace_lines
+  - insert_at_line
+  - search_for_pattern
+  - execute_shell_command
+  - write_memory
+  - read_memory
+  - list_memories
+  - delete_memory
+  - find_symbol
+  - find_referencing_symbols
+  - get_symbols_overview
+  - replace_symbol_body
+  - insert_after_symbol
+  - insert_before_symbol
+
+# Optional: Add project-specific contexts or modes
+modes:
+  - default
+  - development
+  - testing
+  - production

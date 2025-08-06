@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/courses", tags=["courses"])
 
 # Import the unified authentication system
-from ..utils.auth import get_current_user_unified as get_current_user
+from ..utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 
 @router.post("/courses", response_model=CourseSchema)
 async def create_course(
