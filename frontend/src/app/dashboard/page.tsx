@@ -66,6 +66,7 @@ export default function Dashboard() {
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | undefined>(undefined);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [peers, setPeers] = useState<EnhancedPeerProfile[]>([]);
   const [peersLoading, setPeersLoading] = useState(true);
   const [peersError, setPeersError] = useState<string | null>(null);
@@ -96,12 +97,28 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchHollandResults = async () => {
       try {
-        if (!isLoaded || !user?.id) {
+        // Enhanced authentication guard
+        if (!isLoaded || !isSignedIn || !user?.id) {
+          console.log('[DEBUG] Skipping Holland results fetch - user not ready:', { 
+            isLoaded, 
+            isSignedIn, 
+            userId: user?.id 
+          });
           return;
         }
-        
+
+        // Check token availability before making request
+        const token = await getToken();
+        if (!token) {
+          console.log('[DEBUG] Skipping Holland results fetch - no token available');
+          setError('Authentication token not available');
+          return;
+        }
+
+        console.log('[DEBUG] Fetching Holland results with token:', token.substring(0, 20) + '...');
         const results = await api.getHollandResults();
         setHollandResults(results);
+        console.log('[DEBUG] Holland results fetched successfully');
       } catch (err) {
         console.error('Error fetching Holland results:', err);
         setError('Unable to fetch Holland results');
@@ -111,16 +128,31 @@ export default function Dashboard() {
     };
 
     fetchHollandResults();
-  }, [isLoaded, user?.id, api]);
+  }, [isLoaded, isSignedIn, user?.id]); // Removed api and getToken to prevent infinite loops
 
   // Fetch job recommendations
   useEffect(() => {
     const fetchJobRecommendations = async () => {
       try {
-        // Wait for Clerk to be fully loaded
-        if (!isLoaded || !user?.id) {
+        // Enhanced authentication guard
+        if (!isLoaded || !isSignedIn || !user?.id) {
+          console.log('[DEBUG] Skipping job recommendations fetch - user not ready:', { 
+            isLoaded, 
+            isSignedIn, 
+            userId: user?.id 
+          });
           return;
         }
+
+        // Check token availability before making request
+        const token = await getToken();
+        if (!token) {
+          console.log('[DEBUG] Skipping job recommendations fetch - no token available');
+          setJobsError('Authentication token not available');
+          return;
+        }
+
+        console.log('[DEBUG] Fetching job recommendations with token:', token.substring(0, 20) + '...');
         
         setJobsLoading(true);
         setJobsError(null);
@@ -175,7 +207,7 @@ export default function Dashboard() {
         setPeersLoading(true);
         setPeersError(null);
         
-        const peers = await api.request<EnhancedPeerProfile[]>('/peers/compatible', {
+        const peers = await api.request<EnhancedPeerProfile[]>('/api/v1/peers/compatible', {
           method: 'GET'
         });
         
@@ -219,10 +251,25 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchNotes = async () => {
       try {
-        if (!isLoaded || !user?.id) {
+        // Enhanced authentication guard
+        if (!isLoaded || !isSignedIn || !user?.id) {
+          console.log('[DEBUG] Skipping user notes fetch - user not ready:', { 
+            isLoaded, 
+            isSignedIn, 
+            userId: user?.id 
+          });
           return;
         }
-        
+
+        // Check token availability before making request
+        const token = await getToken();
+        if (!token) {
+          console.log('[DEBUG] Skipping user notes fetch - no token available');
+          setNotesError('Authentication token not available');
+          return;
+        }
+
+        console.log('[DEBUG] Fetching user notes with token:', token.substring(0, 20) + '...');
         setNotesLoading(true);
         setNotesError(null);
         
@@ -239,18 +286,42 @@ export default function Dashboard() {
     };
 
     fetchNotes();
-  }, [isLoaded, user?.id, api]);
+  }, [isLoaded, isSignedIn, user?.id]); // Removed api and getToken to prevent infinite loops
 
   const handleSelectJob = (job: Job) => {
     setSelectedJob(job);
   };
 
-  // Set user ID once available
+  // Fetch user profile to get database user ID
   useEffect(() => {
-    if (user?.id && !currentUserId) {
-      setCurrentUserId(parseInt(user.id));
-    }
-  }, [user?.id]);
+    const fetchUserProfile = async () => {
+      try {
+        if (!isLoaded || !isSignedIn || !user?.id) {
+          console.log('[DEBUG] Skipping user profile fetch - user not ready:', { 
+            isLoaded, 
+            isSignedIn, 
+            userId: user?.id 
+          });
+          return;
+        }
+
+        console.log('[DEBUG] Fetching user profile to get database ID...');
+        const profile = await api.getUserProfile();
+        setUserProfile(profile);
+        
+        if (profile && profile.id) {
+          setCurrentUserId(profile.id);
+          console.log('[DEBUG] Database user ID set:', profile.id);
+        } else {
+          console.warn('[DEBUG] No id in profile response:', profile);
+        }
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+      }
+    };
+
+    fetchUserProfile();
+  }, [isLoaded, isSignedIn, user?.id]);
 
   // Show loading while checking authentication or during SSR
   if (typeof window === 'undefined' || !isLoaded) {

@@ -72,7 +72,7 @@ class ClerkApiService {
   }
 
   async getUserProfile(token: string) {
-    return this.request('/api/v1/user/profile', {
+    return this.request('/user/profile', {
       method: 'GET',
       token,
     });
@@ -104,11 +104,33 @@ export const useClerkApi = () => {
     apiMethod: (token: string, ...args: any[]) => Promise<T>,
     ...args: any[]
   ): Promise<T> => {
-    const token = await getToken();
-    if (!token) {
-      throw new Error('No authentication token available');
+    try {
+      // CRITICAL: Request JWT token with the template we created
+      console.log('[Auth] Requesting JWT token with orientor-jwt template...');
+      const token = await getToken({ template: 'orientor-jwt' });
+      
+      if (!token) {
+        console.error('[Auth] No token returned from Clerk');
+        throw new Error('No authentication token available');
+      }
+      
+      // Validate token format - reject session tokens
+      if (token.startsWith('sess_')) {
+        console.error('[Auth] ❌ Got session token instead of JWT:', token.substring(0, 20));
+        throw new Error('Invalid token type - got session token instead of JWT');
+      }
+      
+      if (!token.startsWith('eyJ')) {
+        console.error('[Auth] ❌ Invalid JWT format:', token.substring(0, 20));
+        throw new Error('Invalid JWT token format');
+      }
+      
+      console.log('[Auth] ✅ JWT token obtained:', token.substring(0, 30) + '...');
+      return apiMethod(token, ...args);
+    } catch (error) {
+      console.error('[Auth] Token acquisition failed:', error);
+      throw error;
     }
-    return apiMethod(token, ...args);
   };
 
   return {

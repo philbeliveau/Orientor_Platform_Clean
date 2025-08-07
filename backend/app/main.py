@@ -1,9 +1,10 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 import os
 import logging
+import time
 
 # Import routers directly
 from app.routers.user import router as auth_router
@@ -66,28 +67,70 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Configure CORS
-origins = [
-    "http://localhost:3000",  # Frontend development server
-    "http://localhost:8000",  # Backend when served 
-    "https://navigoproject.vercel.app",  # Production frontend
-    "http://localhost:5173",  # Vite development server
-    "https://localhost:3000",  # HTTPS local development
-    "https://localhost:5173",  # HTTPS Vite development
-    "https://*.up.railway.app",  # Railway domains
-    "https://*.railway.app",    # Railway domains  
-    "https://*.clerk.accounts.dev",  # Clerk development domains
-    "https://*.clerk.com",  # Clerk production domains
-]
+if os.getenv("ENV", "development") == "development":
+    logger.warning("⚠️ Development CORS enabled - DO NOT USE IN PRODUCTION")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Allow all in development
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+        max_age=3600,
+    )
+else:
+    # Production CORS settings
+    origins = [
+        "http://localhost:3000",  # Frontend development server
+        "http://localhost:8000",  # Backend when served 
+        "https://navigoproject.vercel.app",  # Production frontend
+        "http://localhost:5173",  # Vite development server
+        "https://localhost:3000",  # HTTPS local development
+        "https://localhost:5173",  # HTTPS Vite development
+        "https://*.up.railway.app",  # Railway domains
+        "https://*.railway.app",    # Railway domains  
+        "https://*.clerk.accounts.dev",  # Clerk development domains
+        "https://*.clerk.com",  # Clerk production domains
+    ]
+    
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+        allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+        expose_headers=["Set-Cookie"],
+        max_age=600,
+    )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
-    expose_headers=["Set-Cookie"],
-    max_age=600,
-)
+# Add debug middleware
+@app.middleware("http")
+async def auth_debug_middleware(request: Request, call_next):
+    """Debug middleware to trace authentication issues"""
+    
+    # Only log API requests
+    if "/api/" in str(request.url):
+        auth_header = request.headers.get("authorization", "None")
+        
+        if auth_header != "None":
+            # Log the request
+            token_type = "JWT" if auth_header.startswith("Bearer eyJ") else "Session" if "sess_" in auth_header else "Unknown"
+            logger.info(f"🔐 Auth Request: {request.method} {request.url.path}")
+            logger.info(f"   Token Type: {token_type}")
+            logger.info(f"   Token Preview: {auth_header[:60]}...")
+    
+    # Process request
+    start_time = time.time()
+    response = await call_next(request)
+    duration = time.time() - start_time
+    
+    # Log failures
+    if response.status_code == 401 and "/api/" in str(request.url):
+        logger.warning(f"❌ 401 Unauthorized: {request.url.path} ({duration:.2f}s)")
+    elif response.status_code == 404 and "/api/" in str(request.url):
+        logger.warning(f"❌ 404 Not Found: {request.url.path} ({duration:.2f}s)")
+    
+    return response
 
 # Print debug information about routers
 try:
@@ -128,8 +171,9 @@ app.include_router(profiles_router, prefix="/api/v1")
 logger.info("Profiles router included successfully")
 # Include remaining routers  
 # Standardize all API routes with /api/v1 prefix
+# Include all core routers with /api/v1 prefix for standardization
 app.include_router(test_router, prefix="/api/v1")
-app.include_router(conversations_router, prefix="/api/v1")
+app.include_router(conversations_router, prefix="/api/v1") 
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(share_router, prefix="/api/v1")
 app.include_router(chat_analytics_router, prefix="/api/v1")
@@ -203,6 +247,26 @@ async def startup_event():
     try:
         logger.info("🚀 Application startup initiated")
         
+        # Run security validation first
+        logger.info("🔍 Running security validation...")
+        try:
+            from .utils.security_validation import validate_production_security
+            security_results = validate_production_security()
+            
+            if not security_results["deployment_safe"]:
+                critical_count = len(security_results["issues"]["critical"])
+                logger.error(f"🚨 SECURITY VALIDATION FAILED: {critical_count} critical issues found")
+                
+                # In production, we should consider failing startup
+                is_production = os.getenv("ENVIRONMENT") == "production" or os.getenv("RAILWAY_ENVIRONMENT") == "production"
+                if is_production and critical_count > 0:
+                    logger.critical("❌ WARNING: Critical security issues detected in production")
+            else:
+                logger.info("✅ Security validation passed")
+                
+        except Exception as e:
+            logger.error(f"❌ Security validation error: {e}")
+        
         # Load models if available
         try:
             load_models()
@@ -259,28 +323,6 @@ if not os.getenv("SECRET_KEY"):
     os.environ["SECRET_KEY"] = "development-secret-key-change-in-production-12345678901234567890"
     logger.warning("⚠️ Using default SECRET_KEY for development - change for production!")
 
-@app.on_event("startup")
-async def startup_event():
-    """Run security validation on startup"""
-    logger.info("🔍 Running security validation...")
-    
-    try:
-        from .utils.security_validation import validate_production_security
-        security_results = validate_production_security()
-        
-        if not security_results["deployment_safe"]:
-            critical_count = len(security_results["issues"]["critical"])
-            logger.error(f"🚨 SECURITY VALIDATION FAILED: {critical_count} critical issues found")
-            
-            # In production, we should consider failing startup
-            is_production = os.getenv("ENVIRONMENT") == "production" or os.getenv("RAILWAY_ENVIRONMENT") == "production"
-            if is_production and critical_count > 0:
-                logger.critical("❌ WARNING: Critical security issues detected in production")
-        else:
-            logger.info("✅ Security validation passed")
-            
-    except Exception as e:
-        logger.error(f"❌ Security validation error: {e}")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))  # Use Railway-assigned port
