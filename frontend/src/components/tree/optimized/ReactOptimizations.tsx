@@ -127,21 +127,30 @@ export const OptimizedTreeNode = memo<{
 
 OptimizedTreeNode.displayName = 'OptimizedTreeNode';
 
+// Optimized event handler factories
+export const createNodeClickHandler = (callback: (node: PositionedNode) => void) => {
+  return (node: PositionedNode) => {
+    callback(node);
+  };
+};
+
+export const createNodeHoverHandler = (callback: (node: PositionedNode | null) => void) => {
+  return (node: PositionedNode | null) => {
+    callback(node);
+  };
+};
+
 // Custom hook for optimized event handlers
 export const useOptimizedHandlers = () => {
-  const createNodeClickHandler = useCallback((callback: (node: PositionedNode) => void) => {
-    return useCallback((node: PositionedNode) => {
-      callback(node);
-    }, [callback]);
+  const createNodeClickHandlerMemo = useCallback((callback: (node: PositionedNode) => void) => {
+    return createNodeClickHandler(callback);
   }, []);
 
-  const createNodeHoverHandler = useCallback((callback: (node: PositionedNode | null) => void) => {
-    return useCallback((node: PositionedNode | null) => {
-      callback(node);
-    }, [callback]);
+  const createNodeHoverHandlerMemo = useCallback((callback: (node: PositionedNode | null) => void) => {
+    return createNodeHoverHandler(callback);
   }, []);
 
-  return { createNodeClickHandler, createNodeHoverHandler };
+  return { createNodeClickHandler: createNodeClickHandlerMemo, createNodeHoverHandler: createNodeHoverHandlerMemo };
 };
 
 // Optimized connection renderer
@@ -270,7 +279,7 @@ export const useOptimizedFilter = (
   }, [nodes, searchQuery, nodeTypes]);
 };
 
-export default {
+const ReactOptimizations = {
   OptimizedTreeNode,
   OptimizedConnection,
   VirtualizedNodeList,
@@ -278,3 +287,5 @@ export default {
   useDebouncedSearch,
   useOptimizedFilter
 };
+
+export default ReactOptimizations;

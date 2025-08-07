@@ -127,7 +127,7 @@ class CourseAnalysisService {
       });
     }
     
-    const url = `/api/v1/courses${params.toString() ? `?${params.toString()}` : ''}`;
+    const url = `/api/v1/courses/${params.toString() ? `?${params.toString()}` : ''}`;
     const response = await clerkApiService.request<Course[]>(url, {
       method: 'GET',
       token
@@ -136,7 +136,7 @@ class CourseAnalysisService {
   }
 
   async getCourse(courseId: number, token: string): Promise<Course> {
-    const response = await clerkApiService.request<Course>(`/api/v1/courses/${courseId}`, {
+    const response = await clerkApiService.request<Course>(`/api/v1/courses/${courseId}/`, {
       method: 'GET',
       token
     });
@@ -144,7 +144,7 @@ class CourseAnalysisService {
   }
 
   async createCourse(courseData: CourseCreate, token: string): Promise<Course> {
-    const response = await clerkApiService.request<Course>('/api/v1/courses', {
+    const response = await clerkApiService.request<Course>('/api/v1/courses/', {
       method: 'POST',
       body: JSON.stringify(courseData),
       token
@@ -153,7 +153,7 @@ class CourseAnalysisService {
   }
 
   async updateCourse(courseId: number, updateData: Partial<CourseCreate>, token: string): Promise<Course> {
-    const response = await clerkApiService.request<Course>(`/api/v1/courses/${courseId}`, {
+    const response = await clerkApiService.request<Course>(`/api/v1/courses/${courseId}/`, {
       method: 'PUT',
       body: JSON.stringify(updateData),
       token
@@ -175,7 +175,7 @@ class CourseAnalysisService {
     focusAreas?: string[],
     userContext?: any
   ): Promise<AnalysisSession> {
-    const response = await clerkApiService.request<AnalysisSession>(`/api/v1/courses/${courseId}/targeted-analysis`, {
+    const response = await clerkApiService.request<AnalysisSession>(`/api/v1/courses/${courseId}/targeted-analysis/`, {
       method: 'POST',
       body: JSON.stringify({
         focus_areas: focusAreas,
@@ -222,7 +222,7 @@ class CourseAnalysisService {
 
   // Course Insights
   async getCourseInsights(courseId: number, token: string): Promise<PsychologicalInsight[]> {
-    const response = await clerkApiService.request<PsychologicalInsight[]>(`/api/v1/courses/${courseId}/insights`, {
+    const response = await clerkApiService.request<PsychologicalInsight[]>(`/api/v1/courses/${courseId}/insights/`, {
       method: 'GET',
       token
     });

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 import logging
 from uuid import uuid4
 
 from ..utils.database import get_db
+from ..utils.auth_cache import get_request_cache, RequestCache
 from ..models.user import User
 from ..models.course import Course, PsychologicalInsight, CareerSignal, ConversationLog, CareerProfileAggregate
 from ..schemas.course import (
@@ -30,33 +31,27 @@ from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_us
 
 @router.get("/", response_model=List[CourseSchema])
 async def get_courses(
+    request: Request,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    semester: Optional[str] = None,
+    year: Optional[int] = None,
+    subject_category: Optional[str] = None,
+    request_cache: RequestCache = Depends(get_request_cache)
 ):
-    """Get course catalog"""
-# ============================================================================
-# AUTHENTICATION MIGRATION - Secure Integration System
-# ============================================================================
-# This router has been migrated to use the unified secure authentication system
-# with integrated caching, security optimizations, and rollback support.
-# 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_with_db_sync
-# Current system: secure_auth_integration.get_current_user_secure_integrated
-# 
-# Benefits:
-# - AES-256 encryption for sensitive cache data
-# - Full SHA-256 cache keys (not truncated)
-# - Error message sanitization
-# - Multi-layer caching optimization  
-# - Zero-downtime rollback capability
-# - Comprehensive security monitoring
-# ============================================================================
+    """Get all courses for the current user with optional filtering."""
+    query = db.query(Course).filter(Course.user_id == current_user.id)
+    
+    if semester:
+        query = query.filter(Course.semester == semester)
+    if year:
+        query = query.filter(Course.year == year)
+    if subject_category:
+        query = query.filter(Course.subject_category == subject_category)
+    
+    return query.order_by(Course.created_at.desc()).all()
 
-
-    return []  # Implement actual logic
-
-@router.post("/courses", response_model=CourseSchema)
+@router.post("/", response_model=CourseSchema)
 async def create_course(
     course: CourseCreate,
     db: Session = Depends(get_db),
@@ -92,34 +87,14 @@ async def create_course(
             detail="Failed to create course"
         )
 
-@router.get("/courses", response_model=List[CourseSchema])
-async def get_user_courses(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    semester: Optional[str] = None,
-    year: Optional[int] = None,
-    subject_category: Optional[str] = None
-):
-    """
-    Get all courses for the current user with optional filtering.
-    """
-    query = db.query(Course).filter(Course.user_id == current_user.id)
-    
-    if semester:
-        query = query.filter(Course.semester == semester)
-    if year:
-        query = query.filter(Course.year == year)
-    if subject_category:
-        query = query.filter(Course.subject_category == subject_category)
-    
-    courses = query.order_by(Course.created_at.desc()).all()
-    return courses
 
-@router.get("/courses/{course_id}", response_model=CourseSchema)
+@router.get("/{course_id}", response_model=CourseSchema)
 async def get_course(
+    request: Request,
     course_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    request_cache: RequestCache = Depends(get_request_cache)
 ):
     """
     Get a specific course by ID.
@@ -137,7 +112,7 @@ async def get_course(
     
     return course
 
-@router.put("/courses/{course_id}", response_model=CourseSchema)
+@router.put("/{course_id}", response_model=CourseSchema)
 async def update_course(
     course_id: int,
     course_update: CourseUpdate,
@@ -167,7 +142,7 @@ async def update_course(
     db.refresh(course)
     return course
 
-@router.delete("/courses/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{course_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_course(
     course_id: int,
     db: Session = Depends(get_db),
@@ -190,7 +165,7 @@ async def delete_course(
     db.delete(course)
     db.commit()
 
-@router.post("/courses/{course_id}/targeted-analysis", response_model=TargetedAnalysisResponse)
+@router.post("/{course_id}/targeted-analysis", response_model=TargetedAnalysisResponse)
 async def start_targeted_analysis(
     course_id: int,
     request: TargetedAnalysisRequest,
@@ -449,7 +424,7 @@ async def get_career_signals(
             detail="Failed to extract career signals"
         )
 
-@router.get("/courses/{course_id}/insights", response_model=List[PsychologicalInsightSchema])
+@router.get("/{course_id}/insights", response_model=List[PsychologicalInsightSchema])
 async def get_course_insights(
     course_id: int,
     db: Session = Depends(get_db),

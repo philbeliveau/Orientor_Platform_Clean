@@ -24,7 +24,7 @@ import asyncio
 import time
 import statistics
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple, Union
+from typing import Dict, List, Any, Optional, Tuple, Union, Set
 from dataclasses import dataclass, field
 from contextlib import asynccontextmanager
 from collections import defaultdict
@@ -191,6 +191,10 @@ class AuthPerformanceMonitor:
         if not self.enable_system_monitoring:
             return
             
+        # Initialize background task tracking if not already present
+        if not hasattr(self, '_background_tasks'):
+            self._background_tasks: Set[asyncio.Task] = set()
+            
         self._monitoring_active = True
         
         async def monitor_loop():
@@ -225,14 +229,43 @@ class AuthPerformanceMonitor:
                     logger.error(f"System monitoring error: {e}")
                     await asyncio.sleep(interval_seconds)
         
-        # Start monitoring in background
-        asyncio.create_task(monitor_loop())
+        # FIXED: Proper task management instead of fire-and-forget
+        task = asyncio.create_task(monitor_loop())
+        self._background_tasks.add(task)
+        # Clean up completed tasks
+        task.add_done_callback(self._background_tasks.discard)
+        
         logger.info("📊 System monitoring started")
-
     def stop_system_monitoring(self):
         """Stop system resource monitoring"""
         self._monitoring_active = False
         logger.info("📊 System monitoring stopped")
+
+    async def cleanup(self):
+        """Clean up background tasks and resources"""
+        self._monitoring_active = False
+        
+        if hasattr(self, '_background_tasks'):
+            # Cancel all background tasks
+            for task in self._background_tasks:
+                if not task.done():
+                    task.cancel()
+            
+            # Wait for tasks to complete cancellation
+            if self._background_tasks:
+                try:
+                    await asyncio.gather(*self._background_tasks, return_exceptions=True)
+                except Exception as e:
+                    logger.warning(f"Error during background task cleanup: {e}")
+            
+            self._background_tasks.clear()
+        
+        logger.info("🧹 AuthPerformanceMonitor cleanup completed")
+    
+    def __del__(self):
+        """Destructor to ensure cleanup on garbage collection"""
+        if hasattr(self, '_background_tasks') and self._background_tasks:
+            logger.warning("⚠️ AuthPerformanceMonitor destroyed with active background tasks - cleanup should be called explicitly")
 
     async def run_comprehensive_benchmark(self,
                                         test_scenarios: List[Dict[str, Any]],

@@ -104,21 +104,39 @@ else:
         max_age=600,
     )
 
+# Global variable to store recent requests for middleware
+_middleware_recent_requests = set()
+
 # Add debug middleware
 @app.middleware("http")
 async def auth_debug_middleware(request: Request, call_next):
     """Debug middleware to trace authentication issues"""
+    global _middleware_recent_requests
     
-    # Only log API requests
+    # Only log API requests (reduced logging to prevent spam)
     if "/api/" in str(request.url):
         auth_header = request.headers.get("authorization", "None")
         
         if auth_header != "None":
-            # Log the request
-            token_type = "JWT" if auth_header.startswith("Bearer eyJ") else "Session" if "sess_" in auth_header else "Unknown"
-            logger.info(f"🔐 Auth Request: {request.method} {request.url.path}")
-            logger.info(f"   Token Type: {token_type}")
-            logger.info(f"   Token Preview: {auth_header[:60]}...")
+            # Only log unique requests to reduce log spam
+            request_signature = f"{request.method}:{request.url.path}:{hash(auth_header[:20])}"
+            
+            # Check if we've seen this request recently (using a simple in-memory set)
+            current_time = int(time.time() / 10)  # 10-second windows
+            cache_key = f"{request_signature}:{current_time}"
+            
+            # Clean old entries (keep only current and previous window)
+            _middleware_recent_requests = {
+                key for key in _middleware_recent_requests 
+                if key.split(':')[-1] in [str(current_time), str(current_time - 1)]
+            }
+            
+            # Only log if this is a new request
+            if cache_key not in _middleware_recent_requests:
+                _middleware_recent_requests.add(cache_key)
+                token_type = "JWT" if auth_header.startswith("Bearer eyJ") else "Session" if "sess_" in auth_header else "Unknown"
+                logger.debug(f"🔐 Auth Request: {request.method} {request.url.path}")
+                logger.debug(f"   Token Type: {token_type}")
     
     # Process request
     start_time = time.time()

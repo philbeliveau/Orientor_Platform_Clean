@@ -27,11 +27,11 @@ function getNodeStyle(type: string) {
 function convertToFlowGraph(root: SkillNode): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
-  let yGap = 350;
-  let xGap = 300;
-  let skillMap: Record<string, { x: number, y: number }> = {};
+  const yGap = 350;
+  const xGap = 300;
+  const skillMap: Record<string, { x: number, y: number }> = {};
 
-  let queue: { node: SkillNode; depth: number; column: number; parentId?: string; type?: string }[] = [
+  const queue: { node: SkillNode; depth: number; column: number; parentId?: string; type?: string }[] = [
     { node: root, depth: 0, column: 2, type: 'root' },
   ];
 
@@ -171,7 +171,7 @@ function convertToFlowGraph(root: SkillNode): { nodes: Node[]; edges: Edge[] } {
     }
 
     // 🧠 NEW: auto-detect and link similar skills across paths
-    for (let targetId in skillMap) {
+    for (const targetId in skillMap) {
       if (targetId !== id && node.skillDescription === nodes.find(n => n.id === targetId)?.data?.label?.props?.children?.[0]) {
         edges.push({
           id: `${id}-nudge-${targetId}`,

@@ -323,7 +323,7 @@ async def get_current_user_with_db_sync(
     """
     try:
         # Get Clerk user data using cached authentication
-        from .auth_cache import get_request_cache
+        from .auth_cache import get_request_cache, get_current_user_cached
         request_cache = get_request_cache()
         clerk_user_data = await get_current_user_cached(credentials, db, request_cache)
         

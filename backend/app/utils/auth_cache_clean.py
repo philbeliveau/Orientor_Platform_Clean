@@ -191,7 +191,7 @@ jwt_validation_cache = TTLCache(default_ttl=300)
 class JWKSCache:
     """
     Advanced JWKS cache with background refresh, fallback mechanisms,
-    and comprehensive error handling. Race condition in background refresh fixed.
+    and comprehensive error handling. Fixed AsyncHttpxClientWrapper error.
     """
     
     def __init__(self, jwks_url: str, refresh_interval: int = 7200):  # 2 hours
@@ -203,6 +203,8 @@ class JWKSCache:
         # FIXED: Use asyncio.Lock instead of boolean flag to prevent race conditions
         self._refresh_lock = None  # Will be initialized when first used
         self._fallback_cache: Optional[Dict[str, Any]] = None
+        # FIXED: Track background tasks to prevent orphaned httpx clients
+        self._background_tasks: Set[asyncio.Task] = set()
         self._stats = {
             "cache_hits": 0,
             "cache_misses": 0,
@@ -210,6 +212,13 @@ class JWKSCache:
             "failed_refreshes": 0,
             "fallback_uses": 0
         }
+    
+    def __del__(self):
+        """Cleanup any remaining background tasks on garbage collection"""
+        if hasattr(self, '_background_tasks'):
+            for task in self._background_tasks.copy():
+                if not task.done():
+                    task.cancel()
     
     def _get_refresh_lock(self):
         """Get or create the asyncio refresh lock"""
@@ -239,10 +248,14 @@ class JWKSCache:
             
             self._stats["cache_misses"] += 1
         
-        # FIXED: Use proper async lock instead of boolean flag
+        # FIXED: Proper task management instead of fire-and-forget
         refresh_lock = self._get_refresh_lock()
         if not refresh_lock.locked():
-            asyncio.create_task(self._refresh_jwks())
+            # Create and track background task
+            task = asyncio.create_task(self._refresh_jwks())
+            self._background_tasks.add(task)
+            # Clean up completed tasks
+            task.add_done_callback(self._background_tasks.discard)
         
         # If we have any cached data (even if stale), return it while refresh happens
         if self._cache is not None:
@@ -309,13 +322,27 @@ class JWKSCache:
             )
     
     async def _fetch_jwks_from_url(self) -> Dict[str, Any]:
-        """Fetch JWKS from the configured URL"""
+        """Fetch JWKS from the configured URL - FIXED: Proper context management"""
         timeout = httpx.Timeout(10.0, connect=5.0)  # 10s total, 5s connect
         
+        # FIXED: Use proper async context manager to prevent _state attribute errors
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.get(self.jwks_url)
             response.raise_for_status()
             return response.json()
+    
+    async def cleanup(self) -> None:
+        """Explicit cleanup method for graceful shutdown"""
+        # Cancel all background tasks
+        for task in self._background_tasks.copy():
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+        self._background_tasks.clear()
+        logger.info("🧹 JWKS cache cleanup completed")
     
     def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics for monitoring"""
@@ -325,7 +352,8 @@ class JWKSCache:
                 "cache_valid": self._is_cache_valid(),
                 "last_updated": self._last_updated.isoformat() if self._last_updated else None,
                 "has_fallback": self._fallback_cache is not None,
-                "cache_age_seconds": (datetime.now() - self._last_updated).total_seconds() if self._last_updated else None
+                "cache_age_seconds": (datetime.now() - self._last_updated).total_seconds() if self._last_updated else None,
+                "active_background_tasks": len([t for t in self._background_tasks if not t.done()])
             }
     
     def invalidate(self) -> None:
@@ -334,7 +362,6 @@ class JWKSCache:
             self._cache = None
             self._last_updated = None
         logger.info("🗑️ JWKS cache manually invalidated")
-
 # Global JWKS cache instance
 _jwks_cache: Optional[JWKSCache] = None
 

@@ -16,7 +16,7 @@ Features:
 import asyncio
 import json
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Set
 from pathlib import Path
 import logging
 
@@ -64,6 +64,10 @@ class PerformanceDashboard:
         }
         
         logger.info("📊 PerformanceDashboard initialized")
+
+        
+        # Initialize background task tracking for proper cleanup
+        self._background_tasks: Set[asyncio.Task] = set()
 
     async def connect_websocket(self, websocket: WebSocket):
         """Add a new WebSocket connection"""
@@ -799,6 +803,39 @@ class PerformanceDashboard:
         
         return html_content
 
+    async def cleanup(self):
+        """Clean up background tasks and resources"""
+        
+        # Cancel all background tasks
+        for task in self._background_tasks:
+            if not task.done():
+                task.cancel()
+        
+        # Wait for tasks to complete cancellation
+        if self._background_tasks:
+            try:
+                await asyncio.gather(*self._background_tasks, return_exceptions=True)
+            except Exception as e:
+                logger.warning(f"Error during dashboard background task cleanup: {e}")
+        
+        self._background_tasks.clear()
+        
+        # Close all WebSocket connections
+        for websocket in self.active_connections[:]:
+            try:
+                await websocket.close()
+            except Exception:
+                pass
+        
+        self.active_connections.clear()
+        
+        logger.info("🧹 PerformanceDashboard cleanup completed")
+    
+    def __del__(self):
+        """Destructor to ensure cleanup on garbage collection"""
+        if hasattr(self, '_background_tasks') and self._background_tasks:
+            logger.warning("⚠️ PerformanceDashboard destroyed with active background tasks - cleanup should be called explicitly")
+
 # Create FastAPI router for dashboard endpoints
 router = APIRouter(prefix="/api/performance", tags=["performance"])
 dashboard = PerformanceDashboard()
@@ -870,8 +907,26 @@ async def dashboard_update_task():
             logger.error(f"Dashboard update task error: {e}")
             await asyncio.sleep(10)
 
-# Start the background update task
-asyncio.create_task(dashboard_update_task())
+# FIXED: Start the background update task with proper task management
+def start_dashboard_background_task():
+    """Start the background update task with proper tracking"""
+    try:
+        # Only start if there's a running event loop
+        asyncio.get_running_loop()
+        task = asyncio.create_task(dashboard_update_task())
+        dashboard._background_tasks.add(task)
+        # Clean up completed tasks
+        task.add_done_callback(dashboard._background_tasks.discard)
+        logger.info("📊 Dashboard background update task started")
+    except RuntimeError:
+        # No event loop running, task will be started when needed
+        logger.debug("📊 Dashboard background task will be started when event loop is available")
+
+# Start the background task when possible
+try:
+    start_dashboard_background_task()
+except Exception as e:
+    logger.debug(f"Dashboard background task will be started later: {e}")
 
 # Export router and dashboard instance
 __all__ = ['router', 'dashboard', 'PerformanceDashboard']

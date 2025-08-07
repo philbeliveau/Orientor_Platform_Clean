@@ -269,8 +269,8 @@ def cached_jwt_validation(func):
 
 class JWKSCache:
     """
-    Advanced JWKS cache with background refresh, fallback mechanisms,
-    and comprehensive error handling.
+    JWKS cache with background refresh and advanced error handling.
+    Fixed AsyncHttpxClientWrapper error with proper task management.
     """
     
     def __init__(self, jwks_url: str, refresh_interval: int = 7200):  # 2 hours
@@ -279,8 +279,9 @@ class JWKSCache:
         self._cache: Optional[Dict[str, Any]] = None
         self._last_updated: Optional[datetime] = None
         self._lock = threading.RLock()
-        self._background_task: Optional[asyncio.Task] = None
-        self._refresh_in_progress = False
+        # FIXED: Track background tasks instead of single task reference
+        self._background_tasks: Set[asyncio.Task] = set()
+        self._refresh_lock = None  # Async lock for refresh coordination
         self._fallback_cache: Optional[Dict[str, Any]] = None
         self._stats = {
             "cache_hits": 0,
@@ -289,19 +290,23 @@ class JWKSCache:
             "failed_refreshes": 0,
             "fallback_uses": 0
         }
-        
+    
+    def __del__(self):
+        """Cleanup any remaining background tasks on garbage collection"""
+        if hasattr(self, '_background_tasks'):
+            for task in self._background_tasks.copy():
+                if not task.done():
+                    task.cancel()
+    
+    def _get_refresh_lock(self):
+        """Get or create the asyncio refresh lock"""
+        if self._refresh_lock is None:
+            self._refresh_lock = asyncio.Lock()
+        return self._refresh_lock
+
     async def get_jwks(self, force_refresh: bool = False) -> Dict[str, Any]:
         """
-        Get JWKS with automatic refresh and fallback mechanisms.
-        
-        Args:
-            force_refresh: Force a refresh even if cache is valid
-            
-        Returns:
-            JWKS dictionary
-            
-        Raises:
-            HTTPException: If JWKS cannot be retrieved and no fallback exists
+        Get JWKS with automatic refresh and fallback mechanisms
         """
         with self._lock:
             # Check if we have valid cached data
@@ -312,9 +317,14 @@ class JWKSCache:
             
             self._stats["cache_misses"] += 1
         
-        # Start background refresh if not already in progress
-        if not self._refresh_in_progress:
-            asyncio.create_task(self._refresh_jwks())
+        # FIXED: Proper task management instead of fire-and-forget
+        refresh_lock = self._get_refresh_lock()
+        if not refresh_lock.locked():
+            # Create and track background task
+            task = asyncio.create_task(self._refresh_jwks())
+            self._background_tasks.add(task)
+            # Clean up completed tasks
+            task.add_done_callback(self._background_tasks.discard)
         
         # If we have any cached data (even if stale), return it while refresh happens
         if self._cache is not None:
@@ -323,7 +333,7 @@ class JWKSCache:
         
         # No cache available, must fetch synchronously
         return await self._fetch_jwks_sync()
-    
+
     def _is_cache_valid(self) -> bool:
         """Check if the current cache is still valid"""
         if self._cache is None or self._last_updated is None:
@@ -331,34 +341,30 @@ class JWKSCache:
         
         age = datetime.now() - self._last_updated
         return age < timedelta(seconds=self.refresh_interval)
-    
+
     async def _refresh_jwks(self) -> None:
-        """Background task to refresh JWKS"""
-        if self._refresh_in_progress:
-            return
-            
-        self._refresh_in_progress = True
-        try:
-            logger.debug("🔄 Starting background JWKS refresh...")
-            new_jwks = await self._fetch_jwks_from_url()
-            
-            with self._lock:
-                # Store old cache as fallback before updating
-                if self._cache is not None:
-                    self._fallback_cache = self._cache.copy()
+        """Background task to refresh JWKS - FIXED for proper async handling"""
+        refresh_lock = self._get_refresh_lock()
+        async with refresh_lock:
+            try:
+                logger.debug("🔄 Starting background JWKS refresh...")
+                new_jwks = await self._fetch_jwks_from_url()
                 
-                self._cache = new_jwks
-                self._last_updated = datetime.now()
-                self._stats["background_refreshes"] += 1
+                with self._lock:
+                    # Store old cache as fallback before updating
+                    if self._cache is not None:
+                        self._fallback_cache = self._cache.copy()
+                    
+                    self._cache = new_jwks
+                    self._last_updated = datetime.now()
+                    self._stats["background_refreshes"] += 1
+                    
+                logger.info("✅ JWKS background refresh completed successfully")
                 
-            logger.info("✅ JWKS background refresh completed successfully")
-            
-        except Exception as e:
-            logger.error(f"❌ JWKS background refresh failed: {str(e)}")
-            self._stats["failed_refreshes"] += 1
-        finally:
-            self._refresh_in_progress = False
-    
+            except Exception as e:
+                logger.error(f"❌ JWKS background refresh failed: {str(e)}")
+                self._stats["failed_refreshes"] += 1
+
     async def _fetch_jwks_sync(self) -> Dict[str, Any]:
         """Synchronously fetch JWKS when no cache is available"""
         try:
@@ -383,16 +389,30 @@ class JWKSCache:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Unable to retrieve JWKS for token validation"
             )
-    
+
     async def _fetch_jwks_from_url(self) -> Dict[str, Any]:
-        """Fetch JWKS from the configured URL"""
+        """Fetch JWKS from the configured URL - FIXED: Proper context management"""
         timeout = httpx.Timeout(10.0, connect=5.0)  # 10s total, 5s connect
         
+        # FIXED: Use proper async context manager to prevent _state attribute errors
         async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.get(self.jwks_url)
             response.raise_for_status()
             return response.json()
     
+    async def cleanup(self) -> None:
+        """Explicit cleanup method for graceful shutdown"""
+        # Cancel all background tasks
+        for task in self._background_tasks.copy():
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+        self._background_tasks.clear()
+        logger.info("🧹 JWKS cache cleanup completed")
+
     def get_stats(self) -> Dict[str, Any]:
         """Get cache statistics for monitoring"""
         with self._lock:
@@ -400,18 +420,17 @@ class JWKSCache:
                 **self._stats,
                 "cache_valid": self._is_cache_valid(),
                 "last_updated": self._last_updated.isoformat() if self._last_updated else None,
-                "refresh_in_progress": self._refresh_in_progress,
                 "has_fallback": self._fallback_cache is not None,
-                "cache_age_seconds": (datetime.now() - self._last_updated).total_seconds() if self._last_updated else None
+                "cache_age_seconds": (datetime.now() - self._last_updated).total_seconds() if self._last_updated else None,
+                "active_background_tasks": len([t for t in self._background_tasks if not t.done()])
             }
-    
+
     def invalidate(self) -> None:
         """Manually invalidate the cache"""
         with self._lock:
             self._cache = None
             self._last_updated = None
         logger.info("🗑️ JWKS cache manually invalidated")
-
 # Global JWKS cache instance
 _jwks_cache: Optional[JWKSCache] = None
 
@@ -585,6 +604,7 @@ async def get_current_user_cached(
     """
     Get current authenticated user with request-level caching.
     This is the main entry point that combines all caching layers.
+    OPTIMIZED: Uses user ID caching to prevent multiple API calls for same user.
     """
     token = credentials.credentials
     
@@ -600,15 +620,25 @@ async def get_current_user_cached(
                 detail="Invalid token payload"
             )
         
-        # Check request cache for user data
+        # OPTIMIZATION: Check request cache for user data using user_id (more efficient)
         user_cache_key = f"clerk_user:{user_id}"
         cached_user_data = request_cache.get(user_cache_key)
         
         if cached_user_data is not None:
-            logger.debug("🎯 Request cache hit for user data")
+            logger.debug(f"🎯 Request cache hit for user {user_id}")
             return cached_user_data
         
-        # Fetch user data from Clerk API
+        # OPTIMIZATION: Also check global TTL cache for user data (reduces Clerk API calls)
+        global_user_cache_key = f"global_user:{user_id}"
+        cached_global_user = jwt_validation_cache.get(global_user_cache_key)
+        
+        if cached_global_user is not None:
+            logger.debug(f"🎯 Global cache hit for user {user_id}")
+            # Store in request cache too for this request
+            request_cache.set(user_cache_key, cached_global_user)
+            return cached_global_user
+        
+        # Fetch user data from Clerk API (only when not cached)
         clerk_secret_key = os.getenv("CLERK_SECRET_KEY")
         if not clerk_secret_key:
             raise HTTPException(
@@ -618,6 +648,7 @@ async def get_current_user_cached(
         
         clerk_api_url = "https://api.clerk.com/v1"
         
+        logger.debug(f"🔄 Fetching user data from Clerk API for user {user_id}")
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{clerk_api_url}/users/{user_id}",
@@ -639,9 +670,10 @@ async def get_current_user_cached(
             "__raw": token
         }
         
-        # Cache in request cache
+        # Cache in both request cache AND global cache to prevent repeated API calls
         request_cache.set(user_cache_key, user_data)
-        logger.debug("💾 User data cached in request cache")
+        jwt_validation_cache.set(global_user_cache_key, user_data, ttl=300)  # 5 minutes global cache
+        logger.debug(f"💾 User data cached globally and per-request for user {user_id}")
         
         return user_data
         

@@ -91,32 +91,68 @@ export class CareerGoalsService {
   /**
    * Get active career goal with progression
    */
+  private static activeGoalCache: {
+    data: {
+      goal: CareerGoal | null;
+      progression: any;
+      milestones: any[];
+    };
+    timestamp: number;
+  } | null = null;
+
+  private static pendingRequest: Promise<any> | null = null;
+
   static async getActiveCareerGoal(token: string): Promise<{
     goal: CareerGoal | null;
     progression: any;
     milestones: any[];
   }> {
+    // Return cached data if it's fresh (less than 5 seconds old)
+    if (this.activeGoalCache && Date.now() - this.activeGoalCache.timestamp < 5000) {
+      return this.activeGoalCache.data;
+    }
+
+    // If there's already a pending request, return its promise
+    if (this.pendingRequest) {
+      return this.pendingRequest;
+    }
+
     try {
       const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       };
 
-      const response = await fetch(`${API_BASE}/api/v1/career-goals/active`, {
+      // Create and store the pending request
+      this.pendingRequest = fetch(`${API_BASE}/api/v1/career-goals/active`, {
         method: 'GET',
         headers,
+      }).then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      }).then(data => {
+        // Update cache
+        this.activeGoalCache = {
+          data,
+          timestamp: Date.now()
+        };
+        return data;
+      }).catch(error => {
+        console.error('Error fetching active career goal:', error);
+        // Return cached data if available, otherwise empty state
+        return this.activeGoalCache?.data || { goal: null, progression: null, milestones: [] };
+      }).finally(() => {
+        // Clear the pending request
+        this.pendingRequest = null;
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data;
+      return await this.pendingRequest;
     } catch (error) {
-      console.error('Error fetching active career goal:', error);
-      // Return empty state instead of throwing
-      return { goal: null, progression: null, milestones: [] };
+      console.error('Error in getActiveCareerGoal:', error);
+      this.pendingRequest = null;
+      return this.activeGoalCache?.data || { goal: null, progression: null, milestones: [] };
     }
   }
 

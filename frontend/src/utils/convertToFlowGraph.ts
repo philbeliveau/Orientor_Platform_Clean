@@ -79,7 +79,7 @@ export function convertToFlowGraph(tree: TreeNode) {
     const id = node.id;
     
     // Calculate horizontal position - center node relative to its children
-    let nodeX = xOffset;
+    const nodeX = xOffset;
     
     // Create node with appropriate type and data
     nodes.push({

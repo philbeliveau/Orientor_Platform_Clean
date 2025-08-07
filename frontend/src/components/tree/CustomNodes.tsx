@@ -188,7 +188,7 @@ export function SkillNode({ data, id, selected }: NodeProps) {
       // Default to right placement
       let placement = 'right';
       let x = nodeRect.right + 16; // 16px gap
-      let y = nodeRect.top + (nodeRect.height / 2);
+      const y = nodeRect.top + (nodeRect.height / 2);
       
       // If not enough space on the right, try left
       if (x + 280 > viewportWidth) { // 280px is approx tooltip width

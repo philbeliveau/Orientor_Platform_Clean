@@ -19,8 +19,44 @@ const AvatarPanel: React.FC<AvatarPanelProps> = ({ className = '' }) => {
 
   // Charger l'avatar existant au montage du composant
   useEffect(() => {
-    loadUserAvatar();
-  }, []);
+    let isCancelled = false;
+    
+    const loadAvatar = async () => {
+      // Prevent duplicate requests
+      if (avatarData !== null || isLoading) {
+        return;
+      }
+      
+      try {
+        setIsLoading(true);
+        setError(null);
+        const token = await getToken();
+        if (!token || isCancelled) {
+          return;
+        }
+        const data = await AvatarService.getUserAvatar(token);
+        if (!isCancelled) {
+          setAvatarData(data);
+        }
+      } catch (err: any) {
+        if (!isCancelled) {
+          console.log('Aucun avatar existant trouvé');
+          setAvatarData(null);
+          setError(null);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadAvatar();
+    
+    return () => {
+      isCancelled = true;
+    };
+  }, [avatarData, isLoading]); // Added state checks
 
   const loadUserAvatar = async () => {
     try {

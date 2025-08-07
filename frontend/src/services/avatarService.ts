@@ -22,18 +22,40 @@ class AvatarService {
   /**
    * Récupère l'avatar existant de l'utilisateur authentifié
    */
+  private static avatarCache: {
+    data: AvatarData | null;
+    timestamp: number;
+  } = { data: null, timestamp: 0 };
+
   static async getUserAvatar(token: string): Promise<AvatarData> {
     try {
+      // Return cached data if it's fresh (5 seconds)
+      const now = Date.now();
+      if (this.avatarCache.data && now - this.avatarCache.timestamp < 5000) {
+        return this.avatarCache.data;
+      }
+
       console.log('🔍 Récupération de l\'avatar pour l\'utilisateur authentifié');
       const response = await clerkApiService.request<AvatarData>('/api/v1/avatar/me', {
         method: 'GET',
         token
       });
+
+      // Update cache
+      this.avatarCache = {
+        data: response,
+        timestamp: now
+      };
+
       console.log('✅ Avatar récupéré:', response);
       return response;
     } catch (error: any) {
+      // Return cached data if available, even if stale
+      if (this.avatarCache.data) {
+        console.warn('Using cached avatar data after error');
+        return this.avatarCache.data;
+      }
       console.error('❌ Erreur lors de la récupération de l\'avatar:', error);
-      console.error('Détails de l\'erreur API:', error);
       throw error;
     }
   }

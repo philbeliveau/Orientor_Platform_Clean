@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import MainLayout from '@/components/layout/MainLayout';
 import MessageList from '@/components/chat/MessageList';
@@ -30,33 +30,14 @@ export default function PeerChatPage() {
     const params = useParams();
     const peerId = params?.peerId as string;
     
-    // If someone navigates to /chat/conversations, redirect to /chat
-    useEffect(() => {
-        if (peerId === 'conversations') {
-            router.replace('/chat');
-            return;
-        }
-    }, [peerId, router]);
-    
     const [messages, setMessages] = useState<Message[]>([]);
     const [peer, setPeer] = useState<PeerProfile | null>(null);
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    
-    // Don't render anything if we're redirecting
-    if (peerId === 'conversations') {
-        return (
-            <MainLayout>
-                <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-            </MainLayout>
-        );
-    }
 
     // Function to fetch conversation history
-    const fetchMessages = async () => {
+    const fetchMessages = useCallback(async () => {
         try {
             const token = localStorage.getItem('access_token');
             if (!token) {
@@ -79,10 +60,10 @@ export default function PeerChatPage() {
             console.error('Error details:', err.response);
             setError(err.response?.data?.detail || 'Failed to load messages');
         }
-    };
+    }, [peerId, router]);
 
     // Function to fetch peer profile
-    const fetchPeerProfile = async () => {
+    const fetchPeerProfile = useCallback(async () => {
         try {
             const token = localStorage.getItem('access_token');
             if (!token) {
@@ -102,10 +83,10 @@ export default function PeerChatPage() {
             console.error('Error fetching peer profile:', err);
             setError(err.response?.data?.detail || 'Failed to load peer profile');
         }
-    };
+    }, [peerId, router]);
 
     // Function to get current user ID
-    const fetchCurrentUserId = async () => {
+    const fetchCurrentUserId = useCallback(async () => {
         try {
             const token = localStorage.getItem('access_token');
             if (!token) {
@@ -128,7 +109,7 @@ export default function PeerChatPage() {
             console.error('Error details:', err.response);
             setError(err.response?.data?.detail || 'Failed to load user information');
         }
-    };
+    }, [router]);
 
     // Function to send a message
     const handleSendMessage = async (messageText: string) => {
@@ -158,6 +139,14 @@ export default function PeerChatPage() {
         }
     };
 
+    // If someone navigates to /chat/conversations, redirect to /chat
+    useEffect(() => {
+        if (peerId === 'conversations') {
+            router.replace('/chat');
+            return;
+        }
+    }, [peerId, router]);
+
     // Initial data fetch
     useEffect(() => {
         const initializeChat = async () => {
@@ -177,14 +166,14 @@ export default function PeerChatPage() {
             }
         };
 
-        if (peerId) {
+        if (peerId && peerId !== 'conversations') {
             initializeChat();
         }
-    }, [peerId]);
+    }, [peerId, fetchCurrentUserId, fetchPeerProfile, fetchMessages]);
 
-    // Set up polling for new messages
+    // Set up polling for new messages  
     useEffect(() => {
-        if (!peerId) return;
+        if (!peerId || peerId === 'conversations') return;
 
         const interval = setInterval(() => {
             fetchMessages();
@@ -193,7 +182,18 @@ export default function PeerChatPage() {
         return () => {
             clearInterval(interval);
         };
-    }, [peerId]);
+    }, [peerId, fetchMessages]);
+
+    // Don't render anything if we're redirecting
+    if (peerId === 'conversations') {
+        return (
+            <MainLayout>
+                <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+            </MainLayout>
+        );
+    }
 
     // Debug logging
     console.log('Component state:', {

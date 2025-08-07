@@ -33,7 +33,7 @@ import logging
 
 from app.models.user import User
 from app.utils.database import get_db
-from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
+from app.utils.clerk_auth import get_current_user_with_db_sync
 from app.utils.auth_cache import (
     CacheMetrics,
     cache_health_check,
@@ -58,7 +58,7 @@ router = APIRouter(
 
 @router.get("/stats", response_model=Dict[str, Any])
 async def get_cache_statistics(
-    current_user: User = Depends(get_current_user_secure_integrated)
+    current_user: User = Depends(get_current_user_with_db_sync)
 ):
     """
     Get comprehensive cache statistics and performance metrics.
@@ -137,7 +137,7 @@ async def get_cache_health():
 
 @router.get("/performance", response_model=Dict[str, Any])
 async def get_cache_performance_metrics(
-    current_user: User = Depends(get_current_user_secure_integrated)
+    current_user: User = Depends(get_current_user_with_db_sync)
 ):
     """
     Get detailed performance metrics from the cache system.
@@ -180,7 +180,7 @@ async def get_cache_performance_metrics(
 
 @router.post("/cleanup", response_model=Dict[str, Any])
 async def cleanup_expired_cache_entries(
-    current_user: User = Depends(get_current_user_secure_integrated)
+    current_user: User = Depends(get_current_user_with_db_sync)
 ):
     """
     Trigger cleanup of expired cache entries across all cache layers.
@@ -213,7 +213,7 @@ async def cleanup_expired_cache_entries(
 
 @router.post("/jwks/refresh", response_model=Dict[str, Any])
 async def force_jwks_refresh(
-    current_user: User = Depends(get_current_user_secure_integrated)
+    current_user: User = Depends(get_current_user_with_db_sync)
 ):
     """
     Force a refresh of the JWKS cache.
@@ -255,7 +255,7 @@ async def force_jwks_refresh(
 
 @router.get("/config", response_model=Dict[str, Any])
 async def get_cache_configuration(
-    current_user: User = Depends(get_current_user_secure_integrated)
+    current_user: User = Depends(get_current_user_with_db_sync)
 ):
     """
     Get current cache configuration and settings.
@@ -313,7 +313,7 @@ async def get_cache_configuration(
 
 @router.get("/demo/request-cache", response_model=Dict[str, Any])
 async def demo_request_cache_behavior(
-    current_user: User = Depends(get_current_user_secure_integrated)
+    current_user: User = Depends(get_current_user_with_db_sync)
 ):
     """
     Demonstrate request-level caching behavior.
@@ -378,7 +378,7 @@ async def demo_request_cache_behavior(
 
 @router.get("/test/authentication-speed", response_model=Dict[str, Any])
 async def test_authentication_speed(
-    current_user: User = Depends(get_current_user_secure_integrated)
+    current_user: User = Depends(get_current_user_with_db_sync)
 ):
     """
     Test authentication speed with and without caching.

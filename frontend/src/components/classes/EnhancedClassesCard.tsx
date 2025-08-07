@@ -45,35 +45,51 @@ const EnhancedClassesCard: React.FC<EnhancedClassesCardProps> = ({
 
   // Fetch user's courses
   useEffect(() => {
+    let isMounted = true;
     const fetchCourses = async () => {
       if (!isLoaded || !isSignedIn) {
-        setLoading(false);
+        if (isMounted) setLoading(false);
         return;
       }
 
       try {
-        setLoading(true);
-        const coursesData = await courseServices.getCourses();
-        setCourses(coursesData.slice(0, 3)); // Show top 3 most recent courses
+        if (isMounted) {
+          setLoading(true);
+          setError(null);
+        }
 
-        // Check if any courses need analysis
-        const needsAnalysis = coursesData.some((course: Course) => 
-          !course.insights_count || course.insights_count === 0
-        );
-        setShowAnalysisPrompt(needsAnalysis);
+        const coursesData = await courseServices.getCourses();
+        if (!isMounted) return;
+
+        if (isMounted) {
+          setCourses(coursesData.slice(0, 3)); // Show top 3 most recent courses
+
+          // Check if any courses need analysis
+          const needsAnalysis = coursesData.some((course: Course) => 
+            !course.insights_count || course.insights_count === 0
+          );
+          setShowAnalysisPrompt(needsAnalysis);
+        }
 
       } catch (err) {
-        console.error('Error fetching courses:', err);
-        setError('Unable to load courses');
-        // Fallback to mock data for development
-        setCourses(getMockCourses());
+        if (isMounted) {
+          console.error('Error fetching courses:', err);
+          setError('Unable to load courses');
+          // Fallback to mock data for development
+          setCourses(getMockCourses());
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchCourses();
-  }, [userId, isLoaded, isSignedIn, courseServices]);
+    return () => {
+      isMounted = false;
+    };
+  }, [userId, isLoaded, isSignedIn]); // Removed courseServices from dependencies
 
   const getMockCourses = (): Course[] => [
     {

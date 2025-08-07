@@ -30,17 +30,27 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
   const { careerGoals, isSignedIn, isLoaded } = useAuthenticatedServices();
 
   useEffect(() => {
+    let isMounted = true;
     const fetchActiveCareerGoal = async () => {
       if (!isLoaded || !isSignedIn) {
-        setLoading(false);
+        if (isMounted) setLoading(false);
         return;
       }
 
       try {
-        setLoading(true);
-        setError(null);
+        if (isMounted) {
+          setLoading(true);
+          setError(null);
+          // Don't clear careerGoal immediately to prevent flashing
+          // Only clear if we're actually going to load new data
+        }
+        
+        // Add small delay to prevent rapid successive calls
+        await new Promise(resolve => setTimeout(resolve, 200));
+        if (!isMounted) return;
         
         const response = await careerGoals.getActiveCareerGoal();
+        if (!isMounted) return;
         
         if (response.goal) {
           // Format the target date
@@ -114,8 +124,8 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
     fetchActiveCareerGoal();
   }, [isLoaded, isSignedIn, careerGoals]);
 
-  // Show loading state
-  if (loading) {
+  // Show loading overlay if we have no data yet
+  if (loading && !careerGoal) {
     return (
       <div 
         className={`bg-gradient-to-br from-gray-400 to-gray-500 rounded-3xl p-4 sm:p-6 shadow-lg relative overflow-hidden touch-none select-none ${className}`}
@@ -134,8 +144,8 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
     );
   }
 
-  // Show error state
-  if (error || !careerGoal) {
+  // Show error state if we have no data
+  if ((error || !careerGoal) && !loading) {
     return (
       <div 
         className={`bg-gradient-to-br from-red-400 to-red-500 rounded-3xl p-4 sm:p-6 shadow-lg relative overflow-hidden touch-none select-none ${className}`}
@@ -160,6 +170,8 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
       </div>
     );
   }
+
+  if (!careerGoal) return null; // Should never happen due to earlier checks
 
   const completedMilestones = careerGoal.milestones.filter(m => m.completed).length;
   const totalMilestones = careerGoal.milestones.length;

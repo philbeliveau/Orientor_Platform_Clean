@@ -54,26 +54,44 @@ const UserCard: React.FC<UserCardProps> = ({
 
   // Charger l'avatar de l'utilisateur
   useEffect(() => {
+    let isMounted = true;
     const loadAvatar = async () => {
       if (!isLoaded || !isSignedIn) {
-        setAvatarLoading(false);
+        if (isMounted) setAvatarLoading(false);
         return;
       }
 
       try {
-        setAvatarLoading(true);
+        if (isMounted) {
+          setAvatarLoading(true);
+          setAvatarData(null);
+        }
+        
+        // Add small delay to prevent rapid successive calls
+        await new Promise(resolve => setTimeout(resolve, 100));
+        if (!isMounted) return;
+        
         const data = await avatar.getUserAvatar();
-        setAvatarData(data);
+        if (isMounted) {
+          setAvatarData(data);
+        }
       } catch (err) {
         console.log('Aucun avatar trouvé pour cet utilisateur');
-        setAvatarData(null);
+        if (isMounted) {
+          setAvatarData(null);
+        }
       } finally {
-        setAvatarLoading(false);
+        if (isMounted) {
+          setAvatarLoading(false);
+        }
       }
     };
 
     loadAvatar();
-  }, [isLoaded, isSignedIn, avatar]);
+    return () => {
+      isMounted = false;
+    };
+  }, [isLoaded, isSignedIn]);
 
   const handleProfileClick = () => {
     router.push('/insight');
