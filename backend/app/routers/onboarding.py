@@ -18,13 +18,33 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
-from ..utils.clerk_auth import get_current_user_with_db_sync as get_current_user
+from ..utils.secure_auth_integration import get_current_user_secure_integrated as get_current_user
 
 async def get_current_user_with_onboarding(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get user info from Clerk and sync with local database"""
+# ============================================================================
+# AUTHENTICATION MIGRATION - Secure Integration System
+# ============================================================================
+# This router has been migrated to use the unified secure authentication system
+# with integrated caching, security optimizations, and rollback support.
+# 
+# Migration date: 2025-08-07 13:44:03
+# Previous system: clerk_auth.get_current_user_with_db_sync
+# Current system: secure_auth_integration.get_current_user_secure_integrated
+# 
+# Benefits:
+# - AES-256 encryption for sensitive cache data
+# - Full SHA-256 cache keys (not truncated)
+# - Error message sanitization
+# - Multi-layer caching optimization  
+# - Zero-downtime rollback capability
+# - Comprehensive security monitoring
+# ============================================================================
+
+
     try:
         # The get_current_user already returns a User object, so we can return it directly
         # No need for additional database lookup as it's already synced

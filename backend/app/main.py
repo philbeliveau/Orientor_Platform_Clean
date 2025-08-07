@@ -45,6 +45,7 @@ from app.routers.career_goals import router as career_goals_router
 from app.routers.llm_career_advisor import router as llm_career_advisor_router
 from app.routers.orientator import router as orientator_router
 from app.routers.auth_clerk import router as auth_clerk_router
+from app.routers.cache_monitoring import router as cache_monitoring_router
 from fastapi import FastAPI, HTTPException
 from pathlib import Path
 # from scripts.model_loader import load_models
@@ -209,6 +210,7 @@ app.include_router(career_goals_router, prefix="/api/v1")
 app.include_router(llm_career_advisor_router, prefix="/api/v1")
 app.include_router(orientator_router, prefix="/api/v1")
 app.include_router(auth_clerk_router, prefix="/api/v1")
+app.include_router(cache_monitoring_router, prefix="/api/v1")
 logger.info("All routers included successfully")
 
 # Explicitly capture route after including it
@@ -284,6 +286,23 @@ async def startup_event():
                 initialize_database()
         except Exception as db_e:
             logger.warning(f"⚠️ Database initialization failed (continuing anyway): {str(db_e)}")
+        
+        # Initialize authentication cache system
+        try:
+            logger.info("🚀 Initializing authentication cache system...")
+            from .utils.auth_cache import start_cache_maintenance, get_jwks_cache
+            
+            # Pre-populate JWKS cache
+            jwks_cache = get_jwks_cache()
+            await jwks_cache.get_jwks()
+            logger.info("✅ JWKS cache pre-populated")
+            
+            # Start background maintenance
+            await start_cache_maintenance()
+            logger.info("✅ Cache maintenance tasks started")
+            
+        except Exception as cache_e:
+            logger.warning(f"⚠️ Cache system initialization failed (continuing anyway): {str(cache_e)}")
         
         logger.info("✅ Application startup completed successfully")
         

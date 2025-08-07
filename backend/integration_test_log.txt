@@ -1,0 +1,155 @@
+2025-08-07 13:48:19,802 - INFO - 🔬 Running comprehensive test suite
+2025-08-07 13:48:19,802 - INFO - 🚀 Starting comprehensive integration tests (Environment: production)
+2025-08-07 13:48:19,802 - INFO - 📋 Running configuration test suite...
+2025-08-07 13:48:19,809 - ERROR - ❌ Test suite configuration failed
+2025-08-07 13:48:19,809 - INFO - 📋 Running security test suite...
+2025-08-07 13:48:19,825 - ERROR - ❌ Test suite security failed
+2025-08-07 13:48:19,825 - ERROR - 🚨 Critical test suite failed - consider stopping
+2025-08-07 13:48:19,825 - INFO - 📋 Running authentication test suite...
+2025-08-07 13:48:19,825 - ERROR - ❌ Test suite authentication failed
+2025-08-07 13:48:19,825 - ERROR - 🚨 Critical test suite failed - consider stopping
+2025-08-07 13:48:19,825 - INFO - 📋 Running cache_comprehensive test suite...
+2025-08-07 13:48:20,561 - INFO - === Configuration Summary ===
+2025-08-07 13:48:20,561 - INFO - Environment: development
+2025-08-07 13:48:20,561 - INFO - Railway Environment: None
+2025-08-07 13:48:20,561 - INFO - Port: 8000
+2025-08-07 13:48:20,561 - INFO - Is Production: False
+2025-08-07 13:48:20,561 - INFO - Is Railway: False
+2025-08-07 13:48:20,561 - INFO - Using DATABASE_URL for local development
+2025-08-07 13:48:20,561 - INFO - Database URL configured: True
+2025-08-07 13:48:20,561 - INFO - OpenAI API Key configured: True
+2025-08-07 13:48:20,561 - INFO - === Security Configuration ===
+2025-08-07 13:48:20,561 - INFO - Clerk Secret Key configured: True
+2025-08-07 13:48:20,561 - INFO - Clerk Publishable Key configured: True
+2025-08-07 13:48:20,561 - INFO - Clerk Domain configured: True
+2025-08-07 13:48:20,562 - INFO - =============================
+2025-08-07 13:48:20,562 - INFO - 📌 Database initialization deferred to avoid environment variable caching
+2025-08-07 13:48:20,562 - ERROR - ❌ Test suite cache_comprehensive failed
+2025-08-07 13:48:20,562 - INFO - 📋 Running database test suite...
+2025-08-07 13:48:20,562 - INFO - 📌 Database initialization deferred to avoid environment variable caching
+2025-08-07 13:48:20,562 - ERROR - ❌ Test suite database failed
+2025-08-07 13:48:20,562 - INFO - 📋 Running performance test suite...
+2025-08-07 13:48:20,563 - ERROR - ❌ Test suite performance failed
+2025-08-07 13:48:20,563 - INFO - 📋 Running rollback test suite...
+2025-08-07 13:48:20,563 - ERROR - ❌ Test suite rollback failed
+2025-08-07 13:48:20,563 - INFO - 📋 Running monitoring test suite...
+2025-08-07 13:48:20,563 - ERROR - ❌ Test suite monitoring failed
+2025-08-07 13:48:20,563 - INFO - 📄 Test report generated: integration_test_report_20250807_134820.json
+2025-08-07 13:48:20,563 - ERROR - ❌ Some integration tests failed!
+2025-08-07 13:48:56,130 - INFO - 🔒 Running security-only tests
+2025-08-07 13:48:56,130 - INFO - 🚀 Starting comprehensive integration tests (Environment: development)
+2025-08-07 13:48:56,130 - INFO - 📋 Running security test suite...
+2025-08-07 13:48:59,280 - INFO - === Configuration Summary ===
+2025-08-07 13:48:59,280 - INFO - Environment: development
+2025-08-07 13:48:59,280 - INFO - Railway Environment: None
+2025-08-07 13:48:59,280 - INFO - Port: 8000
+2025-08-07 13:48:59,280 - INFO - Is Production: False
+2025-08-07 13:48:59,280 - INFO - Is Railway: False
+2025-08-07 13:48:59,280 - INFO - Using DATABASE_URL for local development
+2025-08-07 13:48:59,280 - INFO - Database URL configured: True
+2025-08-07 13:48:59,281 - INFO - OpenAI API Key configured: True
+2025-08-07 13:48:59,281 - INFO - === Security Configuration ===
+2025-08-07 13:48:59,281 - INFO - Clerk Secret Key configured: True
+2025-08-07 13:48:59,281 - INFO - Clerk Publishable Key configured: True
+2025-08-07 13:48:59,281 - INFO - Clerk Domain configured: True
+2025-08-07 13:48:59,281 - INFO - =============================
+2025-08-07 13:48:59,281 - INFO - 📌 Database initialization deferred to avoid environment variable caching
+2025-08-07 13:48:59,281 - ERROR - ❌ Test suite security failed
+2025-08-07 13:48:59,281 - ERROR - 🚨 Critical test suite failed - consider stopping
+2025-08-07 13:48:59,281 - INFO - 📄 Test report generated: integration_test_report_20250807_134859.json
+2025-08-07 13:48:59,281 - ERROR - ❌ Some integration tests failed!
+2025-08-07 13:53:29,056 - INFO - 🔒 Running security-only tests
+2025-08-07 13:53:29,057 - INFO - 🚀 Starting comprehensive integration tests (Environment: development)
+2025-08-07 13:53:29,057 - INFO - 📋 Running security test suite...
+2025-08-07 13:53:30,026 - INFO - === Configuration Summary ===
+2025-08-07 13:53:30,026 - INFO - Environment: development
+2025-08-07 13:53:30,026 - INFO - Railway Environment: None
+2025-08-07 13:53:30,026 - INFO - Port: 8000
+2025-08-07 13:53:30,026 - INFO - Is Production: False
+2025-08-07 13:53:30,026 - INFO - Is Railway: False
+2025-08-07 13:53:30,026 - INFO - Using DATABASE_URL for local development
+2025-08-07 13:53:30,026 - INFO - Database URL configured: True
+2025-08-07 13:53:30,026 - INFO - OpenAI API Key configured: True
+2025-08-07 13:53:30,026 - INFO - === Security Configuration ===
+2025-08-07 13:53:30,026 - INFO - Clerk Secret Key configured: True
+2025-08-07 13:53:30,027 - INFO - Clerk Publishable Key configured: True
+2025-08-07 13:53:30,027 - INFO - Clerk Domain configured: True
+2025-08-07 13:53:30,027 - INFO - =============================
+2025-08-07 13:53:30,027 - INFO - 📌 Database initialization deferred to avoid environment variable caching
+2025-08-07 13:53:30,073 - WARNING - 🔐 Generated new encryption key - should be stored securely in production
+2025-08-07 13:53:30,073 - INFO - 🎛️ Feature flags initialized: 7/8 enabled
+2025-08-07 13:53:30,074 - INFO - 🛡️ Secure Authentication System initialized
+2025-08-07 13:53:30,074 - WARNING - 🔒 Sanitized sensitive error message: Database connection failed with password=secret123
+2025-08-07 13:53:30,078 - INFO - 🔧 Unified authentication configuration loaded for development
+2025-08-07 13:53:30,078 - INFO - ✅ Test suite security passed
+2025-08-07 13:53:30,078 - INFO - 📄 Test report generated: integration_test_report_20250807_135330.json
+2025-08-07 13:53:30,078 - INFO - ✅ All integration tests passed!
+2025-08-07 13:53:38,717 - INFO - ⚡ Running quick test suite
+2025-08-07 13:53:38,717 - INFO - 🚀 Starting comprehensive integration tests (Environment: development)
+2025-08-07 13:53:38,717 - INFO - 📋 Running security test suite...
+2025-08-07 13:53:39,493 - INFO - === Configuration Summary ===
+2025-08-07 13:53:39,493 - INFO - Environment: development
+2025-08-07 13:53:39,493 - INFO - Railway Environment: None
+2025-08-07 13:53:39,493 - INFO - Port: 8000
+2025-08-07 13:53:39,493 - INFO - Is Production: False
+2025-08-07 13:53:39,493 - INFO - Is Railway: False
+2025-08-07 13:53:39,493 - INFO - Using DATABASE_URL for local development
+2025-08-07 13:53:39,493 - INFO - Database URL configured: True
+2025-08-07 13:53:39,493 - INFO - OpenAI API Key configured: True
+2025-08-07 13:53:39,493 - INFO - === Security Configuration ===
+2025-08-07 13:53:39,493 - INFO - Clerk Secret Key configured: True
+2025-08-07 13:53:39,493 - INFO - Clerk Publishable Key configured: True
+2025-08-07 13:53:39,493 - INFO - Clerk Domain configured: True
+2025-08-07 13:53:39,493 - INFO - =============================
+2025-08-07 13:53:39,493 - INFO - 📌 Database initialization deferred to avoid environment variable caching
+2025-08-07 13:53:39,548 - WARNING - 🔐 Generated new encryption key - should be stored securely in production
+2025-08-07 13:53:39,549 - INFO - 🎛️ Feature flags initialized: 7/8 enabled
+2025-08-07 13:53:39,551 - INFO - 🛡️ Secure Authentication System initialized
+2025-08-07 13:53:39,551 - WARNING - 🔒 Sanitized sensitive error message: Database connection failed with password=secret123
+2025-08-07 13:53:39,555 - INFO - 🔧 Unified authentication configuration loaded for development
+2025-08-07 13:53:39,555 - INFO - ✅ Test suite security passed
+2025-08-07 13:53:39,555 - INFO - 📋 Running authentication test suite...
+2025-08-07 13:53:39,949 - INFO - HTTP Request: GET https://test-domain.clerk.accounts.dev/.well-known/jwks.json "HTTP/1.1 400 Bad Request"
+2025-08-07 13:53:39,950 - ERROR - ❌ JWKS background refresh failed: Client error '400 Bad Request' for url 'https://test-domain.clerk.accounts.dev/.well-known/jwks.json'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+2025-08-07 13:53:40,070 - INFO - HTTP Request: GET https://test-domain.clerk.accounts.dev/.well-known/jwks.json "HTTP/1.1 400 Bad Request"
+2025-08-07 13:53:40,071 - ERROR - 🚨 JWKS fetch failed with no fallback available: Client error '400 Bad Request' for url 'https://test-domain.clerk.accounts.dev/.well-known/jwks.json'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/400
+2025-08-07 13:53:40,071 - ERROR - ❌ Test suite authentication failed
+2025-08-07 13:53:40,071 - INFO - 📋 Running cache_basic test suite...
+2025-08-07 13:53:40,071 - INFO - ✅ Test suite cache_basic passed
+2025-08-07 13:53:40,071 - INFO - 📄 Test report generated: integration_test_report_20250807_135340.json
+2025-08-07 13:53:40,072 - ERROR - ❌ Some integration tests failed!
+2025-08-07 13:58:52,601 - INFO - ⚡ Running quick test suite
+2025-08-07 13:58:52,601 - INFO - 🚀 Starting comprehensive integration tests (Environment: development)
+2025-08-07 13:58:52,601 - INFO - 📋 Running security test suite...
+2025-08-07 13:58:53,350 - INFO - === Configuration Summary ===
+2025-08-07 13:58:53,350 - INFO - Environment: development
+2025-08-07 13:58:53,350 - INFO - Railway Environment: None
+2025-08-07 13:58:53,350 - INFO - Port: 8000
+2025-08-07 13:58:53,350 - INFO - Is Production: False
+2025-08-07 13:58:53,350 - INFO - Is Railway: False
+2025-08-07 13:58:53,350 - INFO - Using DATABASE_URL for local development
+2025-08-07 13:58:53,350 - INFO - Database URL configured: True
+2025-08-07 13:58:53,350 - INFO - OpenAI API Key configured: True
+2025-08-07 13:58:53,350 - INFO - === Security Configuration ===
+2025-08-07 13:58:53,350 - INFO - Clerk Secret Key configured: True
+2025-08-07 13:58:53,350 - INFO - Clerk Publishable Key configured: True
+2025-08-07 13:58:53,350 - INFO - Clerk Domain configured: True
+2025-08-07 13:58:53,350 - INFO - =============================
+2025-08-07 13:58:53,350 - INFO - 📌 Database initialization deferred to avoid environment variable caching
+2025-08-07 13:58:53,399 - WARNING - 🔐 Generated new encryption key - should be stored securely in production
+2025-08-07 13:58:53,399 - INFO - 🎛️ Feature flags initialized: 7/8 enabled
+2025-08-07 13:58:53,400 - INFO - 🛡️ Secure Authentication System initialized
+2025-08-07 13:58:53,400 - WARNING - 🔒 Sanitized sensitive error message: Database connection failed with password=secret123
+2025-08-07 13:58:53,403 - INFO - 🔧 Unified authentication configuration loaded for development
+2025-08-07 13:58:53,403 - INFO - ✅ Test suite security passed
+2025-08-07 13:58:53,403 - INFO - 📋 Running authentication test suite...
+2025-08-07 13:58:53,738 - INFO - HTTP Request: GET https://ruling-halibut-89.clerk.accounts.dev/.well-known/jwks.json "HTTP/1.1 200 OK"
+2025-08-07 13:58:53,740 - INFO - ✅ JWKS background refresh completed successfully
+2025-08-07 13:58:53,740 - INFO - HTTP Request: GET https://ruling-halibut-89.clerk.accounts.dev/.well-known/jwks.json "HTTP/1.1 200 OK"
+2025-08-07 13:58:53,741 - INFO - ✅ Test suite authentication passed
+2025-08-07 13:58:53,741 - INFO - 📋 Running cache_basic test suite...
+2025-08-07 13:58:53,741 - INFO - ✅ Test suite cache_basic passed
+2025-08-07 13:58:53,742 - INFO - 📄 Test report generated: integration_test_report_20250807_135853.json
+2025-08-07 13:58:53,742 - INFO - ✅ All integration tests passed!

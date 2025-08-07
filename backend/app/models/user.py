@@ -15,6 +15,7 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)  # User account status
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     onboarding_completed = Column(Boolean, default=False, nullable=False)
+    last_clerk_sync = Column(DateTime(timezone=True), nullable=True)  # Last sync timestamp with Clerk
     
     # Relationships
     profile = relationship("UserProfile", back_populates="user", uselist=False)

@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from ..utils.database import get_db
 from ..models import User, UserProfile, SuggestedPeers
-from ..utils.clerk_auth import get_current_user_with_db_sync as get_current_user, get_database_user_id_sync
+from ..utils.secure_auth_integration import get_current_user_secure_integrated as get_current_user, get_database_user_id_sync
 from ..services.peer_matching_service import find_compatible_peers, generate_enhanced_peer_suggestions
 import logging
 import asyncio
@@ -57,6 +57,26 @@ def get_suggested_peers(
     db: Session = Depends(get_db)
 ):
     """Get suggested peers for the current user."""
+# ============================================================================
+# AUTHENTICATION MIGRATION - Secure Integration System
+# ============================================================================
+# This router has been migrated to use the unified secure authentication system
+# with integrated caching, security optimizations, and rollback support.
+# 
+# Migration date: 2025-08-07 13:44:03
+# Previous system: clerk_auth.get_current_user_with_db_sync
+# Current system: secure_auth_integration.get_current_user_secure_integrated
+# 
+# Benefits:
+# - AES-256 encryption for sensitive cache data
+# - Full SHA-256 cache keys (not truncated)
+# - Error message sanitization
+# - Multi-layer caching optimization  
+# - Zero-downtime rollback capability
+# - Comprehensive security monitoring
+# ============================================================================
+
+
     try:
         # Find the user's suggested peers with their profiles
         suggested_peers_query = (

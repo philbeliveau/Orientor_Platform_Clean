@@ -5,7 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.dialects.postgresql import UUID
 from uuid import uuid4
-from typing import Optional
+from typing import Optional, Dict, Any
 from fastapi import HTTPException
 from ..core.config import settings
 
@@ -21,41 +21,68 @@ SessionLocal: Optional[object] = None
 database_connected = False
 
 def create_database_engine():
-    """Create database engine with Railway-optimized configuration"""
+    """Create database engine with optimized configuration for user session caching"""
     global engine
     
     try:
         database_url = settings.get_database_url
-        logger.info(f"Attempting to connect to database...")
+        logger.info(f"Attempting to connect to database with optimization...")
         
-        # Railway-optimized engine configuration
+        # Optimized engine configuration for Phase 4-5 (Database optimization)
+        # These settings are tuned for high-performance user session caching
         engine_kwargs = {
-            "pool_size": 3,  # Reduced for Railway
-            "max_overflow": 5,  # Reduced for Railway
-            "pool_timeout": 20,  # Reduced timeout
-            "pool_recycle": 1800,
-            "pool_pre_ping": True,  # Important for Railway
+            "pool_size": 5,  # Moderate pool size optimized for caching workload
+            "max_overflow": 10,  # Higher overflow for burst capacity
+            "pool_timeout": 30,  # Longer timeout for better reliability
+            "pool_recycle": 3600,  # 1 hour recycle (optimized for session cache TTL)
+            "pool_pre_ping": True,  # Test connections before use
+            "pool_reset_on_return": "commit",  # Clean connection state
             "connect_args": {
                 "connect_timeout": 10,  # Connection timeout
                 "options": "-c timezone=utc"  # Set timezone
             }
         }
         
-        # Additional settings for Railway production
+        # Environment-specific optimizations
         if settings.is_railway:
+            # Railway-specific optimizations for database session caching
             engine_kwargs.update({
-                "pool_size": 2,  # Even smaller for Railway
-                "max_overflow": 3,
-                "pool_timeout": 15,
+                "pool_size": 3,  # Smaller pool for Railway limits
+                "max_overflow": 7,  # Moderate overflow
+                "pool_timeout": 20,  # Shorter timeout for Railway
+                "pool_recycle": 7200,  # 2 hours for production stability
                 "echo": False  # Disable SQL logging in production
+            })
+        elif settings.is_production:
+            # Production optimizations
+            engine_kwargs.update({
+                "pool_size": 8,  # Larger pool for production load
+                "max_overflow": 15,  # Higher burst capacity
+                "pool_recycle": 7200,  # 2 hour recycle
+                "echo": False  # Disable SQL logging
+            })
+        else:
+            # Development optimizations
+            engine_kwargs.update({
+                "pool_size": 3,  # Smaller for development
+                "max_overflow": 5,
+                "echo": False  # Can be enabled for debugging
             })
         
         engine = create_engine(database_url, **engine_kwargs)
-        logger.info("✅ Database engine created successfully")
+        
+        # Log optimization settings
+        logger.info("✅ Database engine created with optimized configuration:")
+        logger.info(f"   Pool size: {engine_kwargs['pool_size']}")
+        logger.info(f"   Max overflow: {engine_kwargs['max_overflow']}")
+        logger.info(f"   Pool timeout: {engine_kwargs['pool_timeout']}s")
+        logger.info(f"   Pool recycle: {engine_kwargs['pool_recycle']}s")
+        logger.info(f"   Environment: {'Railway' if settings.is_railway else 'Production' if settings.is_production else 'Development'}")
+        
         return engine
         
     except Exception as e:
-        logger.error(f"❌ Failed to create database engine: {str(e)}")
+        logger.error(f"❌ Failed to create optimized database engine: {str(e)}")
         raise
 
 def test_database_connection():
@@ -231,3 +258,139 @@ def check_database_health():
 # Database initialization is now deferred to avoid caching issues
 # The database will be initialized when first accessed
 logger.info("📌 Database initialization deferred to avoid environment variable caching")
+
+# ============================================================================
+# DATABASE SESSION UTILITIES FOR OPTIMIZATION (Phase 4-5)
+# ============================================================================
+
+from contextlib import contextmanager, asynccontextmanager
+
+@contextmanager
+def get_db_session():
+    """
+    Context manager for database sessions with proper cleanup.
+    Useful for services that need database access outside of FastAPI dependency injection.
+    
+    Usage:
+        with get_db_session() as db:
+            user = db.query(User).filter(User.id == user_id).first()
+    """
+    db = None
+    try:
+        if not SessionLocal:
+            initialize_database()
+        
+        if not SessionLocal:
+            raise Exception("Database session factory not available")
+        
+        db = SessionLocal()
+        yield db
+    except Exception as e:
+        if db:
+            db.rollback()
+        raise
+    finally:
+        if db:
+            try:
+                db.close()
+            except Exception as close_error:
+                logger.warning(f"Error closing database session: {close_error}")
+
+@asynccontextmanager
+async def get_async_db_session():
+    """
+    Async context manager for database sessions.
+    For use with async services and caching systems.
+    
+    Usage:
+        async with get_async_db_session() as db:
+            user = db.query(User).filter(User.id == user_id).first()
+    """
+    db = None
+    try:
+        if not SessionLocal:
+            initialize_database()
+        
+        if not SessionLocal:
+            raise Exception("Database session factory not available")
+        
+        db = SessionLocal()
+        # Test connection asynchronously
+        await asyncio.create_task(_test_db_connection(db))
+        yield db
+    except Exception as e:
+        if db:
+            db.rollback()
+        raise
+    finally:
+        if db:
+            try:
+                db.close()
+            except Exception as close_error:
+                logger.warning(f"Error closing async database session: {close_error}")
+
+async def _test_db_connection(db):
+    """Test database connection asynchronously"""
+    import asyncio
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, lambda: db.execute(text("SELECT 1")))
+
+def get_connection_pool_stats() -> Optional[Dict]:
+    """
+    Get current database connection pool statistics.
+    Useful for monitoring and optimization.
+    
+    Returns:
+        Dict with pool statistics or None if engine not available
+    """
+    if not engine or not hasattr(engine, 'pool'):
+        return None
+    
+    pool = engine.pool
+    
+    try:
+        return {
+            'pool_size': pool.size(),
+            'checked_in_connections': pool.checkedin(),
+            'checked_out_connections': pool.checkedout(),
+            'overflow_connections': pool.overflow(),
+            'total_connections': pool.size() + pool.overflow(),
+            'pool_timeout': getattr(pool, '_timeout', 'unknown'),
+            'pool_recycle': getattr(pool, '_recycle', 'unknown')
+        }
+    except Exception as e:
+        logger.error(f"Error getting pool stats: {e}")
+        return {'error': str(e)}
+
+def optimize_database_for_caching():
+    """
+    Apply additional database optimizations specifically for user session caching.
+    This function can be called after database initialization to tune performance.
+    """
+    if not engine:
+        logger.warning("Cannot optimize database - engine not available")
+        return False
+    
+    try:
+        # Set connection pool events for monitoring
+        from sqlalchemy import event
+        
+        @event.listens_for(engine, "connect")
+        def set_session_optimizations(dbapi_connection, connection_record):
+            """Set session-level optimizations when connections are created"""
+            with dbapi_connection.cursor() as cursor:
+                # Optimize for read-heavy workloads (user session caching)
+                cursor.execute("SET SESSION statement_timeout = '30s'")
+                cursor.execute("SET SESSION lock_timeout = '10s'")
+                cursor.execute("SET SESSION idle_in_transaction_session_timeout = '60s'")
+                
+                # Optimize for faster reads
+                cursor.execute("SET SESSION effective_cache_size = '256MB'")
+                cursor.execute("SET SESSION random_page_cost = 1.1")  # SSD optimization
+        
+        logger.info("🔧 Database session optimizations applied")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to apply database optimizations: {e}")
+        return False

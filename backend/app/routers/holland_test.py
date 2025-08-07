@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from ..utils.database import get_db
-from ..utils.clerk_auth import get_current_user_with_db_sync as get_current_user
+from ..utils.secure_auth_integration import get_current_user_secure_integrated as get_current_user
 from ..services.LLMholland_service import LLMService
 from uuid import uuid4
 import uuid  # Ajout de l'import complet du module uuid
@@ -67,6 +67,26 @@ async def get_test_metadata(db: Session = Depends(get_db)):
     """
     Retourne les métadonnées du test Holland Code (RIASEC).
     """
+# ============================================================================
+# AUTHENTICATION MIGRATION - Secure Integration System
+# ============================================================================
+# This router has been migrated to use the unified secure authentication system
+# with integrated caching, security optimizations, and rollback support.
+# 
+# Migration date: 2025-08-07 13:44:03
+# Previous system: clerk_auth.get_current_user_with_db_sync
+# Current system: secure_auth_integration.get_current_user_secure_integrated
+# 
+# Benefits:
+# - AES-256 encryption for sensitive cache data
+# - Full SHA-256 cache keys (not truncated)
+# - Error message sanitization
+# - Multi-layer caching optimization  
+# - Zero-downtime rollback capability
+# - Comprehensive security monitoring
+# ============================================================================
+
+
     try:
         # Récupérer les métadonnées du test depuis la base de données
         query = text("""

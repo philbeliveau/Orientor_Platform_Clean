@@ -25,6 +25,7 @@ bcrypt==4.1.2
 passlib[bcrypt]==1.7.4
 email-validator==2.1.0
 clerk-backend-api==3.18.0
+pycryptodome==3.19.0  # For AES-256 encryption in secure auth system
 
 # HTTP clients and networking
 aiohttp==3.9.0

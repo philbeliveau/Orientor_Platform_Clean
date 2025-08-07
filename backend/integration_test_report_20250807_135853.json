@@ -1,0 +1,120 @@
+{
+  "start_time": "2025-08-07T13:58:52.601285",
+  "environment": "development",
+  "test_suites": {
+    "security": {
+      "success": true,
+      "details": {
+        "test_results": {
+          "no_jwt_storage": true,
+          "full_sha256_keys": true,
+          "error_sanitization": true,
+          "aes256_encryption": true,
+          "security_features_enabled": true,
+          "production_ready_config": true
+        },
+        "passed_tests": 6,
+        "total_tests": 6,
+        "security_level": "high"
+      },
+      "duration_seconds": 0.8020169734954834
+    },
+    "authentication": {
+      "success": true,
+      "details": {
+        "health_check": {
+          "status": "healthy",
+          "components": {
+            "jwt_cache": {
+              "status": "healthy",
+              "stats": {
+                "hits": 0,
+                "misses": 0,
+                "evictions": 0,
+                "sets": 0,
+                "size": 0,
+                "hit_rate": 0,
+                "memory_usage_kb": 0.0
+              }
+            },
+            "jwks_cache": {
+              "status": "healthy"
+            }
+          },
+          "metrics": {
+            "total_requests": 0,
+            "cache_hits": 0,
+            "cache_misses": 0,
+            "security_incidents": 0,
+            "rollback_events": 0
+          },
+          "feature_flags": {
+            "ENABLE_AUTH_CACHING": true,
+            "ENABLE_JWT_VALIDATION_CACHE": true,
+            "ENABLE_JWKS_BACKGROUND_REFRESH": true,
+            "ENABLE_DATABASE_OPTIMIZATION": true,
+            "ENABLE_PERFORMANCE_MONITORING": true,
+            "ENABLE_SECURE_ERROR_HANDLING": true,
+            "ENABLE_CACHE_ENCRYPTION": true,
+            "ENABLE_LEGACY_COMPATIBILITY": false
+          },
+          "security_status": {
+            "cache_encryption": true,
+            "error_sanitization": true,
+            "full_sha256_keys": true,
+            "plaintext_storage_disabled": true
+          }
+        },
+        "feature_flags": {
+          "ENABLE_AUTH_CACHING": true,
+          "ENABLE_JWT_VALIDATION_CACHE": true,
+          "ENABLE_JWKS_BACKGROUND_REFRESH": true,
+          "ENABLE_DATABASE_OPTIMIZATION": true,
+          "ENABLE_PERFORMANCE_MONITORING": true,
+          "ENABLE_SECURE_ERROR_HANDLING": true,
+          "ENABLE_CACHE_ENCRYPTION": true,
+          "ENABLE_LEGACY_COMPATIBILITY": false,
+          "ENABLE_EXPERIMENTAL_FEATURES": false,
+          "ENABLE_ROLLBACK": true
+        },
+        "clerk_configured": true,
+        "security_features": {
+          "cache_encryption": true,
+          "error_sanitization": true,
+          "full_sha256_keys": true,
+          "plaintext_storage_disabled": true
+        }
+      },
+      "duration_seconds": 0.3374497890472412
+    },
+    "cache_basic": {
+      "success": true,
+      "details": {
+        "test_results": {
+          "request_cache": true,
+          "ttl_cache": true,
+          "cache_stats": true
+        },
+        "cache_stats": {
+          "hits": 1,
+          "misses": 0,
+          "evictions": 0,
+          "sets": 1,
+          "size": 1,
+          "hit_rate": 1.0,
+          "memory_usage_kb": 0.1796875
+        }
+      },
+      "duration_seconds": 2.3126602172851562e-05
+    }
+  },
+  "overall_status": "success",
+  "end_time": "2025-08-07T13:58:53.741618",
+  "summary": {
+    "total_suites": 3,
+    "passed_suites": 3,
+    "failed_suites": 0,
+    "success_rate": 100.0,
+    "overall_success": true
+  }
+}

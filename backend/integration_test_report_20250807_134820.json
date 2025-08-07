@@ -1,0 +1,55 @@
+{
+  "start_time": "2025-08-07T13:48:19.802337",
+  "environment": "production",
+  "test_suites": {
+    "configuration": {
+      "success": false,
+      "error": "Invalid Clerk secret key configuration",
+      "duration_seconds": 0.007076263427734375
+    },
+    "security": {
+      "success": false,
+      "error": "No module named 'Crypto'",
+      "duration_seconds": 0.015249013900756836
+    },
+    "authentication": {
+      "success": false,
+      "error": "No module named 'Crypto'",
+      "duration_seconds": 0.0002727508544921875
+    },
+    "cache_comprehensive": {
+      "success": false,
+      "error": "name 'Dict' is not defined",
+      "duration_seconds": 0.7366909980773926
+    },
+    "database": {
+      "success": false,
+      "error": "name 'Dict' is not defined",
+      "duration_seconds": 0.0003380775451660156
+    },
+    "performance": {
+      "success": false,
+      "error": "No module named 'Crypto'",
+      "duration_seconds": 0.0003120899200439453
+    },
+    "rollback": {
+      "success": false,
+      "error": "No module named 'Crypto'",
+      "duration_seconds": 0.0002028942108154297
+    },
+    "monitoring": {
+      "success": false,
+      "error": "No module named 'Crypto'",
+      "duration_seconds": 0.00018215179443359375
+    }
+  },
+  "overall_status": "failed",
+  "end_time": "2025-08-07T13:48:20.563594",
+  "summary": {
+    "total_suites": 8,
+    "passed_suites": 0,
+    "failed_suites": 8,
+    "success_rate": 0.0,
+    "overall_success": false
+  }
+}

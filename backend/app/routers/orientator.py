@@ -2,6 +2,26 @@
 Orientator AI API Router
 Handles all endpoints for the intelligent conversational career assistant
 """
+# ============================================================================
+# AUTHENTICATION MIGRATION - Secure Integration System
+# ============================================================================
+# This router has been migrated to use the unified secure authentication system
+# with integrated caching, security optimizations, and rollback support.
+# 
+# Migration date: 2025-08-07 13:44:03
+# Previous system: clerk_auth.get_current_user_with_db_sync
+# Current system: secure_auth_integration.get_current_user_secure_integrated
+# 
+# Benefits:
+# - AES-256 encryption for sensitive cache data
+# - Full SHA-256 cache keys (not truncated)
+# - Error message sanitization
+# - Multi-layer caching optimization  
+# - Zero-downtime rollback capability
+# - Comprehensive security monitoring
+# ============================================================================
+
+
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
@@ -18,7 +38,7 @@ from app.models.tool_invocation import ToolInvocation
 from app.models.saved_recommendation import SavedRecommendation
 from app.models.user_journey_milestone import UserJourneyMilestone
 
-from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
+from app.utils.secure_auth_integration import get_current_user_secure_integrated as get_current_user
 from app.services.orientator_ai_service import OrientatorAIService
 from app.schemas.orientator import (
     OrientatorMessageRequest,

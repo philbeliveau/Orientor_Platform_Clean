@@ -19,6 +19,13 @@ from datetime import datetime, timedelta
 from ..models.user import User
 from ..utils.database import get_db
 from ..core.config import settings
+from .auth_cache import (
+    get_current_user_cached,
+    verify_clerk_token_cached,
+    get_jwks_cache,
+    CacheMetrics,
+    cache_health_check
+)
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer()
@@ -52,190 +59,45 @@ logger.info(f"✅ Clerk configuration validated successfully")
 logger.info(f"📍 Clerk Domain: {CLERK_DOMAIN}")
 logger.info(f"🔗 JWKS URL: {CLERK_JWKS_URL}")
 
-# Cache for Clerk JWKS
+# Legacy JWKS cache - replaced by auth_cache.py
+# These variables are maintained for backward compatibility but are no longer used
 CLERK_JWKS_CACHE = None
 CLERK_JWKS_LAST_UPDATED = None
 
 async def fetch_clerk_jwks() -> Dict:
-    """Fetch Clerk JWKS keys with caching"""
-    global CLERK_JWKS_CACHE, CLERK_JWKS_LAST_UPDATED
-    
-    # Use cached JWKS if recent (5 minute cache)
-    if CLERK_JWKS_CACHE and CLERK_JWKS_LAST_UPDATED and \
-       (datetime.now() - CLERK_JWKS_LAST_UPDATED) < timedelta(minutes=5):
-        return CLERK_JWKS_CACHE
-    
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(CLERK_JWKS_URL)
-            response.raise_for_status()
-            CLERK_JWKS_CACHE = response.json()
-            CLERK_JWKS_LAST_UPDATED = datetime.now()
-            return CLERK_JWKS_CACHE
-    except Exception as e:
-        logger.error(f"Failed to fetch Clerk JWKS: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Unable to verify authentication tokens"
-        )
+    """Fetch Clerk JWKS keys with advanced caching (Legacy wrapper)"""
+    logger.info("🔄 Using legacy JWKS fetch - redirecting to advanced cache")
+    jwks_cache = get_jwks_cache()
+    return await jwks_cache.get_jwks()
 
 async def verify_clerk_token(token: str) -> Dict[str, Any]:
-    """Verify a Clerk JWT token and return its payload"""
-    
-    # Add token type detection
-    logger.info(f"🔍 Token validation attempt")
-    logger.info(f"   Token preview: {token[:50]}...")
-    
-    # Check if this is a session token (wrong type)
-    if token.startswith("sess_"):
-        logger.error("❌ Received session token instead of JWT")
-        logger.error("   Frontend must use getToken({ template: 'orientor-jwt' })")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token type: Session token received, JWT required"
-        )
-    
-    # Check if this looks like a JWT
-    if not token.startswith("eyJ"):
-        logger.error(f"❌ Invalid token format: {token[:20]}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token format: Not a valid JWT"
-        )
-    
-    logger.info("✅ Token appears to be JWT format, proceeding with validation")
-    
-    try:
-        # Get JWKS keys
-        jwks = await fetch_clerk_jwks()
-        logger.info(f"   JWKS loaded: {len(jwks.get('keys', []))} keys available")
-        
-        # Decode token header to get kid
-        header = jwt.get_unverified_header(token)
-        kid = header.get("kid")
-        
-        if not kid:
-            logger.error("No 'kid' in token header")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token header - missing key ID"
-            )
-        
-        # Find the matching key
-        key = None
-        for jwk in jwks.get("keys", []):
-            if jwk.get("kid") == kid:
-                key = jwt.algorithms.RSAAlgorithm.from_jwk(jwk)
-                break
-        
-        if not key:
-            logger.error(f"No matching key for kid: {kid}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token signing key not found"
-            )
-        
-        # Verify token with flexible validation for development
-        # This handles both custom JWT templates and default Clerk tokens
-        payload = jwt.decode(
-            token,
-            key,
-            algorithms=["RS256"],
-            options={
-                "verify_aud": False,  # Skip audience verification (template dependent)
-                "verify_iss": False,  # Skip issuer verification (template dependent)
-                "verify_signature": True,  # Keep signature verification
-                "verify_exp": True,   # Keep expiration verification
-                "verify_sub": False   # Skip subject verification for flexibility
-            }
-        )
-        
-        logger.info(f"✅ Token validated for user: {payload.get('sub')}")
-        return payload
-        
-    except jwt.ExpiredSignatureError:
-        logger.error("Token has expired")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has expired"
-        )
-    except jwt.InvalidTokenError as e:
-        logger.error(f"JWT validation failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token: {str(e)}"
-        )
-    except Exception as e:
-        logger.error(f"Unexpected error during token validation: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Token verification failed"
-        )
+    """Verify a Clerk JWT token and return its payload (Legacy wrapper)"""
+    logger.info("🔄 Using legacy token verification - redirecting to cached version")
+    return await verify_clerk_token_cached(token)
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
-    Get current authenticated user from Clerk token.
+    Get current authenticated user from Clerk token (Legacy wrapper).
     Creates/updates the user in local database if needed.
-    """
-    token = credentials.credentials
     
-    try:
-        # Verify Clerk token
-        payload = await verify_clerk_token(token)
-        
-        # Extract user info from token
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token payload"
-            )
-        
-        # Get additional user info from Clerk API
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{CLERK_API_URL}/users/{user_id}",
-                headers={
-                    "Authorization": f"Bearer {CLERK_SECRET_KEY}",
-                    "Content-Type": "application/json"
-                }
-            )
-            response.raise_for_status()
-            clerk_user = response.json()
-        
-        # Return combined user info
-        return {
-            "id": user_id,
-            "email": clerk_user.get("email_addresses", [{}])[0].get("email_address"),
-            "first_name": clerk_user.get("first_name"),
-            "last_name": clerk_user.get("last_name"),
-            "clerk_data": clerk_user,
-            "__raw": token  # Include raw token for API forwarding
-        }
-        
-    except httpx.HTTPStatusError as e:
-        logger.error(f"Clerk API error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Unable to fetch user details from Clerk"
-        )
-    except Exception as e:
-        logger.error(f"User authentication error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials"
-        )
+    Note: This function now uses the advanced caching system from auth_cache.py
+    """
+    logger.info("🔄 Using legacy get_current_user - redirecting to cached version")
+    from .auth_cache import get_request_cache
+    request_cache = get_request_cache()
+    return await get_current_user_cached(credentials, db, request_cache)
 
 async def clerk_health_check() -> Dict[str, Any]:
-    """Check Clerk service health"""
+    """Check Clerk service health with comprehensive cache monitoring"""
     try:
+        # Get basic Clerk service health
         async with httpx.AsyncClient() as client:
-            # Check JWKS endpoint
-            jwks_response = await client.get(CLERK_JWKS_URL)
-            jwks_response.raise_for_status()
+            # Check JWKS endpoint through cache
+            jwks_cache = get_jwks_cache()
+            await jwks_cache.get_jwks()
             
             # Check API endpoint
             api_response = await client.get(
@@ -247,10 +109,14 @@ async def clerk_health_check() -> Dict[str, Any]:
             )
             api_response.raise_for_status()
             
+            # Get comprehensive cache health
+            cache_health = await cache_health_check()
+            
             return {
-                "status": "healthy",
-                "jwks": jwks_response.status_code == 200,
-                "api": api_response.status_code == 200
+                "status": "healthy" if cache_health["status"] == "healthy" else "degraded",
+                "clerk_api": api_response.status_code == 200,
+                "cache_system": cache_health,
+                "cache_metrics": CacheMetrics.get_all_stats()
             }
     except Exception as e:
         logger.error(f"Clerk health check failed: {str(e)}")
@@ -403,12 +269,24 @@ async def get_current_user_with_db_sync(
     Get current authenticated user from Clerk token and return SQLAlchemy User object.
     This function bridges the gap between Clerk authentication and legacy router expectations.
     
+    Now uses the advanced caching system for improved performance.
+    
     Returns:
         User: SQLAlchemy User object compatible with legacy routers
     """
     try:
-        # Get Clerk user data
-        clerk_user_data = await get_current_user(credentials, db)
+        # Get Clerk user data using cached authentication
+        from .auth_cache import get_request_cache
+        request_cache = get_request_cache()
+        clerk_user_data = await get_current_user_cached(credentials, db, request_cache)
+        
+        # Check if we have the database user ID cached
+        db_user_cache_key = f"db_user:{clerk_user_data['id']}"
+        cached_user = request_cache.get(db_user_cache_key)
+        
+        if cached_user is not None:
+            logger.debug("🎯 Database user cache hit")
+            return cached_user
         
         # Sync/create user in local database
         user_data = create_clerk_user_in_db(clerk_user_data["clerk_data"], db)
@@ -426,6 +304,10 @@ async def get_current_user_with_db_sync(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found in database after sync"
             )
+        
+        # Cache the database user for this request
+        request_cache.set(db_user_cache_key, user)
+        logger.debug("💾 Database user cached")
             
         return user
         
