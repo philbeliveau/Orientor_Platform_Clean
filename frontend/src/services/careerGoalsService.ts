@@ -215,7 +215,7 @@ export class CareerGoalsService {
         `${API_BASE}/api/v1/career-goals/${goalId}/milestones/${milestoneId}/complete`,
         {
           method: 'POST',
-          headers: getAuthHeaders(),
+          headers: getAuthHeaders(token),
         }
       );
 
@@ -240,7 +240,7 @@ export class CareerGoalsService {
         `${API_BASE}/api/v1/career-goals?include_inactive=${includeInactive}`,
         {
           method: 'GET',
-          headers: getAuthHeaders(),
+          headers: getAuthHeaders(token),
         }
       );
 

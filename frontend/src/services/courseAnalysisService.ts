@@ -1,4 +1,4 @@
-import api from './api';
+import { clerkApiService } from './api';
 
 export interface Course {
   id: number;
@@ -113,7 +113,7 @@ export interface ConversationSummary {
 
 class CourseAnalysisService {
   // Course Management
-  async getCourses(filters?: {
+  async getCourses(token: string, filters?: {
     semester?: string;
     year?: number;
     subject_category?: string;
@@ -128,75 +128,114 @@ class CourseAnalysisService {
     }
     
     const url = `/api/v1/courses${params.toString() ? `?${params.toString()}` : ''}`;
-    const response = await api.get(url);
-    return response.data;
+    const response = await clerkApiService.request<Course[]>(url, {
+      method: 'GET',
+      token
+    });
+    return response;
   }
 
-  async getCourse(courseId: number): Promise<Course> {
-    const response = await api.get(`/api/v1/courses/${courseId}`);
-    return response.data;
+  async getCourse(courseId: number, token: string): Promise<Course> {
+    const response = await clerkApiService.request<Course>(`/api/v1/courses/${courseId}`, {
+      method: 'GET',
+      token
+    });
+    return response;
   }
 
-  async createCourse(courseData: CourseCreate): Promise<Course> {
-    const response = await api.post('/api/v1/courses', courseData);
-    return response.data;
+  async createCourse(courseData: CourseCreate, token: string): Promise<Course> {
+    const response = await clerkApiService.request<Course>('/api/v1/courses', {
+      method: 'POST',
+      body: JSON.stringify(courseData),
+      token
+    });
+    return response;
   }
 
-  async updateCourse(courseId: number, updateData: Partial<CourseCreate>): Promise<Course> {
-    const response = await api.put(`/api/v1/courses/${courseId}`, updateData);
-    return response.data;
+  async updateCourse(courseId: number, updateData: Partial<CourseCreate>, token: string): Promise<Course> {
+    const response = await clerkApiService.request<Course>(`/api/v1/courses/${courseId}`, {
+      method: 'PUT',
+      body: JSON.stringify(updateData),
+      token
+    });
+    return response;
   }
 
-  async deleteCourse(courseId: number): Promise<void> {
-    await api.delete(`/api/v1/courses/${courseId}`);
+  async deleteCourse(courseId: number, token: string): Promise<void> {
+    await clerkApiService.request(`/api/v1/courses/${courseId}`, {
+      method: 'DELETE',
+      token
+    });
   }
 
   // Career Analysis
   async startTargetedAnalysis(
-    courseId: number, 
+    courseId: number,
+    token: string,
     focusAreas?: string[],
     userContext?: any
   ): Promise<AnalysisSession> {
-    const response = await api.post(`/api/v1/courses/${courseId}/targeted-analysis`, {
-      focus_areas: focusAreas,
-      user_context: userContext
+    const response = await clerkApiService.request<AnalysisSession>(`/api/v1/courses/${courseId}/targeted-analysis`, {
+      method: 'POST',
+      body: JSON.stringify({
+        focus_areas: focusAreas,
+        user_context: userContext
+      }),
+      token
     });
-    return response.data;
+    return response;
   }
 
   async respondToQuestion(
     sessionId: string,
     questionId: string,
-    userResponse: string
+    userResponse: string,
+    token: string
   ): Promise<AnalysisResponse> {
-    const response = await api.post(`/api/v1/conversations/${sessionId}/respond`, {
-      question_id: questionId,
-      response: userResponse
+    const response = await clerkApiService.request<AnalysisResponse>(`/api/v1/conversations/${sessionId}/respond`, {
+      method: 'POST',
+      body: JSON.stringify({
+        question_id: questionId,
+        response: userResponse
+      }),
+      token
     });
-    return response.data;
+    return response;
   }
 
   // Psychological Profile
-  async getPsychologicalProfile(userId: number): Promise<PsychologicalProfile> {
-    const response = await api.get(`/api/v1/psychological-profile/${userId}`);
-    return response.data;
+  async getPsychologicalProfile(userId: number, token: string): Promise<PsychologicalProfile> {
+    const response = await clerkApiService.request<PsychologicalProfile>(`/api/v1/psychological-profile/${userId}`, {
+      method: 'GET',
+      token
+    });
+    return response;
   }
 
-  async getCareerSignals(userId: number): Promise<CareerSignalsData> {
-    const response = await api.get(`/api/v1/career-signals/${userId}`);
-    return response.data;
+  async getCareerSignals(userId: number, token: string): Promise<CareerSignalsData> {
+    const response = await clerkApiService.request<CareerSignalsData>(`/api/v1/career-signals/${userId}`, {
+      method: 'GET',
+      token
+    });
+    return response;
   }
 
   // Course Insights
-  async getCourseInsights(courseId: number): Promise<PsychologicalInsight[]> {
-    const response = await api.get(`/api/v1/courses/${courseId}/insights`);
-    return response.data;
+  async getCourseInsights(courseId: number, token: string): Promise<PsychologicalInsight[]> {
+    const response = await clerkApiService.request<PsychologicalInsight[]>(`/api/v1/courses/${courseId}/insights`, {
+      method: 'GET',
+      token
+    });
+    return response;
   }
 
   // Session Management
-  async getConversationSummary(sessionId: string): Promise<ConversationSummary> {
-    const response = await api.get(`/api/v1/conversations/${sessionId}/summary`);
-    return response.data;
+  async getConversationSummary(sessionId: string, token: string): Promise<ConversationSummary> {
+    const response = await clerkApiService.request<ConversationSummary>(`/api/v1/conversations/${sessionId}/summary`, {
+      method: 'GET',
+      token
+    });
+    return response;
   }
 
   // Utility Methods

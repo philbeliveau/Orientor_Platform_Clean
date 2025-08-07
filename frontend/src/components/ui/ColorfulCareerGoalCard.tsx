@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Target, TrendingUp, Calendar, CheckCircle, Circle, Plus } from 'lucide-react';
-import { CareerGoalsService, CareerGoal } from '@/services/careerGoalsService';
+import { CareerGoal } from '@/services/careerGoalsService';
+import { useAuthenticatedServices } from '@/hooks/useAuthenticatedServices';
 
 interface ColorfulCareerGoalCardProps {
   style?: React.CSSProperties;
@@ -26,14 +27,20 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { careerGoals, isSignedIn, isLoaded } = useAuthenticatedServices();
 
   useEffect(() => {
     const fetchActiveCareerGoal = async () => {
+      if (!isLoaded || !isSignedIn) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
         
-        const response = await CareerGoalsService.getActiveCareerGoal();
+        const response = await careerGoals.getActiveCareerGoal();
         
         if (response.goal) {
           // Format the target date
@@ -105,7 +112,7 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
     };
 
     fetchActiveCareerGoal();
-  }, []);
+  }, [isLoaded, isSignedIn, careerGoals]);
 
   // Show loading state
   if (loading) {

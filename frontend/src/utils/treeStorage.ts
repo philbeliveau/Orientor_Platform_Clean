@@ -1,4 +1,5 @@
 import { TreeNode } from './convertToFlowGraph';
+import { makeAuthenticatedRequest } from './clerkAuth';
 
 // API URL based on environment
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -32,23 +33,18 @@ interface UserProgress {
 }
 
 // Save tree to user's path
-export async function saveTreePath(tree: TreeNode, treeType: 'career' | 'skills') {
-  const token = localStorage.getItem('access_token');
+export async function saveTreePath(tree: TreeNode, treeType: 'career' | 'skills', token: string) {
   if (!token) {
-    throw new Error('Authentication required');
+    throw new Error('Authentication token required');
   }
 
-  const response = await fetch(`${API_URL}/tree-paths/`, {
+  const response = await makeAuthenticatedRequest('/tree-paths/', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
     body: JSON.stringify({
       tree_type: treeType,
       tree_json: tree
     })
-  });
+  }, token);
 
   if (!response.ok) {
     const error = await response.json();
@@ -59,17 +55,14 @@ export async function saveTreePath(tree: TreeNode, treeType: 'career' | 'skills'
 }
 
 // Fetch all tree paths for the current user
-export async function fetchUserTreePaths() {
-  const token = localStorage.getItem('access_token');
+export async function fetchUserTreePaths(token: string) {
   if (!token) {
-    throw new Error('Authentication required');
+    throw new Error('Authentication token required');
   }
 
-  const response = await fetch(`${API_URL}/tree-paths/`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
+  const response = await makeAuthenticatedRequest('/tree-paths/', {
+    method: 'GET'
+  }, token);
 
   if (!response.ok) {
     const error = await response.json();
@@ -80,24 +73,19 @@ export async function fetchUserTreePaths() {
 }
 
 // Save a note for a node action
-export async function saveNodeNote(nodeId: string, actionIndex: number, noteText: string) {
-  const token = localStorage.getItem('access_token');
+export async function saveNodeNote(nodeId: string, actionIndex: number, noteText: string, token: string) {
   if (!token) {
-    throw new Error('Authentication required');
+    throw new Error('Authentication token required');
   }
 
-  const response = await fetch(`${API_URL}/node-notes/`, {
+  const response = await makeAuthenticatedRequest('/node-notes/', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
     body: JSON.stringify({
       node_id: nodeId,
       action_index: actionIndex,
       note_text: noteText
     })
-  });
+  }, token);
 
   if (!response.ok) {
     const error = await response.json();
@@ -108,17 +96,14 @@ export async function saveNodeNote(nodeId: string, actionIndex: number, noteText
 }
 
 // Fetch all notes for a specific node
-export async function fetchNodeNotes(nodeId: string) {
-  const token = localStorage.getItem('access_token');
+export async function fetchNodeNotes(nodeId: string, token: string) {
   if (!token) {
-    throw new Error('Authentication required');
+    throw new Error('Authentication token required');
   }
 
-  const response = await fetch(`${API_URL}/node-notes/node/${nodeId}/`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
+  const response = await makeAuthenticatedRequest(`/node-notes/node/${nodeId}/`, {
+    method: 'GET'
+  }, token);
 
   if (!response.ok) {
     const error = await response.json();
@@ -129,24 +114,19 @@ export async function fetchNodeNotes(nodeId: string) {
 }
 
 // Update user XP when completing an action
-export async function updateUserXP(nodeId: string, xpGained = 10, completedActions?: { [key: string]: boolean[] }) {
-  const token = localStorage.getItem('access_token');
+export async function updateUserXP(nodeId: string, token: string, xpGained = 10, completedActions?: { [key: string]: boolean[] }) {
   if (!token) {
-    throw new Error('Authentication required');
+    throw new Error('Authentication token required');
   }
 
-  const response = await fetch(`${API_URL}/user-progress/update`, {
+  const response = await makeAuthenticatedRequest('/user-progress/update', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
     body: JSON.stringify({
       node_id: nodeId,
       xp_gained: xpGained,
       completed_actions: completedActions
     })
-  });
+  }, token);
 
   if (!response.ok) {
     const error = await response.json();
@@ -157,17 +137,14 @@ export async function updateUserXP(nodeId: string, xpGained = 10, completedActio
 }
 
 // Get user progress (XP, level)
-export async function getUserProgress() {
-  const token = localStorage.getItem('access_token');
+export async function getUserProgress(token: string) {
   if (!token) {
-    throw new Error('Authentication required');
+    throw new Error('Authentication token required');
   }
 
-  const response = await fetch(`${API_URL}/user-progress/`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
+  const response = await makeAuthenticatedRequest('/user-progress/', {
+    method: 'GET'
+  }, token);
 
   if (!response.ok) {
     const error = await response.json();
@@ -178,21 +155,16 @@ export async function getUserProgress() {
 }
 
 // Delete a saved tree path
-export async function deleteTreePath(treePathId: string) {
-  const token = localStorage.getItem('access_token');
+export async function deleteTreePath(treePathId: string, token: string) {
   if (!token) {
-    throw new Error('Authentication required');
+    throw new Error('Authentication token required');
   }
 
   try {
     console.log('Deleting tree with ID:', treePathId);
-    const response = await fetch(`${API_URL}/tree-paths/${treePathId}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    const response = await makeAuthenticatedRequest(`/tree-paths/${treePathId}`, {
+      method: 'DELETE'
+    }, token);
 
     console.log('Delete response status:', response.status);
     
@@ -214,20 +186,15 @@ export async function deleteTreePath(treePathId: string) {
 }
 
 // Get a saved tree by ID
-export async function getTreePath(treeId: string) {
-  const token = localStorage.getItem('access_token');
+export async function getTreePath(treeId: string, token: string) {
   if (!token) {
-    throw new Error('Authentication required');
+    throw new Error('Authentication token required');
   }
 
   try {
-    const response = await fetch(`${API_URL}/tree-paths/${treeId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
+    const response = await makeAuthenticatedRequest(`/tree-paths/${treeId}`, {
+      method: 'GET'
+    }, token);
 
     if (!response.ok) {
       const errorData = await response.json();

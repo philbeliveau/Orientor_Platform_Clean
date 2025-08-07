@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BookOpen, Clock, Users, Brain, TrendingUp, MessageCircle } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-import { courseAnalysisService } from '@/services/courseAnalysisService';
+import { useAuthenticatedServices } from '@/hooks/useAuthenticatedServices';
 
 interface Course {
   id: number;
@@ -41,13 +41,19 @@ const EnhancedClassesCard: React.FC<EnhancedClassesCardProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAnalysisPrompt, setShowAnalysisPrompt] = useState(false);
+  const { courses: courseServices, isSignedIn, isLoaded } = useAuthenticatedServices();
 
   // Fetch user's courses
   useEffect(() => {
     const fetchCourses = async () => {
+      if (!isLoaded || !isSignedIn) {
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
-        const coursesData = await courseAnalysisService.getCourses();
+        const coursesData = await courseServices.getCourses();
         setCourses(coursesData.slice(0, 3)); // Show top 3 most recent courses
 
         // Check if any courses need analysis
@@ -67,7 +73,7 @@ const EnhancedClassesCard: React.FC<EnhancedClassesCardProps> = ({
     };
 
     fetchCourses();
-  }, [userId]);
+  }, [userId, isLoaded, isSignedIn, courseServices]);
 
   const getMockCourses = (): Course[] => [
     {

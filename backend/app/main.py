@@ -187,6 +187,8 @@ app.include_router(tree_router, prefix="/api/v1")
 app.include_router(tree_paths_router, prefix="/api/v1")
 app.include_router(node_notes_router, prefix="/api/v1")
 app.include_router(user_progress_router, prefix="/api/v1")
+# Also include without prefix for legacy compatibility  
+app.include_router(user_progress_router)
 app.include_router(jobs_router, prefix="/api/v1")
 app.include_router(program_recommendations_router, prefix="/api/v1")
 app.include_router(holland_test_router, prefix="/api/v1")

@@ -107,7 +107,10 @@ export const useClerkApi = () => {
     try {
       // CRITICAL: Request JWT token with the template we created
       console.log('[Auth] Requesting JWT token with orientor-jwt template...');
-      const token = await getToken({ template: 'orientor-jwt' });
+      const token = await getToken({ template: 'orientor-jwt' }).catch(async () => {
+        console.log('[Auth] Template failed, trying default token...');
+        return await getToken();
+      });
       
       if (!token) {
         console.error('[Auth] No token returned from Clerk');

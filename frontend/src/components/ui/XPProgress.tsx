@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import LoadingSpinner from './LoadingSpinner';
 import { getUserProgress } from '../../utils/treeStorage';
+import { useClerkToken } from '../../utils/clerkAuth';
 
 interface XPProgressProps {
   className?: string;
@@ -21,11 +22,23 @@ export default function XPProgress({ className = '' }: XPProgressProps) {
   const [level, setLevel] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getAuthToken, isSignedIn, isLoaded } = useClerkToken();
 
   useEffect(() => {
     const fetchProgress = async () => {
+      if (!isLoaded) {
+        return; // Wait for Clerk to load
+      }
+
+      if (!isSignedIn) {
+        setError('Please sign in to view your progress');
+        setLoading(false);
+        return;
+      }
+
       try {
-        const progress = await getUserProgress();
+        const token = await getAuthToken();
+        const progress = await getUserProgress(token);
         setTotalXP(progress.total_xp);
         setLevel(progress.level);
       } catch (err: any) {
@@ -37,7 +50,7 @@ export default function XPProgress({ className = '' }: XPProgressProps) {
     };
 
     fetchProgress();
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   // Calculate current level threshold and progress percentage
   const currentThreshold = XP_THRESHOLDS.find(t => t.level === level) || XP_THRESHOLDS[0];

@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import LoadingSpinner from './LoadingSpinner';
 import styles from '@/styles/card.module.css';
 import { ScoreResponse } from '@/services/hollandTestService';
-import AvatarService, { AvatarData } from '@/services/avatarService';
+import { AvatarData } from '@/services/avatarService';
+import { useAuthenticatedServices } from '@/hooks/useAuthenticatedServices';
 
 interface UserCardProps {
   name: string;
@@ -49,13 +50,19 @@ const UserCard: React.FC<UserCardProps> = ({
   const router = useRouter();
   const [avatarData, setAvatarData] = useState<AvatarData | null>(null);
   const [avatarLoading, setAvatarLoading] = useState(true);
+  const { avatar, isSignedIn, isLoaded } = useAuthenticatedServices();
 
   // Charger l'avatar de l'utilisateur
   useEffect(() => {
     const loadAvatar = async () => {
+      if (!isLoaded || !isSignedIn) {
+        setAvatarLoading(false);
+        return;
+      }
+
       try {
         setAvatarLoading(true);
-        const data = await AvatarService.getUserAvatar();
+        const data = await avatar.getUserAvatar();
         setAvatarData(data);
       } catch (err) {
         console.log('Aucun avatar trouvé pour cet utilisateur');
@@ -66,14 +73,22 @@ const UserCard: React.FC<UserCardProps> = ({
     };
 
     loadAvatar();
-  }, []);
+  }, [isLoaded, isSignedIn, avatar]);
 
   const handleProfileClick = () => {
     router.push('/insight');
   };
 
+  // Get avatar image URL helper function
+  const getAvatarImageUrl = (relativeUrl: string): string => {
+    if (!relativeUrl) return '';
+    if (relativeUrl.startsWith('http')) return relativeUrl;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    return `${apiUrl}${relativeUrl}`;
+  };
+
   const avatarImageUrl = avatarData?.avatar_image_url
-    ? AvatarService.getAvatarImageUrl(avatarData.avatar_image_url)
+    ? getAvatarImageUrl(avatarData.avatar_image_url)
     : null;
 
   return (

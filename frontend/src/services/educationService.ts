@@ -94,19 +94,22 @@ class EducationService {
     this.baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   }
 
-  private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  private async makeRequest<T>(endpoint: string, options?: RequestInit, token?: string): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...options?.headers as Record<string, string>,
+      };
+
+      // Add auth header if token is provided
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          // Add auth header if available
-          ...(localStorage.getItem('access_token') && {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }),
-          ...options?.headers,
-        },
+        headers,
         ...options,
       });
 
@@ -124,41 +127,41 @@ class EducationService {
   /**
    * Search for education programs
    */
-  async searchPrograms(searchRequest: ProgramSearchRequest): Promise<ProgramSearchResponse> {
+  async searchPrograms(searchRequest: ProgramSearchRequest, token?: string): Promise<ProgramSearchResponse> {
     return this.makeRequest<ProgramSearchResponse>('/api/v1/education/programs/search', {
       method: 'POST',
       body: JSON.stringify(searchRequest),
-    });
+    }, token);
   }
 
   /**
    * Get detailed information about a specific program
    */
-  async getProgramDetails(programId: string): Promise<Program> {
-    return this.makeRequest<Program>(`/api/v1/education/programs/${programId}`);
+  async getProgramDetails(programId: string, token?: string): Promise<Program> {
+    return this.makeRequest<Program>(`/api/v1/education/programs/${programId}`, {}, token);
   }
 
   /**
    * Get list of all institutions
    */
-  async getInstitutions(): Promise<{ institutions: Institution[] }> {
-    return this.makeRequest<{ institutions: Institution[] }>('/api/v1/education/institutions');
+  async getInstitutions(token?: string): Promise<{ institutions: Institution[] }> {
+    return this.makeRequest<{ institutions: Institution[] }>('/api/v1/education/institutions', {}, token);
   }
 
   /**
    * Get metadata for search filters
    */
-  async getSearchMetadata(): Promise<SearchMetadata> {
-    return this.makeRequest<SearchMetadata>('/api/v1/education/metadata');
+  async getSearchMetadata(token?: string): Promise<SearchMetadata> {
+    return this.makeRequest<SearchMetadata>('/api/v1/education/metadata', {}, token);
   }
 
   /**
    * Get user's Holland RIASEC scores for program matching
    */
-  async getUserHollandScores(userId: number): Promise<{ R: number; I: number; A: number; S: number; E: number; C: number } | null> {
+  async getUserHollandScores(userId: number, token?: string): Promise<{ R: number; I: number; A: number; S: number; E: number; C: number } | null> {
     try {
       // This would connect to your existing Holland test results API
-      const response = await this.makeRequest<any>(`/api/v1/holland/user/${userId}/latest`);
+      const response = await this.makeRequest<any>(`/api/v1/holland/user/${userId}/latest`, {}, token);
       return {
         R: response.r_score || 0,
         I: response.i_score || 0,
