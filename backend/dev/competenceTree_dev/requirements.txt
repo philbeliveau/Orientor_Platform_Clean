@@ -1,0 +1,28 @@
+# Dépendances principales
+streamlit>=1.22.0
+numpy>=1.22.0
+pandas>=1.4.0
+matplotlib>=3.5.0
+plotly>=5.10.0
+networkx>=2.8.0
+pinecone-client>=2.2.1
+torch>=1.13.0
+torch-geometric>=2.3.0
+
+# Dépendances pour la visualisation
+seaborn>=0.12.0
+
+# Dépendances pour la base de données
+psycopg2-binary>=2.9.5
+
+# Dépendances pour le traitement des données
+scikit-learn>=1.1.0
+
+# Dépendances pour la gestion des chemins et fichiers
+pathlib>=1.0.1
+
+# Dépendances pour le logging
+python-json-logger>=2.0.4
+
+# Dépendances pour la gestion des événements asyncio
+nest_asyncio>=1.5.6

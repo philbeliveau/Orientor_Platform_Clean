@@ -52,515 +52,478 @@ def get_production_paths():
     return local_paths
 
 # Get production paths
-PATHS = get_production_paths()
+paths = get_production_paths()
+backend_path = paths['backend']
+services_path = paths['services'] 
+gnn_path = paths['gnn']
 
-# Import GraphSAGE model safely with multiple fallback paths
-graphsage_model = None
-CareerTreeModel = None
+# Add both paths to ensure imports work
+if services_path not in sys.path:
+    sys.path.insert(0, services_path)
+if gnn_path not in sys.path:
+    sys.path.insert(0, gnn_path)
 
 try:
-    # Try importing from services/GNN first
-    sys.path.insert(0, PATHS['services'])
-    from GNN.GraphSage import GraphSAGE, CareerTreeModel
-    graphsage_model = GraphSAGE
-    logger.info("✅ GraphSAGE importé depuis app/services/GNN")
+    from GraphSage import GraphSAGE, CareerTreeModel
+    logger.info("GraphSAGE imported successfully from GNN directory")
 except ImportError as e:
-    logger.warning(f"❌ Impossible d'importer GraphSAGE depuis services/GNN: {e}")
-    
+    logger.warning(f"Direct import failed: {e}, trying fallback method")
     try:
-        # Fallback: Try importing from local GNN path
-        sys.path.insert(0, PATHS['gnn'])
-        from GraphSage import GraphSAGE, CareerTreeModel
-        graphsage_model = GraphSAGE
-        logger.info("✅ GraphSAGE importé depuis chemin GNN local")
-    except ImportError as e2:
-        logger.error(f"❌ Impossible d'importer GraphSAGE depuis tous les chemins: {e2}")
-        logger.info("Le service fonctionnera en mode fallback sans GraphSAGE")
+        # Fallback import method
+        from GNN.GraphSage import GraphSAGE, CareerTreeModel
+        logger.info("GraphSAGE imported successfully using fallback method")
+    except ImportError as e:
+        logger.error(f"All import methods failed: {e}")
+        # Define dummy classes to prevent total failure
+        class GraphSAGE:
+            pass
+        class CareerTreeModel:
+            def __init__(self, *args, **kwargs):
+                pass
+            def eval(self):
+                pass
+            def load_state_dict(self, *args, **kwargs):
+                pass
+
 
 class GraphTraversalService:
     """
-    Service de traversée du graphe ESCO utilisant GraphSAGE pour les calculs de similarité.
+    Service pour traverser le graphe ESCO en utilisant GraphSAGE.
     
-    Ce service :
-    1. Charge un graphe ESCO prétraité
-    2. Utilise un modèle GraphSAGE entraîné pour calculer les similarités
-    3. Permet la traversée intelligente du graphe basée sur les embeddings
-    4. Supporte les requêtes de similarité entre nœuds
+    Ce service utilise le modèle GraphSAGE pour calculer les similarités entre les nœuds
+    et traverser le graphe à partir de nœuds d'ancrage.
     """
     
-    def __init__(self):
-        """Initialise le service de traversée du graphe."""
-        self.graph = None
+    def __init__(self, 
+                model_path: Optional[str] = None,
+                graph_data_path: Optional[str] = None,
+                node_metadata_path: Optional[str] = None,
+                max_depth: int = 10):
+        """
+        Initialise le service de traversée du graphe.
+        
+        Args:
+            model_path: Chemin vers le modèle GraphSAGE préentraîné
+            graph_data_path: Chemin vers les données du graphe ESCO
+            node_metadata_path: Chemin vers les métadonnées des nœuds
+            max_depth: Profondeur maximale de traversée
+        """
+        # Production-grade model path resolution  
+        if model_path is None:
+            # Use the production path system
+            paths = get_production_paths()
+            model_path = paths['model']
+            logger.info(f"Using model path: {model_path}")
+        
+        # Chemin par défaut vers le dossier de données
+        data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+        
+        # Chemins vers les fichiers de données
+        self.idx2node_path = os.path.join(data_dir, "idx2node.json")
+        self.node2idx_path = os.path.join(data_dir, "node2idx.json")
+        self.node_metadata_path = os.path.join(data_dir, "node_metadata.json")
+        self.edge_type_dict_path = os.path.join(data_dir, "edge_type_dict.json")
+        self.edge_index_path = os.path.join(data_dir, "edge_index.pt")
+        self.node_features_path = os.path.join(data_dir, "node_features.pt")
+        self.edge_type_path = os.path.join(data_dir, "edge_type.json")
+        self.edge_type_indices_path = os.path.join(data_dir, "edge_type_indices.json")
+        
+        self.model_path = model_path
+        # Ne pas écraser les chemins déjà définis si les paramètres sont None
+        if graph_data_path is not None:
+            self.graph_data_path = graph_data_path
+        if node_metadata_path is not None:
+            self.node_metadata_path = node_metadata_path
+        self.max_depth = max_depth
+        
+        # Charger le modèle GraphSAGE
+        self.model = self._load_model()
+        
+        # Initialiser les structures de données
+        self.idx2node = {}
+        self.node2idx = {}
         self.node_metadata = {}
-        self.graphsage_model = None
-        self.model_loaded = False
-        self.graph_loaded = False
+        self.edge_type_dict = {}
+        self.edge_type = {}
+        self.edge_type_indices = {}
         
-        # Tenter de charger le graphe et le modèle
-        self._load_graph()
-        self._load_graphsage_model()
+        # Charger les données du graphe
+        self._load_graph_data()
+        
+        # Créer le graphe NetworkX à partir des données chargées
+        self.graph = self._create_networkx_graph()
+        
+        logger.info(f"Service de traversée du graphe initialisé avec {len(self.graph.nodes)} nœuds et {len(self.graph.edges)} arêtes")
     
-    def _load_graph(self):
-        """Charge le graphe ESCO depuis les fichiers de données."""
+    def _load_model(self) -> Optional[CareerTreeModel]:
+        """
+        Charge le modèle GraphSAGE préentraîné.
+        
+        Returns:
+            Le modèle GraphSAGE chargé ou None en cas d'échec
+        """
         try:
-            # Chercher les fichiers de graphe dans différents emplacements
-            possible_graph_files = [
-                os.path.join(PATHS.get('data_dir', PATHS['backend']), 'esco_graph.pkl'),
-                os.path.join(PATHS['backend'], 'data', 'esco_graph.pkl'),
-                os.path.join(PATHS['backend'], 'app', 'data', 'esco_graph.pkl'),
-                os.path.join(PATHS['backend'], 'dev', 'competenceTree_dev', 'esco_graph.pkl')
-            ]
+            # Vérifier si le fichier du modèle existe
+            if not os.path.exists(self.model_path):
+                logger.error(f"Le fichier du modèle n'existe pas: {self.model_path}")
+                return None
             
-            graph_file = None
-            for file_path in possible_graph_files:
-                if os.path.exists(file_path):
-                    graph_file = file_path
-                    break
+            # Charger le checkpoint
+            checkpoint = torch.load(self.model_path, map_location="cpu", weights_only=False)
             
-            if graph_file:
-                with open(graph_file, 'rb') as f:
-                    graph_data = pickle.load(f)
-                    self.graph = graph_data.get('graph', nx.Graph())
-                    self.node_metadata = graph_data.get('metadata', {})
-                
-                logger.info(f"✅ Graphe ESCO chargé depuis {graph_file}")
-                logger.info(f"📊 Graphe: {self.graph.number_of_nodes()} nœuds, {self.graph.number_of_edges()} arêtes")
-                self.graph_loaded = True
-            else:
-                logger.warning("❌ Aucun fichier de graphe ESCO trouvé, création d'un graphe vide")
-                self._create_fallback_graph()
-                
-        except Exception as e:
-            logger.error(f"❌ Erreur lors du chargement du graphe: {e}")
-            self._create_fallback_graph()
-    
-    def _create_fallback_graph(self):
-        """Crée un graphe de fallback minimal pour les tests."""
-        self.graph = nx.Graph()
-        self.node_metadata = {}
-        
-        # Ajouter quelques nœuds d'exemple pour éviter les erreurs
-        sample_nodes = [
-            ("occupation_1", {"type": "occupation", "preferredLabel": "Software Developer"}),
-            ("skill_1", {"type": "skill", "preferredLabel": "Programming"}),
-            ("skill_2", {"type": "skill", "preferredLabel": "Problem Solving"}),
-            ("skill_3", {"type": "skill", "preferredLabel": "Critical Thinking"})
-        ]
-        
-        for node_id, metadata in sample_nodes:
-            self.graph.add_node(node_id)
-            self.node_metadata[node_id] = metadata
-        
-        # Ajouter quelques arêtes d'exemple
-        self.graph.add_edge("occupation_1", "skill_1")
-        self.graph.add_edge("occupation_1", "skill_2")
-        self.graph.add_edge("skill_1", "skill_3")
-        
-        logger.info("✅ Graphe de fallback créé avec des données d'exemple")
-        self.graph_loaded = True
-    
-    def _load_graphsage_model(self):
-        """Charge le modèle GraphSAGE pré-entraîné."""
-        if not graphsage_model or not CareerTreeModel:
-            logger.warning("❌ Classes GraphSAGE non disponibles, mode fallback activé")
-            return
-        
-        try:
-            model_path = PATHS['model']
-            
-            if not os.path.exists(model_path):
-                logger.warning(f"❌ Modèle GraphSAGE non trouvé: {model_path}")
-                logger.info("Le service fonctionnera avec des similarités basiques")
-                return
-            
-            # Créer une instance du modèle complet
-            full_model = CareerTreeModel(
-                input_dim=1024,
+            # Instancier le modèle
+            model = CareerTreeModel(
+                input_dim=384,  # Dimension des embeddings
                 hidden_dim=128,
                 output_dim=128,
                 dropout=0.2
             )
             
-            # Charger le checkpoint
-            checkpoint = torch.load(model_path, map_location='cpu', weights_only=False)
+            # Charger les poids du modèle
+            if "model_state_dict" not in checkpoint:
+                logger.error("Le checkpoint ne contient pas 'model_state_dict'")
+                return None
             
-            if 'model_state_dict' not in checkpoint:
-                logger.error("❌ Checkpoint invalide: 'model_state_dict' manquant")
-                return
+            model.load_state_dict(checkpoint["model_state_dict"])
+            model.eval()  # Mettre le modèle en mode évaluation
             
-            # Charger les poids
-            full_model.load_state_dict(checkpoint['model_state_dict'])
-            full_model.eval()
-            
-            # Extraire seulement l'encodeur (GraphSAGE)
-            self.graphsage_model = full_model.encoder
-            self.graphsage_model.eval()
-            
-            logger.info("✅ Modèle GraphSAGE chargé avec succès")
-            self.model_loaded = True
+            logger.info("Modèle GraphSAGE chargé avec succès")
+            return model
             
         except Exception as e:
-            logger.error(f"❌ Erreur lors du chargement du modèle GraphSAGE: {e}")
-            logger.info("Le service fonctionnera avec des similarités basiques")
+            logger.error(f"Erreur lors du chargement du modèle: {str(e)}")
+            return None
     
-    def get_node_neighbors(self, node_id: str, max_neighbors: int = 10) -> List[Dict[str, Any]]:
+    def _load_graph_data(self) -> bool:
         """
-        Récupère les voisins directs d'un nœud.
+        Charge les données du graphe à partir des fichiers dans le dossier data/.
         
-        Args:
-            node_id: ID du nœud source
-            max_neighbors: Nombre maximum de voisins à retourner
-            
         Returns:
-            Liste des voisins avec leurs métadonnées
+            Booléen indiquant le succès ou l'échec du chargement
         """
-        if not self.graph_loaded or node_id not in self.graph:
-            return []
-        
-        neighbors = []
-        for neighbor_id in list(self.graph.neighbors(node_id))[:max_neighbors]:
-            neighbor_data = {
-                'id': neighbor_id,
-                'metadata': self.node_metadata.get(neighbor_id, {}),
-                'similarity': 1.0  # Similarité maximale pour les voisins directs
-            }
-            neighbors.append(neighbor_data)
-        
-        return neighbors
+        try:
+            # Charger les mappages d'index
+            if os.path.exists(self.idx2node_path):
+                with open(self.idx2node_path, 'r') as f:
+                    self.idx2node = json.load(f)
+                logger.info(f"Mappages idx2node chargés pour {len(self.idx2node)} nœuds")
+            else:
+                logger.warning(f"Le fichier idx2node n'existe pas: {self.idx2node_path}")
+            
+            if os.path.exists(self.node2idx_path):
+                with open(self.node2idx_path, 'r') as f:
+                    self.node2idx = json.load(f)
+                logger.info(f"Mappages node2idx chargés pour {len(self.node2idx)} nœuds")
+            else:
+                logger.warning(f"Le fichier node2idx n'existe pas: {self.node2idx_path}")
+            
+            # Charger les métadonnées des nœuds
+            if os.path.exists(self.node_metadata_path):
+                with open(self.node_metadata_path, 'r') as f:
+                    self.node_metadata = json.load(f)
+                logger.info(f"Métadonnées chargées pour {len(self.node_metadata)} nœuds")
+            else:
+                logger.warning(f"Le fichier des métadonnées n'existe pas: {self.node_metadata_path}")
+            
+            # Charger le dictionnaire des types d'arêtes
+            if os.path.exists(self.edge_type_dict_path):
+                with open(self.edge_type_dict_path, 'r') as f:
+                    self.edge_type_dict = json.load(f)
+                logger.info(f"Dictionnaire des types d'arêtes chargé avec {len(self.edge_type_dict)} types")
+            else:
+                logger.warning(f"Le fichier du dictionnaire des types d'arêtes n'existe pas: {self.edge_type_dict_path}")
+            
+            # Charger les index d'arêtes
+            if os.path.exists(self.edge_index_path):
+                self.edge_index = torch.load(self.edge_index_path)
+                logger.info(f"Index d'arêtes chargés avec forme {self.edge_index.shape}")
+            else:
+                logger.warning(f"Le fichier des index d'arêtes n'existe pas: {self.edge_index_path}")
+                self.edge_index = torch.empty((2, 0), dtype=torch.long)
+            
+            # Charger les caractéristiques des nœuds
+            if os.path.exists(self.node_features_path):
+                self.node_features_tensor = torch.load(self.node_features_path)
+                logger.info(f"Caractéristiques des nœuds chargées avec forme {self.node_features_tensor.shape}")
+            else:
+                logger.warning(f"Le fichier des caractéristiques des nœuds n'existe pas: {self.node_features_path}")
+                self.node_features_tensor = torch.empty((0, 384), dtype=torch.float)
+            
+            # Charger les informations sur les types d'arêtes (optionnel)
+            if os.path.exists(self.edge_type_path):
+                with open(self.edge_type_path, 'r') as f:
+                    self.edge_type = json.load(f)
+                logger.info(f"Types d'arêtes chargés")
+            else:
+                logger.warning(f"Le fichier des types d'arêtes n'existe pas: {self.edge_type_path}")
+            
+            if os.path.exists(self.edge_type_indices_path):
+                with open(self.edge_type_indices_path, 'r') as f:
+                    self.edge_type_indices = json.load(f)
+                logger.info(f"Indices des types d'arêtes chargés")
+            else:
+                logger.warning(f"Le fichier des indices des types d'arêtes n'existe pas: {self.edge_type_indices_path}")
+            
+            # Convertir les caractéristiques des nœuds en dictionnaire pour une utilisation plus facile
+            self.node_features = {}
+            if hasattr(self, 'node_features_tensor') and self.node_features_tensor.shape[0] > 0:
+                for idx, node_id in self.idx2node.items():
+                    idx = int(idx)
+                    if idx < self.node_features_tensor.shape[0]:
+                        self.node_features[node_id] = self.node_features_tensor[idx].numpy()
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Erreur lors du chargement des données du graphe: {str(e)}")
+            return False
     
-    def compute_node_similarity(self, node_id1: str, node_id2: str) -> float:
+    def _create_networkx_graph(self) -> nx.Graph:
         """
-        Calcule la similarité entre deux nœuds.
+        Crée un graphe NetworkX à partir des données chargées ou charge un graphe prétraité.
+        
+        Returns:
+            Graphe NetworkX
+        """
+        try:
+            # Chemin vers le graphe prétraité
+            networkx_graph_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "data",
+                "networkx_graph.pkl"
+            )
+            
+            # Vérifier si le graphe prétraité existe
+            if os.path.exists(networkx_graph_path):
+                logger.info(f"Chargement du graphe prétraité depuis {networkx_graph_path}...")
+                with open(networkx_graph_path, 'rb') as f:
+                    G = pickle.load(f)
+                logger.info(f"Graphe NetworkX chargé avec {len(G.nodes)} nœuds et {len(G.edges)} arêtes")
+                return G
+            
+            logger.info("Graphe prétraité non trouvé, création d'un nouveau graphe...")
+            
+            # Créer le graphe
+            G = nx.Graph()
+            
+            # Ajouter les nœuds avec leurs métadonnées
+            for node_id, metadata in self.node_metadata.items():
+                G.add_node(node_id, **metadata)
+            
+            # Ajouter les arêtes si edge_index existe
+            if hasattr(self, 'edge_index') and self.edge_index.shape[1] > 0:
+                for i in range(self.edge_index.shape[1]):
+                    src_idx = self.edge_index[0, i].item()
+                    tgt_idx = self.edge_index[1, i].item()
+                    
+                    # Convertir les indices en IDs de nœuds
+                    src_id = self.idx2node.get(str(src_idx))
+                    tgt_id = self.idx2node.get(str(tgt_idx))
+                    
+                    if src_id and tgt_id:
+                        # Déterminer le type d'arête si disponible
+                        edge_type = "default"
+                        if hasattr(self, 'edge_type_indices') and str(i) in self.edge_type_indices:
+                            type_idx = self.edge_type_indices[str(i)]
+                            edge_type = self.edge_type.get(str(type_idx), "default")
+                        
+                        # Ajouter l'arête avec un poids par défaut de 1.0
+                        G.add_edge(src_id, tgt_id, weight=1.0, type=edge_type)
+            
+            logger.info(f"Graphe NetworkX créé avec {len(G.nodes)} nœuds et {len(G.edges)} arêtes")
+            return G
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la création du graphe NetworkX: {str(e)}")
+            return nx.Graph()
+    
+    def compute_node_similarity(self, node1_id: str, node2_id: str) -> float:
+        """
+        Calcule la similarité entre deux nœuds en utilisant GraphSAGE.
         
         Args:
-            node_id1: Premier nœud
-            node_id2: Deuxième nœud
-            
+            node1_id: ID du premier nœud
+            node2_id: ID du deuxième nœud
+        
         Returns:
             Score de similarité entre 0 et 1
         """
-        if not self.graph_loaded:
+        # Vérifier si les nœuds existent dans le graphe
+        if node1_id not in self.node_features or node2_id not in self.node_features:
+            logger.warning(f"Un des nœuds n'existe pas dans le graphe: {node1_id}, {node2_id}")
             return 0.0
         
-        if node_id1 not in self.graph or node_id2 not in self.graph:
-            return 0.0
-        
-        if node_id1 == node_id2:
-            return 1.0
-        
-        # Si le modèle GraphSAGE est disponible, l'utiliser
-        if self.model_loaded and self.graphsage_model:
-            try:
-                return self._compute_graphsage_similarity(node_id1, node_id2)
-            except Exception as e:
-                logger.warning(f"❌ Erreur GraphSAGE, fallback vers similarité basique: {e}")
-        
-        # Fallback: utiliser la similarité basée sur les voisins communs
-        return self._compute_basic_similarity(node_id1, node_id2)
-    
-    def _compute_graphsage_similarity(self, node_id1: str, node_id2: str) -> float:
-        """
-        Calcule la similarité en utilisant les embeddings GraphSAGE.
-        
-        Args:
-            node_id1: Premier nœud
-            node_id2: Deuxième nœud
-            
-        Returns:
-            Score de similarité GraphSAGE
-        """
-        # TODO: Implémenter le calcul réel avec GraphSAGE
-        # Pour l'instant, retourner une similarité basique
-        return self._compute_basic_similarity(node_id1, node_id2)
-    
-    def _compute_basic_similarity(self, node_id1: str, node_id2: str) -> float:
-        """
-        Calcule une similarité basique basée sur les voisins communs.
-        
-        Args:
-            node_id1: Premier nœud
-            node_id2: Deuxième nœud
-            
-        Returns:
-            Score de similarité basique
-        """
         try:
-            # Voisins directs
-            neighbors1 = set(self.graph.neighbors(node_id1))
-            neighbors2 = set(self.graph.neighbors(node_id2))
+            # Récupérer les caractéristiques des nœuds
+            node1_features = self.node_features[node1_id]
+            node2_features = self.node_features[node2_id]
             
-            # Calcul de l'indice de Jaccard
-            intersection = len(neighbors1.intersection(neighbors2))
-            union = len(neighbors1.union(neighbors2))
+            # Convertir en tensors PyTorch
+            node1_tensor = torch.tensor(node1_features, dtype=torch.float32).unsqueeze(0)
+            node2_tensor = torch.tensor(node2_features, dtype=torch.float32).unsqueeze(0)
             
-            if union == 0:
-                return 0.0
+            # Si le modèle GraphSAGE est disponible, l'utiliser pour calculer la similarité
+            if self.model is not None:
+                # Créer un mini-graphe pour les deux nœuds
+                x = torch.cat([node1_tensor, node2_tensor], dim=0)
+                edge_index = torch.tensor([[0, 1], [1, 0]], dtype=torch.long)
+                
+                # Calculer les embeddings avec GraphSAGE
+                with torch.no_grad():
+                    node_embeddings = self.model.encoder(x, edge_index)
+                
+                # Calculer la similarité cosinus
+                node1_embedding = node_embeddings[0]
+                node2_embedding = node_embeddings[1]
+                
+                similarity = torch.cosine_similarity(node1_embedding, node2_embedding, dim=0).item()
+            else:
+                # Fallback: calculer directement la similarité cosinus entre les caractéristiques
+                similarity = torch.cosine_similarity(node1_tensor, node2_tensor, dim=1).item()
             
-            jaccard_similarity = intersection / union
+            # Normaliser entre 0 et 1
+            similarity = (similarity + 1) / 2
             
-            # Vérifier s'ils sont directement connectés (bonus)
-            if self.graph.has_edge(node_id1, node_id2):
-                jaccard_similarity = min(1.0, jaccard_similarity + 0.3)
-            
-            # Vérifier le même type (bonus léger)
-            type1 = self.node_metadata.get(node_id1, {}).get('type', '')
-            type2 = self.node_metadata.get(node_id2, {}).get('type', '')
-            if type1 == type2 and type1:
-                jaccard_similarity = min(1.0, jaccard_similarity + 0.1)
-            
-            return jaccard_similarity
+            return similarity
             
         except Exception as e:
-            logger.error(f"❌ Erreur calcul similarité basique: {e}")
+            logger.error(f"Erreur lors du calcul de la similarité: {str(e)}")
             return 0.0
     
-    def find_similar_nodes(self, 
-                          node_id: str, 
-                          node_type: Optional[str] = None,
-                          max_results: int = 10,
-                          min_similarity: float = 0.1) -> List[Dict[str, Any]]:
-        """
-        Trouve les nœuds similaires à un nœud donné.
-        
-        Args:
-            node_id: ID du nœud de référence
-            node_type: Type de nœuds à chercher (optionnel)
-            max_results: Nombre maximum de résultats
-            min_similarity: Seuil minimum de similarité
-            
-        Returns:
-            Liste des nœuds similaires triés par similarité décroissante
-        """
-        if not self.graph_loaded or node_id not in self.graph:
-            return []
-        
-        similar_nodes = []
-        
-        # Parcourir tous les nœuds du graphe
-        for candidate_id in self.graph.nodes():
-            if candidate_id == node_id:
-                continue
-            
-            # Filtrer par type si spécifié
-            if node_type:
-                candidate_type = self.node_metadata.get(candidate_id, {}).get('type', '')
-                if candidate_type != node_type:
-                    continue
-            
-            # Calculer la similarité
-            similarity = self.compute_node_similarity(node_id, candidate_id)
-            
-            if similarity >= min_similarity:
-                similar_nodes.append({
-                    'id': candidate_id,
-                    'similarity': similarity,
-                    'metadata': self.node_metadata.get(candidate_id, {}),
-                    'type': self.node_metadata.get(candidate_id, {}).get('type', 'unknown')
-                })
-        
-        # Trier par similarité décroissante et limiter les résultats
-        similar_nodes.sort(key=lambda x: x['similarity'], reverse=True)
-        return similar_nodes[:max_results]
-    
     def traverse_graph(self, 
-                      start_node: str,
-                      max_depth: int = 3,
-                      max_nodes_per_level: int = 5,
-                      node_types: Optional[List[str]] = None) -> Dict[str, Any]:
+                      anchor_node_ids: List[str], 
+                      max_depth: Optional[int] = None,
+                      min_similarity: float = 0.3,
+                      max_nodes_per_level: int = 5) -> Dict[str, Any]:
         """
-        Traverse le graphe à partir d'un nœud de départ.
+        Traverse le graphe à partir des nœuds d'ancrage.
         
         Args:
-            start_node: Nœud de départ
-            max_depth: Profondeur maximale de traversée
-            max_nodes_per_level: Nombre maximum de nœuds par niveau
-            node_types: Types de nœuds à inclure (optionnel)
-            
-        Returns:
-            Structure hiérarchique de la traversée
-        """
-        if not self.graph_loaded or start_node not in self.graph:
-            return {"error": "Nœud de départ invalide ou graphe non chargé"}
+            anchor_node_ids: Liste des IDs des nœuds d'ancrage
+            max_depth: Profondeur maximale de traversée (si None, utilise self.max_depth)
+            min_similarity: Similarité minimale pour inclure un nœud
+            max_nodes_per_level: Nombre maximum de nœuds à explorer par niveau
         
-        visited = set()
-        result = {
-            "start_node": start_node,
-            "levels": [],
-            "total_nodes": 0
+        Returns:
+            Dictionnaire contenant le graphe résultant et les métadonnées
+        """
+        if max_depth is None:
+            max_depth = self.max_depth
+        
+        # Vérifier si les nœuds d'ancrage existent dans le graphe
+        valid_anchors = [node_id for node_id in anchor_node_ids if node_id in self.graph.nodes]
+        if not valid_anchors:
+            logger.warning("Aucun nœud d'ancrage valide")
+            return {"nodes": {}, "edges": []}
+        
+        # Initialiser le graphe résultant
+        result_graph = {
+            "nodes": {},
+            "edges": []
         }
         
-        current_level = [start_node]
-        visited.add(start_node)
+        # Ensemble des nœuds visités
+        visited = set()
         
-        for depth in range(max_depth):
-            level_nodes = []
-            next_level = []
+        # File d'attente pour la traversée en largeur (BFS)
+        queue = deque([(node_id, 0) for node_id in valid_anchors])  # (node_id, depth)
+        
+        # Ajouter les nœuds d'ancrage au graphe résultant
+        for node_id in valid_anchors:
+            node_metadata = self.node_metadata.get(node_id, {})
+            node_type = node_metadata.get("type", "unknown")
+            node_label = node_metadata.get("preferredlabel", node_metadata.get("label", ""))
             
-            for node_id in current_level:
-                # Ajouter le nœud actuel au niveau
-                node_data = {
-                    "id": node_id,
-                    "metadata": self.node_metadata.get(node_id, {}),
-                    "depth": depth
-                }
-                level_nodes.append(node_data)
-                
-                # Trouver les voisins pour le niveau suivant
-                neighbors = self.get_node_neighbors(node_id, max_nodes_per_level * 2)
-                neighbor_scores = []
-                
-                for neighbor in neighbors:
-                    neighbor_id = neighbor['id']
-                    
-                    if neighbor_id in visited:
-                        continue
-                    
-                    # Filtrer par type si spécifié
-                    if node_types:
-                        neighbor_type = neighbor['metadata'].get('type', '')
-                        if neighbor_type not in node_types:
-                            continue
-                    
-                    # Calculer la similarité pour le tri
+            result_graph["nodes"][node_id] = {
+                "id": node_id,
+                "type": node_type,
+                "label": node_label,
+                "metadata": node_metadata,
+                "is_anchor": True,
+                "depth": 0
+            }
+            
+            visited.add(node_id)
+        
+        # Traverser le graphe en largeur (BFS)
+        while queue and len(result_graph["nodes"]) < 100:  # Limite de sécurité
+            node_id, depth = queue.popleft()
+            
+            # Arrêter si la profondeur maximale est atteinte
+            if depth >= max_depth:
+                continue
+            
+            # Récupérer les voisins du nœud
+            neighbors = list(self.graph.neighbors(node_id))
+            
+            # Calculer la similarité avec le nœud courant pour chaque voisin
+            neighbor_similarities = []
+            for neighbor_id in neighbors:
+                if neighbor_id not in visited:
                     similarity = self.compute_node_similarity(node_id, neighbor_id)
-                    neighbor_scores.append((neighbor_id, similarity))
-                
-                # Trier les voisins par similarité et prendre les meilleurs
-                neighbor_scores.sort(key=lambda x: x[1], reverse=True)
-                for neighbor_id, _ in neighbor_scores[:max_nodes_per_level]:
-                    if neighbor_id not in visited:
-                        next_level.append(neighbor_id)
-                        visited.add(neighbor_id)
-                        
-                        if len(next_level) >= max_nodes_per_level:
-                            break
-                
-                if len(next_level) >= max_nodes_per_level:
-                    break
+                    if similarity >= min_similarity:
+                        neighbor_similarities.append((neighbor_id, similarity))
             
-            result["levels"].append(level_nodes)
-            result["total_nodes"] += len(level_nodes)
+            # Trier les voisins par similarité décroissante
+            neighbor_similarities.sort(key=lambda x: x[1], reverse=True)
             
-            if not next_level:
-                break
-                
-            current_level = next_level[:max_nodes_per_level]
+            # Limiter le nombre de voisins par niveau
+            neighbor_similarities = neighbor_similarities[:max_nodes_per_level]
+            
+            # Ajouter les voisins au graphe résultant
+            for neighbor_id, similarity in neighbor_similarities:
+                if neighbor_id not in visited:
+                    # Ajouter le nœud
+                    node_metadata = self.node_metadata.get(neighbor_id, {})
+                    node_type = node_metadata.get("type", "unknown")
+                    node_label = node_metadata.get("preferredlabel", node_metadata.get("label", ""))
+                    
+                    result_graph["nodes"][neighbor_id] = {
+                        "id": neighbor_id,
+                        "type": node_type,
+                        "label": node_label,
+                        "metadata": node_metadata,
+                        "is_anchor": False,
+                        "depth": depth + 1
+                    }
+                    
+                    # Ajouter l'arête
+                    result_graph["edges"].append({
+                        "source": node_id,
+                        "target": neighbor_id,
+                        "weight": similarity,
+                        "type": "similarity"
+                    })
+                    
+                    # Marquer le nœud comme visité
+                    visited.add(neighbor_id)
+                    
+                    # Ajouter le nœud à la file d'attente pour la prochaine itération
+                    queue.append((neighbor_id, depth + 1))
         
-        return result
+        logger.info(f"Graphe traversé avec {len(result_graph['nodes'])} nœuds et {len(result_graph['edges'])} arêtes")
+        return result_graph
     
-    def get_node_info(self, node_id: str) -> Optional[Dict[str, Any]]:
+    def get_node_info(self, node_id: str) -> Dict[str, Any]:
         """
-        Récupère les informations détaillées d'un nœud.
+        Récupère les informations d'un nœud.
         
         Args:
             node_id: ID du nœud
-            
-        Returns:
-            Informations du nœud ou None si non trouvé
-        """
-        if not self.graph_loaded or node_id not in self.graph:
-            return None
         
-        neighbors = list(self.graph.neighbors(node_id))
-        metadata = self.node_metadata.get(node_id, {})
+        Returns:
+            Dictionnaire contenant les informations du nœud
+        """
+        if node_id not in self.graph.nodes:
+            logger.warning(f"Le nœud n'existe pas dans le graphe: {node_id}")
+            return {}
+        
+        node_metadata = self.node_metadata.get(node_id, {})
+        node_data = self.graph.nodes[node_id]
         
         return {
             "id": node_id,
-            "metadata": metadata,
-            "type": metadata.get("type", "unknown"),
-            "label": metadata.get("preferredLabel", metadata.get("label", node_id)),
-            "neighbor_count": len(neighbors),
-            "neighbors": neighbors[:10],  # Limiter à 10 pour l'affichage
-            "degree": self.graph.degree(node_id)
+            "type": node_metadata.get("type", "unknown"),
+            "label": node_metadata.get("preferredlabel", node_metadata.get("label", "")),
+            "metadata": {**node_metadata, **node_data}
         }
-    
-    def get_statistics(self) -> Dict[str, Any]:
-        """
-        Récupère les statistiques du graphe et du service.
-        
-        Returns:
-            Dictionnaire des statistiques
-        """
-        stats = {
-            "graph_loaded": self.graph_loaded,
-            "model_loaded": self.model_loaded,
-            "nodes_count": 0,
-            "edges_count": 0,
-            "node_types": {},
-            "graphsage_available": self.graphsage_model is not None
-        }
-        
-        if self.graph_loaded and self.graph:
-            stats["nodes_count"] = self.graph.number_of_nodes()
-            stats["edges_count"] = self.graph.number_of_edges()
-            
-            # Compter les types de nœuds
-            type_counts = {}
-            for node_id in self.graph.nodes():
-                node_type = self.node_metadata.get(node_id, {}).get('type', 'unknown')
-                type_counts[node_type] = type_counts.get(node_type, 0) + 1
-            
-            stats["node_types"] = type_counts
-        
-        return stats
-
-# Fonction utilitaire pour créer une instance globale
-_graph_service_instance = None
-
-def get_graph_service() -> GraphTraversalService:
-    """
-    Récupère l'instance globale du service de traversée du graphe.
-    
-    Returns:
-        Instance du GraphTraversalService
-    """
-    global _graph_service_instance
-    if _graph_service_instance is None:
-        _graph_service_instance = GraphTraversalService()
-    return _graph_service_instance
-
-# Test des fonctionnalités si exécuté directement
-if __name__ == "__main__":
-    print("🧪 Test du service de traversée du graphe ESCO")
-    print("=" * 60)
-    
-    # Créer une instance du service
-    service = GraphTraversalService()
-    
-    # Afficher les statistiques
-    stats = service.get_statistics()
-    print(f"📊 Statistiques du service:")
-    for key, value in stats.items():
-        print(f"   {key}: {value}")
-    print()
-    
-    # Tester avec les nœuds d'exemple
-    if service.graph_loaded:
-        # Lister quelques nœuds
-        sample_nodes = list(service.graph.nodes())[:3]
-        print(f"🔍 Nœuds d'exemple: {sample_nodes}")
-        
-        if sample_nodes:
-            test_node = sample_nodes[0]
-            print(f"\n🧪 Test avec le nœud: {test_node}")
-            
-            # Informations du nœud
-            node_info = service.get_node_info(test_node)
-            print(f"ℹ️  Informations: {node_info}")
-            
-            # Voisins
-            neighbors = service.get_node_neighbors(test_node, max_neighbors=3)
-            print(f"👥 Voisins: {[n['id'] for n in neighbors]}")
-            
-            # Nœuds similaires
-            similar = service.find_similar_nodes(test_node, max_results=3)
-            print(f"🔄 Similaires: {[(s['id'], f\"{s['similarity']:.2f}\") for s in similar]}")
-            
-            # Traversée
-            traversal = service.traverse_graph(test_node, max_depth=2, max_nodes_per_level=2)
-            if "error" not in traversal:
-                print(f"🌐 Traversée: {traversal['total_nodes']} nœuds sur {len(traversal['levels'])} niveaux")
-            else:
-                print(f"❌ Erreur traversée: {traversal['error']}")
-    
-    print("\n✅ Test terminé")
