@@ -1,5 +1,43 @@
+#!/usr/bin/env python
 import os
 import sys
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Force load environment variables BEFORE any other imports
+env_path = Path(__file__).parent / '.env'
+if env_path.exists():
+    load_dotenv(env_path, override=True)
+    print(f"✅ Loaded environment from: {env_path}")
+else:
+    print(f"❌ No .env file found at: {env_path}")
+    sys.exit(1)
+
+# Validate critical environment variables
+REQUIRED_ENV_VARS = [
+    'CLERK_SECRET_KEY',
+    'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
+    'NEXT_PUBLIC_CLERK_DOMAIN'
+]
+
+print("\n🔍 Checking required environment variables:")
+all_present = True
+for var in REQUIRED_ENV_VARS:
+    value = os.getenv(var)
+    if not value:
+        print(f"   ❌ {var}: NOT FOUND")
+        all_present = False
+    else:
+        print(f"   ✅ {var}: {value[:20]}...")
+
+if not all_present:
+    print("\n❌ Missing required environment variables!")
+    print("   Please check your .env file")
+    sys.exit(1)
+
+print("\n✅ All environment variables loaded successfully!\n")
+
+# NOW import the rest
 import uvicorn
 
 # Add current directory to Python path

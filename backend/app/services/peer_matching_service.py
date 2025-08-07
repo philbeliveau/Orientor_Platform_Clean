@@ -11,8 +11,10 @@ from datetime import datetime, timezone
 
 from app.models.user_profile import UserProfile
 from app.models.personality_profiles import PersonalityProfile
+from app.models.user import User
 from app.services.Oasisembedding_service import generate_embedding
 from app.services.LLMcompatibility_service import compatibility_service
+from app.utils.clerk_auth import get_database_user_id_sync
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -115,8 +117,11 @@ def find_similar_peers(db: Session, user_id: str, embedding: List[float], top_n:
         List of tuples (peer_id, similarity_score)
     """
     try:
-        # Get all other users
-        other_profiles = db.query(UserProfile).join(User).filter(User.clerk_user_id != user_id).all()
+        # Convert Clerk user ID to database user ID
+        db_user_id = get_database_user_id_sync(user_id, db)
+        
+        # Get all other users by database ID
+        other_profiles = db.query(UserProfile).filter(UserProfile.user_id != db_user_id).all()
         
         # Calculate similarities
         similarities = []
@@ -156,20 +161,23 @@ def update_suggested_peers(db: Session, user_id: str, similar_peers: List[Tuple[
     
     Args:
         db: Database session
-        user_id: ID of the user
+        user_id: Clerk user ID of the user
         similar_peers: List of tuples (peer_id, similarity_score)
         
     Returns:
         True if successful, False otherwise
     """
     try:
+        # Convert Clerk user ID to database user ID
+        db_user_id = get_database_user_id_sync(user_id, db)
+        
         # Delete existing suggestions
         query = text("""
             DELETE FROM suggested_peers
             WHERE user_id = :user_id
         """)
         
-        db.execute(query, {"user_id": user_id})
+        db.execute(query, {"user_id": db_user_id})
         
         # Insert new suggestions
         for peer_id, similarity in similar_peers:
@@ -179,7 +187,7 @@ def update_suggested_peers(db: Session, user_id: str, similar_peers: List[Tuple[
             """)
             
             db.execute(query, {
-                "user_id": user_id,
+                "user_id": db_user_id,
                 "peer_id": peer_id,
                 "similarity": float(similarity)
             })
@@ -198,13 +206,16 @@ def generate_peer_suggestions(db: Session, user_id: str, top_n: int = 5) -> bool
     
     Args:
         db: Database session
-        user_id: ID of the user
+        user_id: Clerk user ID of the user
         top_n: Number of similar peers to find
         
     Returns:
         True if successful, False otherwise
     """
     try:
+        # Convert Clerk user ID to database user ID
+        db_user_id = get_database_user_id_sync(user_id, db)
+        
         # Get user's embedding
         query = text("""
             SELECT embedding
@@ -212,7 +223,7 @@ def generate_peer_suggestions(db: Session, user_id: str, top_n: int = 5) -> bool
             WHERE user_id = :user_id
         """)
         
-        result = db.execute(query, {"user_id": user_id}).fetchone()
+        result = db.execute(query, {"user_id": db_user_id}).fetchone()
         
         if not result or not result.embedding:
             logger.error(f"No embedding found for user {user_id}")
@@ -245,12 +256,15 @@ async def ensure_compatibility_vector(db: Session, user_id: str) -> Optional[Dic
     
     Args:
         db: Database session
-        user_id: ID of the user
+        user_id: Clerk user ID of the user
         
     Returns:
         Compatibility vector or None if failed
     """
     try:
+        # Convert Clerk user ID to database user ID
+        db_user_id = get_database_user_id_sync(user_id, db)
+        
         # Check if compatibility vector exists
         query = text("""
             SELECT compatibility_vector
@@ -258,7 +272,7 @@ async def ensure_compatibility_vector(db: Session, user_id: str) -> Optional[Dic
             WHERE user_id = :user_id
         """)
         
-        result = db.execute(query, {"user_id": user_id}).fetchone()
+        result = db.execute(query, {"user_id": db_user_id}).fetchone()
         
         if result and result.compatibility_vector:
             vector = result.compatibility_vector
@@ -270,7 +284,7 @@ async def ensure_compatibility_vector(db: Session, user_id: str) -> Optional[Dic
                     return vector
         
         # Generate new compatibility vector
-        profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+        profile = db.query(UserProfile).filter(UserProfile.user_id == db_user_id).first()
         if not profile:
             logger.error(f"User profile not found for user {user_id}")
             return None
@@ -285,7 +299,7 @@ async def ensure_compatibility_vector(db: Session, user_id: str) -> Optional[Dic
         """)
         
         db.execute(update_query, {
-            "user_id": user_id,
+            "user_id": db_user_id,
             "vector": json.dumps(compatibility_vector)
         })
         db.commit()
@@ -428,13 +442,16 @@ async def find_compatible_peers(
     
     Args:
         db: Database session
-        user_id: ID of the user
+        user_id: Clerk user ID of the user
         top_n: Number of compatible peers to find
         
     Returns:
         List of tuples (peer_id, compatibility_score, explanation)
     """
     try:
+        # Convert Clerk user ID to database user ID
+        db_user_id = get_database_user_id_sync(user_id, db)
+        
         # Ensure user has compatibility vector
         user_vector = await ensure_compatibility_vector(db, user_id)
         if not user_vector:
@@ -443,7 +460,7 @@ async def find_compatible_peers(
         
         # Get user's personality data
         user_personality_stmt = select(PersonalityProfile).where(
-            PersonalityProfile.user_id == user_id
+            PersonalityProfile.user_id == db_user_id
         ).order_by(PersonalityProfile.computed_at.desc())
         
         user_personality_result = db.execute(user_personality_stmt).first()
@@ -470,7 +487,7 @@ async def find_compatible_peers(
             AND up.compatibility_vector IS NOT NULL
         """)
         
-        results = db.execute(query, {"user_id": user_id}).fetchall()
+        results = db.execute(query, {"user_id": db_user_id}).fetchall()
         
         compatibility_scores = []
         
@@ -591,19 +608,22 @@ async def update_suggested_peers_enhanced(
     
     Args:
         db: Database session
-        user_id: ID of the user
+        user_id: Clerk user ID of the user
         compatible_peers: List of tuples (peer_id, score, explanation)
         
     Returns:
         True if successful, False otherwise
     """
     try:
+        # Convert Clerk user ID to database user ID
+        db_user_id = get_database_user_id_sync(user_id, db)
+        
         # Delete existing suggestions
         delete_query = text("""
             DELETE FROM suggested_peers
             WHERE user_id = :user_id
         """)
-        db.execute(delete_query, {"user_id": user_id})
+        db.execute(delete_query, {"user_id": db_user_id})
         
         # Insert new suggestions
         for peer_id, score, explanation in compatible_peers:
@@ -613,7 +633,7 @@ async def update_suggested_peers_enhanced(
             """)
             
             db.execute(insert_query, {
-                "user_id": user_id,
+                "user_id": db_user_id,
                 "peer_id": peer_id,
                 "similarity": float(score),
                 "created_at": datetime.now(timezone.utc)

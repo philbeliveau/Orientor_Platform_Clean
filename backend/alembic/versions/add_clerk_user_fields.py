@@ -21,10 +21,12 @@ def upgrade():
     op.add_column('users', sa.Column('first_name', sa.String(length=100), nullable=True))
     op.add_column('users', sa.Column('last_name', sa.String(length=100), nullable=True))
     op.add_column('users', sa.Column('is_active', sa.Boolean(), nullable=False, server_default='true'))
+    op.add_column('users', sa.Column('clerk_user_id', sa.String(length=255), nullable=True, unique=True))
 
 
 def downgrade():
     # Remove the new fields
+    op.drop_column('users', 'clerk_user_id')
     op.drop_column('users', 'is_active')
     op.drop_column('users', 'last_name')
     op.drop_column('users', 'first_name')

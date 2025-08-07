@@ -28,6 +28,14 @@ router = APIRouter(prefix="/courses", tags=["courses"])
 # Import the unified authentication system
 from ..utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 
+@router.get("/", response_model=List[CourseSchema])
+async def get_courses(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get course catalog"""
+    return []  # Implement actual logic
+
 @router.post("/courses", response_model=CourseSchema)
 async def create_course(
     course: CourseCreate,

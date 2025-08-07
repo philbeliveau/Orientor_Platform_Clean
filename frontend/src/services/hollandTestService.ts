@@ -53,14 +53,14 @@ export interface ScoreResponse {
 
 // URL de base de l'API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-const HOLLAND_TEST_API = `${API_BASE_URL}/api/tests/holland`;
+const HOLLAND_TEST_API = `${API_BASE_URL}/api/v1/tests/holland`;
 
 // Service pour le test Holland
 const hollandTestService = {
   // Récupérer les métadonnées du test
   getTestMetadata: async (): Promise<TestMetadata> => {
     try {
-      const response = await api.get<TestMetadata>(`/api/tests/holland`);
+      const response = await api.get<TestMetadata>(`/api/v1/tests/holland`);
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la récupération des métadonnées du test:', error);
@@ -71,7 +71,7 @@ const hollandTestService = {
   // Récupérer toutes les questions du test
   getQuestions: async (): Promise<Question[]> => {
     try {
-      const response = await api.get<Question[]>(`/api/tests/holland/questions`);
+      const response = await api.get<Question[]>(`/api/v1/tests/holland/questions`);
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la récupération des questions:', error);

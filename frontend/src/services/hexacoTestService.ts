@@ -61,14 +61,14 @@ export interface ProgressResponse {
 
 // URL de base de l'API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-const HEXACO_TEST_API = `${API_BASE_URL}/api/tests/hexaco`;
+const HEXACO_TEST_API = `${API_BASE_URL}/api/v1/tests/hexaco`;
 
 // Service pour le test HEXACO
 const hexacoTestService = {
   // Récupérer les métadonnées générales du test HEXACO
   getMetadata: async (): Promise<HexacoMetadata> => {
     try {
-      const response = await api.get<HexacoMetadata>(`/api/tests/hexaco`);
+      const response = await api.get<HexacoMetadata>(`/api/v1/tests/hexaco`);
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la récupération des métadonnées HEXACO:', error);
@@ -79,7 +79,7 @@ const hexacoTestService = {
   // Récupérer les langues disponibles
   getAvailableLanguages: async (): Promise<Record<string, any>> => {
     try {
-      const response = await api.get<Record<string, any>>(`/api/tests/hexaco/languages`);
+      const response = await api.get<Record<string, any>>(`/api/v1/tests/hexaco/languages`);
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la récupération des langues:', error);
@@ -91,8 +91,8 @@ const hexacoTestService = {
   getAvailableVersions: async (language?: string): Promise<Record<string, HexacoVersion>> => {
     try {
       const url = language 
-        ? `/api/tests/hexaco/versions?language=${language}`
-        : `/api/tests/hexaco/versions`;
+        ? `/api/v1/tests/hexaco/versions?language=${language}`
+        : `/api/v1/tests/hexaco/versions`;
       const response = await api.get<Record<string, HexacoVersion>>(url);
       return response.data;
     } catch (error) {
