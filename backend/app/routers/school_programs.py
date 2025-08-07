@@ -34,7 +34,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 
 from app.utils.database import get_db
-from app.utils.secure_auth_integration import get_current_user_secure_integrated as get_current_user
+from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from app.models import User
 from app.schemas.school_programs import (
     ProgramSearchQuery, ProgramResponse, SearchResultsResponse,

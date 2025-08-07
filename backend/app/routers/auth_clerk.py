@@ -26,7 +26,8 @@ from typing import Dict, Any
 import logging
 from sqlalchemy.orm import Session
 
-from ..utils.secure_auth_integration import get_current_user_secure_integrated as get_current_user, clerk_health_check, create_clerk_user_in_db
+from ..utils.clerk_auth import get_current_user_with_db_sync as get_current_user
+from ..utils.clerk_auth import clerk_health_check, create_clerk_user_in_db
 from ..utils.database import get_db
 from ..models.user import User
 

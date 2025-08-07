@@ -4,7 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from ..utils.database import get_db
 from ..models import User, UserProfile
-from ..utils.secure_auth_integration import get_current_user_secure_integrated as get_current_user
+from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 
 router = APIRouter(
     prefix="/users",

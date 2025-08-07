@@ -40,7 +40,7 @@ from sqlalchemy.orm import Session
 
 from app.utils.database import get_db
 from app.models.user import User
-from app.utils.secure_auth_integration import get_current_user_secure_integrated as get_current_user
+from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 
 # Configure logging
 logger = logging.getLogger(__name__)

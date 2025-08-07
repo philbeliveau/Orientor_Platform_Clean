@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 from ..utils.database import get_db
 from ..models import User, UserProfile, SuggestedPeers
-from ..utils.secure_auth_integration import get_current_user_secure_integrated as get_current_user
+from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..utils.clerk_auth import get_database_user_id_sync
 from ..services.peer_matching_service import find_compatible_peers, generate_enhanced_peer_suggestions
 import logging

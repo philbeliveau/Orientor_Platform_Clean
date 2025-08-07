@@ -19,11 +19,9 @@ from datetime import datetime, timedelta
 from ..models.user import User
 from ..utils.database import get_db
 from ..core.config import settings
-from .auth_cache import (
-    get_current_user_cached,
+from .auth_cache_clean import (
     verify_clerk_token_cached,
     get_jwks_cache,
-    CacheMetrics,
     cache_health_check
 )
 
@@ -86,38 +84,87 @@ async def get_current_user(
     Note: This function now uses the advanced caching system from auth_cache.py
     """
     logger.info("🔄 Using legacy get_current_user - redirecting to cached version")
-    from .auth_cache import get_request_cache
+    from .auth_cache_clean import get_request_cache
+    # Simple cached user fetching without over-engineering
+    token = credentials.credentials
+    
+    # Use request cache for deduplication within same request
     request_cache = get_request_cache()
-    return await get_current_user_cached(credentials, db, request_cache)
-
-async def clerk_health_check() -> Dict[str, Any]:
-    """Check Clerk service health with comprehensive cache monitoring"""
+    cache_key = f"user_fetch:{hash(token)}"
+    cached_result = request_cache.get(cache_key)
+    
+    if cached_result is not None:
+        logger.debug("🎯 Request cache hit for user fetch")
+        return cached_result
+    
     try:
-        # Get basic Clerk service health
+        # Verify token with caching
+        payload = await verify_clerk_token_cached(token)
+        
+        # Extract user info from token
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload"
+            )
+        
+        # Get additional user info from Clerk API
         async with httpx.AsyncClient() as client:
-            # Check JWKS endpoint through cache
-            jwks_cache = get_jwks_cache()
-            await jwks_cache.get_jwks()
-            
-            # Check API endpoint
-            api_response = await client.get(
-                f"{CLERK_API_URL}/health",
+            response = await client.get(
+                f"https://api.clerk.com/v1/users/{user_id}",
                 headers={
                     "Authorization": f"Bearer {CLERK_SECRET_KEY}",
                     "Content-Type": "application/json"
                 }
             )
-            api_response.raise_for_status()
-            
-            # Get comprehensive cache health
-            cache_health = await cache_health_check()
-            
-            return {
-                "status": "healthy" if cache_health["status"] == "healthy" else "degraded",
-                "clerk_api": api_response.status_code == 200,
-                "cache_system": cache_health,
-                "cache_metrics": CacheMetrics.get_all_stats()
-            }
+            response.raise_for_status()
+            clerk_user = response.json()
+        
+        # Prepare user data
+        user_data = {
+            "id": user_id,
+            "email": clerk_user.get("email_addresses", [{}])[0].get("email_address"),
+            "first_name": clerk_user.get("first_name"),
+            "last_name": clerk_user.get("last_name"),
+            "clerk_data": clerk_user,
+            "__raw": token
+        }
+        
+        # Cache in request cache
+        request_cache.set(cache_key, user_data)
+        logger.debug("💾 User data cached in request cache")
+        
+        return user_data
+        
+    except httpx.HTTPStatusError as e:
+        logger.error(f"Clerk API error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Unable to fetch user details from Clerk"
+        )
+    except Exception as e:
+        logger.error(f"User authentication error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials"
+        )
+
+async def clerk_health_check() -> Dict[str, Any]:
+    """Check Clerk service health with simple cache monitoring"""
+    try:
+        # Check JWKS endpoint through cache
+        jwks_cache = get_jwks_cache()
+        await jwks_cache.get_jwks()
+        
+        # Get basic cache health
+        cache_health = await cache_health_check()
+        
+        return {
+            "status": "healthy" if cache_health["status"] == "healthy" else "degraded",
+            "clerk_jwks": "accessible",
+            "cache_system": cache_health
+        }
     except Exception as e:
         logger.error(f"Clerk health check failed: {str(e)}")
         return {

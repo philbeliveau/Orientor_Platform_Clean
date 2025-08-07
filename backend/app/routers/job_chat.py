@@ -28,7 +28,7 @@ from typing import Dict, Any, List, Optional
 import logging
 
 from ..database import get_db
-from ..utils.secure_auth_integration import get_current_user_secure_integrated as get_current_user
+from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..services.job_card_llm_service import JobCardLLMService, get_preset_queries
 from ..models import User
 
