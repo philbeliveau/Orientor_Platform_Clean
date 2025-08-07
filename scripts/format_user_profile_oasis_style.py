@@ -48,198 +48,221 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # Template de prompt pour le formatage du profil utilisateur
 PROFILE_FORMAT_TEMPLATE = """
 Tu es un expert en formatage de données pour l'alignement sémantique.
+Ta tâche est de reformater un profil utilisateur pour qu'il corresponde au format des descriptions d'emploi OaSIS.
 
-Ta tâche est de formater un profil utilisateur selon les directives OaSIS (Occupation and Skills in Semantic Integration System).
+Voici le format OaSIS de référence:
+```
+oasis_code: [code]
+OaSIS Label - Final_x: [titre]
+Job title text: [titres alternatifs séparés par |]
+top_3_code: [code RIASEC]
+Employment requirement: [exigences d'emploi]
+Main duties: [tâches principales]
+Leadership: [score]
+Critical Thinking: [score]
+... (autres compétences)
+```
 
-CONTEXTE:
-- Tu as reçu des données de profil utilisateur depuis plusieurs sources
-- Tu dois créer un profil formaté qui maximise la qualité des embeddings sémantiques
-- Le profil sera utilisé pour la recherche vectorielle et les recommandations de carrière
+Voici le profil utilisateur à reformater:
+- Nom: {name}
+- Âge: {age}
+- Niveau d'éducation: {education_level}
+- Spécialisation: {major}
+- Objectifs de carrière: {career_goals}
+- Histoire personnelle: {story}
+- Compétences: {skills}
+- Titre du poste actuel: {job_title}
+- Années d'expérience: {years_experience}
 
-DIRECTIVES DE FORMATAGE OaSIS:
+Scores de compétences (sur 5.0):
+- Créativité: {creativity}
+- Leadership: {leadership}
+- Pensée critique: {critical_thinking}
+- Résolution de problèmes: {problem_solving}
+- Pensée analytique: {analytical_thinking}
+- Attention aux détails: {attention_to_detail}
+- Collaboration: {collaboration}
+- Évaluation: {evaluation}
+- Prise de décision: {decision_making}
+- Tolérance au stress: {stress_tolerance}
 
-1. STRUCTURE HIÉRARCHIQUE:
-   - Commence par les informations démographiques de base
-   - Continue avec les objectifs de carrière et aspirations
-   - Développe les compétences et expériences
-   - Termine par les intérêts personnels et qualités uniques
+Code RIASEC: {riasec_code}
 
-2. LANGUE ET STYLE:
-   - Utilise un langage professionnel mais accessible
-   - Privilégie les termes spécifiques du domaine professionnel
-   - Évite les expressions vagues ("bon", "excellent")
-   - Utilise des verbes d'action et des descriptions concrètes
+Recommandations sauvegardées: {saved_recommendations}
 
-3. OPTIMISATION SÉMANTIQUE:
-   - Intègre des mots-clés pertinents pour la recherche d'emploi
-   - Utilise la terminologie standard de l'industrie
-   - Lie les compétences aux contextes d'application
-   - Crée des connexions logiques entre les différents éléments
+INSTRUCTIONS IMPORTANTES:
+1. Génère un code OaSIS fictif basé sur le titre du poste (format: 5 chiffres suivis d'un point et 2 chiffres)
+2. Utilise le titre du poste actuel comme "OaSIS Label - Final_x"
+3. Crée des titres alternatifs basés sur le titre actuel et les compétences pour "Job title text"
+4. Utilise le code RIASEC fourni pour "top_3_code"
+5. Formule les "Employment requirement" en fonction du niveau d'éducation et de la spécialisation
+6. Résume les "Main duties" en fonction des objectifs de carrière, de l'histoire et des compétences
+7. Convertis tous les scores de compétences sur une échelle de 0.0 à 5.0 (arrondi à 0.5 près)
+8. N'utilise PAS d'adjectifs abstraits comme "motivé" ou "passionné"
+9. Intègre les recommandations sauvegardées dans la description des tâches principales et des compétences
+10. Si des recommandations sauvegardées sont fournies, ajoute une section "Related occupations" avec ces recommandations
+11. Assure-toi que le résultat final est une chaîne multiligne unique avec le même format que l'exemple OaSIS
 
-4. COHÉRENCE NARRATIVE:
-   - Assure-toi que tous les éléments s'alignent avec les objectifs de carrière
-   - Crée une progression logique du profil
-   - Élimine les contradictions ou incohérences
-
-DONNÉES D'ENTRÉE:
-{input_data}
-
-PROFIL OASIS FORMATÉ:
-Génère un profil utilisateur professionnel et cohérent qui respecte les directives OaSIS ci-dessus.
-
-Le profil doit être formaté comme un texte continu, bien structuré, qui pourra être efficacement transformé en embeddings pour la recherche sémantique et les recommandations de carrière.
+Retourne UNIQUEMENT le profil reformaté, sans commentaires ni explications supplémentaires.
 """
 
-def format_user_profile(profile_data: Dict[str, Any], 
-                       skills_data: Dict[str, Any] = None,
-                       riasec_data: Dict[str, Any] = None,
-                       recommendations_data: List[Dict[str, Any]] = None) -> Optional[str]:
+def format_user_profile(profile: Dict[str, Any], skills: Dict[str, float], riasec: Dict[str, str], saved_recommendations: List[Dict[str, str]] = None) -> Optional[str]:
     """
-    Formate un profil utilisateur selon les directives OaSIS.
+    Formate un profil utilisateur selon le style OaSIS pour l'alignement des embeddings.
     
     Args:
-        profile_data: Données du profil utilisateur
-        skills_data: Données des compétences (optionnel)
-        riasec_data: Données RIASEC (optionnel)
-        recommendations_data: Données des recommandations sauvegardées (optionnel)
+        profile: Dictionnaire contenant les informations de base du profil utilisateur
+        skills: Dictionnaire contenant les scores de compétences de l'utilisateur
+        riasec: Dictionnaire contenant les résultats du test RIASEC
+        saved_recommendations: Liste de dictionnaires contenant les recommandations sauvegardées
         
     Returns:
-        Profil formaté selon les directives OaSIS ou None en cas d'erreur
+        Une chaîne formatée selon le style OaSIS pour l'embedding
     """
+    # Initialiser les recommandations sauvegardées si elles sont None
+    if saved_recommendations is None:
+        saved_recommendations = []
+    # Vérifier que les clés nécessaires sont présentes
+    required_profile_keys = [
+        "user_id", "name", "age", "education_level", "major", 
+        "career_goals", "story", "skills", "job_title", "years_experience"
+    ]
     
-    # Vérifier les dépendances
+    required_skills_keys = [
+        "creativity", "leadership", "critical_thinking", "problem_solving",
+        "analytical_thinking", "attention_to_detail", "collaboration",
+        "evaluation", "decision_making", "stress_tolerance"
+    ]
+    
+    # Vérifier les clés requises
+    for key in required_profile_keys:
+        if key not in profile:
+            profile[key] = ""  # Valeur par défaut si manquante
+    
+    for key in required_skills_keys:
+        if key not in skills:
+            skills[key] = 3.0  # Valeur par défaut si manquante (score moyen)
+    
+    # Extraire le code RIASEC
+    riasec_code = riasec.get("top_3_code", "RCI")  # Valeur par défaut si manquante
+    
+    # Formater les recommandations sauvegardées en une chaîne
+    saved_recommendations_list = [rec.get("label", "") for rec in saved_recommendations if rec.get("label")]
+    if saved_recommendations_list:
+        saved_recommendations_str = ", ".join(saved_recommendations_list)
+    else:
+        saved_recommendations_str = "Aucune recommandation sauvegardée"
+    
+    # Créer un dictionnaire combiné pour le prompt
+    prompt_data = {
+        **profile,
+        **skills,
+        "riasec_code": riasec_code,
+        "saved_recommendations": saved_recommendations_str
+    }
+    
+    # Vérifier que toutes les dépendances sont installées
     if not check_dependencies():
+        print("Impossible de formater le profil utilisateur: dépendances manquantes.")
         return None
-    
-    # Vérifier la clé API
+        
+    # Vérifier que la clé API OpenAI est disponible
     if not OPENAI_API_KEY:
-        print("Erreur: La clé API OpenAI n'est pas configurée.")
+        print("Erreur: La clé API OpenAI n'est pas définie dans les variables d'environnement.")
         print("Veuillez définir la variable d'environnement OPENAI_API_KEY.")
         return None
     
     try:
-        # Préparer les données d'entrée
-        input_data = {
-            "profile": profile_data,
-            "skills": skills_data or {},
-            "riasec": riasec_data or {},
-            "recommendations": recommendations_data or []
-        }
-        
-        # Créer le modèle LLM
+        # Initialiser le modèle LLM
         llm = ChatOpenAI(
-            model="gpt-4",
-            temperature=0.3,
+            model_name="gpt-4o",
+            temperature=0.2,
             api_key=OPENAI_API_KEY
         )
         
         # Créer le template de prompt
         prompt = PromptTemplate(
-            input_variables=["input_data"],
+            input_variables=list(prompt_data.keys()),
             template=PROFILE_FORMAT_TEMPLATE
         )
         
         # Créer la chaîne LLM
         chain = LLMChain(llm=llm, prompt=prompt)
         
-        # Exécuter le formatage
-        result = chain.run(input_data=str(input_data))
-        
-        return result.strip()
-        
+        # Exécuter la chaîne pour obtenir le profil formaté
+        formatted_profile = chain.run(prompt_data)
     except Exception as e:
-        print(f"Erreur lors du formatage du profil OaSIS: {str(e)}")
+        print(f"Erreur lors du formatage du profil: {str(e)}")
         return None
-
-def format_user_profile_simple(profile_data: Dict[str, Any]) -> str:
-    """
-    Version simplifiée du formatage sans utiliser LLM (fallback).
     
-    Args:
-        profile_data: Données du profil utilisateur
-        
-    Returns:
-        Profil formaté de manière simple
-    """
-    try:
-        # Extraire les informations de base
-        name = profile_data.get("name", "Professionnel")
-        age = profile_data.get("age", "")
-        education = profile_data.get("education_level", "")
-        major = profile_data.get("major", "")
-        career_goals = profile_data.get("career_goals", "")
-        interests = profile_data.get("interests", "")
-        hobbies = profile_data.get("hobbies", "")
-        skills = profile_data.get("skills", "")
-        
-        # Construire le profil formaté
-        formatted_profile = f"""Profil professionnel: {name}
-        
-Informations démographiques:
-{"Âge: " + str(age) + " ans. " if age else ""}{"Niveau d'éducation: " + education + ". " if education else ""}{"Domaine d'études: " + major + ". " if major else ""}
-
-Objectifs de carrière:
-{career_goals if career_goals else "En développement"}
-
-Compétences:
-{skills if skills else "Compétences variées en développement"}
-
-Centres d'intérêt:
-{interests if interests else "Intérêts diversifiés"}
-
-Activités personnelles:
-{hobbies if hobbies else "Activités variées"}
-
-Ce profil reflète un professionnel en développement avec des objectifs clairs et des compétences en progression."""
-        
-        return formatted_profile.strip()
-        
-    except Exception as e:
-        print(f"Erreur lors du formatage simple: {str(e)}")
-        return "Profil utilisateur en cours de développement professionnel."
-
-# Fonction principale pour le formatage avec fallback
-def format_user_profile_with_fallback(profile_data: Dict[str, Any], 
-                                    skills_data: Dict[str, Any] = None,
-                                    riasec_data: Dict[str, Any] = None,
-                                    recommendations_data: List[Dict[str, Any]] = None) -> str:
-    """
-    Formate un profil utilisateur avec fallback vers une version simple.
-    
-    Args:
-        profile_data: Données du profil utilisateur
-        skills_data: Données des compétences (optionnel)
-        riasec_data: Données RIASEC (optionnel)
-        recommendations_data: Données des recommandations sauvegardées (optionnel)
-        
-    Returns:
-        Profil formaté (version complète ou simple selon la disponibilité)
-    """
-    
-    # Essayer d'abord le formatage complet avec LLM
-    formatted_profile = format_user_profile(profile_data, skills_data, riasec_data, recommendations_data)
-    
-    # Si ça échoue, utiliser la version simple
-    if formatted_profile is None:
-        print("Utilisation du formatage simple comme fallback")
-        formatted_profile = format_user_profile_simple(profile_data)
+    # Nettoyer le résultat (supprimer les espaces et les lignes vides au début et à la fin)
+    formatted_profile = formatted_profile.strip()
     
     return formatted_profile
 
-# Test du module si exécuté directement
-if __name__ == "__main__":
-    # Test avec des données d'exemple
-    test_profile = {
-        "name": "Test User",
-        "age": 25,
-        "education_level": "Bachelor's",
-        "major": "Computer Science",
-        "career_goals": "Software Developer",
-        "interests": "Programming, AI, Technology",
-        "hobbies": "Reading, Gaming",
-        "skills": "Python, JavaScript, Problem Solving"
+def example_usage():
+    """Exemple d'utilisation de la fonction format_user_profile"""
+    # Exemple de profil utilisateur
+    profile = {
+        "user_id": "user123",
+        "name": "Marie Dupont",
+        "age": 28,
+        "education_level": "Master",
+        "major": "Informatique",
+        "career_goals": "Devenir développeuse full-stack senior et diriger une équipe de développement",
+        "story": "J'ai commencé à coder à l'âge de 15 ans. Après mes études en informatique, j'ai travaillé pendant 3 ans dans une startup où j'ai développé des applications web.",
+        "skills": "JavaScript, Python, React, Node.js, SQL, Git",
+        "job_title": "Développeuse web",
+        "years_experience": 3
     }
     
-    print("Test du formatage OaSIS:")
-    result = format_user_profile_with_fallback(test_profile)
-    print(result)
+    # Exemple de scores de compétences
+    skills = {
+        "creativity": 3.5,
+        "leadership": 2.8,
+        "critical_thinking": 4.2,
+        "problem_solving": 4.5,
+        "analytical_thinking": 4.0,
+        "attention_to_detail": 3.8,
+        "collaboration": 3.5,
+        "evaluation": 3.2,
+        "decision_making": 3.0,
+        "stress_tolerance": 3.5
+    }
+    
+    # Exemple de résultats RIASEC
+    riasec = {
+        "top_3_code": "RIC"
+    }
+    
+    # Exemple de recommandations sauvegardées
+    saved_recommendations = [
+        {"label": "Développeur d'applications web"},
+        {"label": "Ingénieur logiciel full-stack"},
+        {"label": "Architecte de solutions web"}
+    ]
+    
+    # Formater le profil sans recommandations sauvegardées
+    formatted_profile_without_recs = format_user_profile(profile, skills, riasec)
+    
+    # Formater le profil avec recommandations sauvegardées
+    formatted_profile_with_recs = format_user_profile(profile, skills, riasec, saved_recommendations)
+    
+    # Afficher les résultats
+    print("\nProfil formaté sans recommandations sauvegardées:")
+    print("-" * 50)
+    print(formatted_profile_without_recs)
+    print("-" * 50)
+    
+    print("\nProfil formaté avec recommandations sauvegardées:")
+    print("-" * 50)
+    print(formatted_profile_with_recs)
+    print("-" * 50)
+    
+    # Les résultats ont déjà été affichés ci-dessus
+
+if __name__ == "__main__":
+    if check_dependencies():
+        example_usage()
+    else:
+        sys.exit(1)
