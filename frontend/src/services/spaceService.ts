@@ -204,13 +204,42 @@ export const fetchNotes = async (token: string, recommendationId: number): Promi
 };
 
 // Fetch all user notes (not tied to specific recommendations)
+// Cache for deduplicating requests
+let notesCache: {
+  data: Note[] | null;
+  timestamp: number;
+  pendingRequest: Promise<Note[]> | null;
+} = {
+  data: null,
+  timestamp: 0,
+  pendingRequest: null
+};
+
 export const fetchAllUserNotes = async (token: string): Promise<Note[]> => {
+  // Return cached data if it's fresh (5 seconds)
+  if (notesCache.data && Date.now() - notesCache.timestamp < 5000) {
+    return notesCache.data;
+  }
+
+  // Return pending request if one exists
+  if (notesCache.pendingRequest) {
+    return notesCache.pendingRequest;
+  }
+
   try {
-    const response = await axios.get<Note[]>(
+    // Create new pending request
+    notesCache.pendingRequest = axios.get<Note[]>(
       `${API_URL}/api/v1/space/notes`, 
       getAuthHeader(token)
-    );
-    return response.data;
+    ).then(response => {
+      notesCache.data = response.data;
+      notesCache.timestamp = Date.now();
+      return response.data;
+    }).finally(() => {
+      notesCache.pendingRequest = null;
+    });
+
+    return await notesCache.pendingRequest;
   } catch (error) {
     console.error('Error fetching all user notes:', error);
     throw error;
@@ -473,4 +502,4 @@ export const cleanupTestJobs = async (token: string): Promise<{success: boolean,
     console.error('Error cleaning up test jobs:', error);
     throw error;
   }
-}; 
+};

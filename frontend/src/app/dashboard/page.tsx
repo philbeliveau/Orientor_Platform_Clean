@@ -95,88 +95,71 @@ export default function Dashboard() {
 
   // Fetch user data and Holland results
   useEffect(() => {
+    let isCancelled = false;
+    
     const fetchHollandResults = async () => {
       try {
-        // Enhanced authentication guard
-        if (!isLoaded || !isSignedIn || !user?.id) {
-          console.log('[DEBUG] Skipping Holland results fetch - user not ready:', { 
-            isLoaded, 
-            isSignedIn, 
-            userId: user?.id 
-          });
+        if (!isLoaded || !isSignedIn || !user?.id || isCancelled) {
           return;
         }
 
-        // Check token availability before making request
         const token = await getToken();
-        if (!token) {
-          console.log('[DEBUG] Skipping Holland results fetch - no token available');
-          setError('Authentication token not available');
+        if (!token || isCancelled) {
           return;
         }
 
-        console.log('[DEBUG] Fetching Holland results with token:', token.substring(0, 20) + '...');
+        if (!isCancelled) {
+          setLoading(true);
+          setError(null);
+        }
+
         const results = await api.getHollandResults();
-        setHollandResults(results as ScoreResponse);
-        console.log('[DEBUG] Holland results fetched successfully');
+        if (!isCancelled) {
+          setHollandResults(results as ScoreResponse);
+        }
       } catch (err) {
-        console.error('Error fetching Holland results:', err);
-        setError('Unable to fetch Holland results');
+        if (!isCancelled) {
+          console.error('Error fetching Holland results:', err);
+          setError('Unable to fetch Holland results');
+        }
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
     fetchHollandResults();
-  }, [isLoaded, isSignedIn, user?.id]); // Removed api and getToken to prevent infinite loops
+    
+    return () => {
+      isCancelled = true;
+    };
+  }, [isLoaded, isSignedIn, user?.id]); // Simplified dependencies
 
   // Fetch job recommendations
   useEffect(() => {
+    let isCancelled = false;
+    
     const fetchJobRecommendations = async () => {
       try {
-        // Enhanced authentication guard
-        if (!isLoaded || !isSignedIn || !user?.id) {
-          console.log('[DEBUG] Skipping job recommendations fetch - user not ready:', { 
-            isLoaded, 
-            isSignedIn, 
-            userId: user?.id 
-          });
+        if (!isLoaded || !isSignedIn || !user?.id || isCancelled) {
           return;
         }
 
-        // Check token availability before making request
         const token = await getToken();
-        if (!token) {
-          console.log('[DEBUG] Skipping job recommendations fetch - no token available');
-          setJobsError('Authentication token not available');
+        if (!token || isCancelled) {
           return;
         }
 
-        console.log('[DEBUG] Fetching job recommendations with token:', token.substring(0, 20) + '...');
-        
-        setJobsLoading(true);
-        setJobsError(null);
+        if (!isCancelled) {
+          setJobsLoading(true);
+          setJobsError(null);
+        }
         
         const response = await api.getJobRecommendations(3) as JobRecommendationsResponse;
         
-        if (response && response.recommendations) {
+        if (response && response.recommendations && !isCancelled) {
           const limitedRecommendations = response.recommendations.slice(0, 3);
-          
-          // Debug: Log the actual job structure
-          console.log('🔍 Homepage job recommendations:', {
-            count: limitedRecommendations.length,
-            firstJob: limitedRecommendations[0] ? {
-              id: limitedRecommendations[0].id,
-              score: limitedRecommendations[0].score,
-              metadata: limitedRecommendations[0].metadata,
-              metadataKeys: Object.keys(limitedRecommendations[0].metadata || {}),
-              title: limitedRecommendations[0].metadata?.title,
-              preferred_label: limitedRecommendations[0].metadata?.preferred_label,
-              label: limitedRecommendations[0].metadata?.label,
-              description: limitedRecommendations[0].metadata?.description
-            } : null
-          });
-          
           setJobRecommendations(limitedRecommendations);
           
           if (limitedRecommendations.length > 0) {
@@ -184,15 +167,23 @@ export default function Dashboard() {
           }
         }
       } catch (err) {
-        console.error('Error fetching job recommendations:', err);
-        setJobsError('Unable to fetch job recommendations');
+        if (!isCancelled) {
+          console.error('Error fetching job recommendations:', err);
+          setJobsError('Unable to fetch job recommendations');
+        }
       } finally {
-        setJobsLoading(false);
+        if (!isCancelled) {
+          setJobsLoading(false);
+        }
       }
     };
     
     fetchJobRecommendations();
-  }, [isLoaded, user?.id]); // Removed api from dependencies
+    
+    return () => {
+      isCancelled = true;
+    };
+  }, [isLoaded, isSignedIn, user?.id]); // Simplified dependencies
 
   // Fetch top peers
   useEffect(() => {
@@ -249,45 +240,49 @@ export default function Dashboard() {
 
   // Fetch user notes
   useEffect(() => {
+    let isCancelled = false;
+    
     const fetchNotes = async () => {
       try {
         // Enhanced authentication guard
         if (!isLoaded || !isSignedIn || !user?.id) {
-          console.log('[DEBUG] Skipping user notes fetch - user not ready:', { 
-            isLoaded, 
-            isSignedIn, 
-            userId: user?.id 
-          });
           return;
         }
 
         // Check token availability before making request
         const token = await getToken();
-        if (!token) {
-          console.log('[DEBUG] Skipping user notes fetch - no token available');
-          setNotesError('Authentication token not available');
+        if (!token || isCancelled) {
           return;
         }
 
-        console.log('[DEBUG] Fetching user notes with token:', token.substring(0, 20) + '...');
         setNotesLoading(true);
         setNotesError(null);
         
-        const notes = await api.getUserNotes();
-        // Get top 3 most recent notes for home page
-        const notesArray = Array.isArray(notes) ? notes : [];
-        const recentNotes = notesArray.slice(0, 3);
-        setUserNotes(recentNotes);
+        const notes = await fetchAllUserNotes(token);
+        if (!isCancelled) {
+          // Get top 3 most recent notes for home page
+          const notesArray = Array.isArray(notes) ? notes : [];
+          const recentNotes = notesArray.slice(0, 3);
+          setUserNotes(recentNotes);
+        }
       } catch (err: any) {
-        console.error('Error fetching user notes:', err);
-        setNotesError('Unable to fetch notes');
+        if (!isCancelled) {
+          console.error('Error fetching user notes:', err);
+          setNotesError('Unable to fetch notes');
+        }
       } finally {
-        setNotesLoading(false);
+        if (!isCancelled) {
+          setNotesLoading(false);
+        }
       }
     };
 
     fetchNotes();
-  }, [isLoaded, isSignedIn, user?.id]); // Removed api and getToken to prevent infinite loops
+    
+    return () => {
+      isCancelled = true;
+    };
+  }, [isLoaded, isSignedIn, user?.id]); // Simplified dependencies
 
   const handleSelectJob = (job: Job) => {
     setSelectedJob(job);
@@ -295,34 +290,40 @@ export default function Dashboard() {
 
   // Fetch user profile to get database user ID
   useEffect(() => {
+    let isCancelled = false;
+    
     const fetchUserProfile = async () => {
       try {
         if (!isLoaded || !isSignedIn || !user?.id) {
-          console.log('[DEBUG] Skipping user profile fetch - user not ready:', { 
-            isLoaded, 
-            isSignedIn, 
-            userId: user?.id 
-          });
           return;
         }
 
-        console.log('[DEBUG] Fetching user profile to get database ID...');
+        // Prevent duplicate requests
+        if (userProfile || currentUserId) {
+          return;
+        }
+
         const profile = await api.getUserProfile();
-        setUserProfile(profile);
-        
-        if (profile && (profile as any).id) {
-          setCurrentUserId((profile as any).id);
-          console.log('[DEBUG] Database user ID set:', (profile as any).id);
-        } else {
-          console.warn('[DEBUG] No id in profile response:', profile);
+        if (!isCancelled) {
+          setUserProfile(profile);
+          
+          if (profile && (profile as any).id) {
+            setCurrentUserId((profile as any).id);
+          }
         }
       } catch (err) {
-        console.error('Error fetching user profile:', err);
+        if (!isCancelled) {
+          console.error('Error fetching user profile:', err);
+        }
       }
     };
 
     fetchUserProfile();
-  }, [isLoaded, isSignedIn, user?.id]);
+    
+    return () => {
+      isCancelled = true;
+    };
+  }, [isLoaded, isSignedIn, user?.id, userProfile, currentUserId]);
 
   // Show loading while checking authentication or during SSR
   if (typeof window === 'undefined' || !isLoaded) {
