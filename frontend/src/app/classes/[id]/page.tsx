@@ -8,11 +8,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { courseAnalysisService, Course, PsychologicalInsight } from '@/services/courseAnalysisService';
+import { useAuth } from '@clerk/nextjs';
 
 export default function CourseDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const courseId = params ? parseInt(params.id as string) : null;
+  const { getToken } = useAuth();
   
   const [course, setCourse] = useState<Course | null>(null);
   const [insights, setInsights] = useState<PsychologicalInsight[]>([]);
@@ -30,7 +32,12 @@ export default function CourseDetailsPage() {
   const fetchCourseDetails = async () => {
     if (!courseId) return;
     try {
-      const courseData = await courseAnalysisService.getCourse(courseId);
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      const courseData = await courseAnalysisService.getCourse(courseId, token);
       setCourse(courseData);
     } catch (err) {
       console.error('Error fetching course:', err);
@@ -41,7 +48,9 @@ export default function CourseDetailsPage() {
   const fetchCourseInsights = async () => {
     if (!courseId) return;
     try {
-      const insightsData = await courseAnalysisService.getCourseInsights(courseId);
+      const token = await getToken();
+      if (!token) return;
+      const insightsData = await courseAnalysisService.getCourseInsights(courseId, token);
       setInsights(insightsData);
     } catch (err) {
       console.error('Error fetching insights:', err);
@@ -60,7 +69,12 @@ export default function CourseDetailsPage() {
     if (!courseId) return;
 
     try {
-      await courseAnalysisService.deleteCourse(courseId);
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      await courseAnalysisService.deleteCourse(courseId, token);
       router.push('/classes');
     } catch (err) {
       console.error('Error deleting course:', err);

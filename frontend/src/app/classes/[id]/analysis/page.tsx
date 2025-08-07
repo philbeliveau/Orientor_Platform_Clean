@@ -5,11 +5,13 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, BookOpen } from 'lucide-react';
 import Link from 'next/link';
 import { courseAnalysisService, Course } from '@/services/courseAnalysisService';
+import { useAuth } from '@clerk/nextjs';
 import CareerAnalysisChat from '@/components/classes/CareerAnalysisChat';
 
 export default function CourseAnalysisPage() {
   const params = useParams();
   const courseId = params ? parseInt(params.id as string) : null;
+  const { getToken } = useAuth();
   
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
@@ -24,7 +26,12 @@ export default function CourseAnalysisPage() {
   const fetchCourseDetails = async () => {
     if (!courseId) return;
     try {
-      const courseData = await courseAnalysisService.getCourse(courseId);
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      const courseData = await courseAnalysisService.getCourse(courseId, token);
       setCourse(courseData);
     } catch (err) {
       console.error('Error fetching course:', err);

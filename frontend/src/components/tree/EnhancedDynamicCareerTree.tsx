@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import ReactFlow, {
   Node,
   Edge,
@@ -107,6 +108,9 @@ const EnhancedDynamicCareerTree: React.FC<EnhancedDynamicCareerTreeProps> = ({
   initialProfile = '',
   onTreeGenerated
 }) => {
+  // Auth hook for token
+  const { getToken } = useAuth();
+  
   // Local state for tree generation
   const [profile, setProfile] = useState(initialProfile);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -162,12 +166,18 @@ const EnhancedDynamicCareerTree: React.FC<EnhancedDynamicCareerTreeProps> = ({
     const loadSavedTree = async () => {
       if (!treeId) return;
       
+      const token = await getToken();
+      if (!token) {
+        setGenerationError('Authentication required');
+        return;
+      }
+      
       setIsGenerating(true);
       setGenerationError(null);
       
       try {
         console.log('Loading tree with ID:', treeId);
-        const savedTree = await getTreePath(treeId);
+        const savedTree = await getTreePath(treeId, token);
         
         if (savedTree && savedTree.tree_json) {
           // Convert tree data to ReactFlow format
@@ -191,7 +201,7 @@ const EnhancedDynamicCareerTree: React.FC<EnhancedDynamicCareerTreeProps> = ({
     };
     
     loadSavedTree();
-  }, [treeId, initializeTree, onTreeGenerated]);
+  }, [treeId, initializeTree, onTreeGenerated, getToken]);
   
   // Generate new career tree
   const generateTree = useCallback(async () => {

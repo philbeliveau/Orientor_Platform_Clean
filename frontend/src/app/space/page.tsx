@@ -17,8 +17,11 @@ import {
 } from '@/services/spaceService';
 import type { Recommendation, SavedJob } from '@/services/spaceService';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '@clerk/nextjs';
 
 export default function SpacePage() {
+  const { getToken } = useAuth();
+  
   // Tab state
   const [activeTab, setActiveTab] = useState<'recommendations' | 'jobs'>('recommendations');
   
@@ -46,7 +49,12 @@ export default function SpacePage() {
   const loadRecommendations = async () => {
     try {
       console.log('🔄 Loading saved recommendations...');
-      const data = await fetchSavedRecommendations();
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      const data = await fetchSavedRecommendations(token);
       console.log('📊 Fetched recommendations:', data);
       console.log(`📈 Total recommendations found: ${data.length}`);
       
@@ -77,7 +85,12 @@ export default function SpacePage() {
   useEffect(() => {
     const loadJobs = async () => {
       try {
-        const data = await fetchSavedJobs();
+        const token = await getToken();
+        if (!token) {
+          setJobsError('Authentication required');
+          return;
+        }
+        const data = await fetchSavedJobs(token);
         // OaSIS jobs from tree exploration are in separate table
         setSavedJobs(data);
       } catch (err) {
@@ -97,6 +110,12 @@ export default function SpacePage() {
 
   const handleDelete = async (recommendation: Recommendation) => {
     try {
+      const token = await getToken();
+      if (!token) {
+        toast.error('Authentication required');
+        return;
+      }
+      
       // For fake test jobs with occupation::key_* codes, use oasis_code
       // For real jobs, use the numeric ID
       const identifier = recommendation.oasis_code?.startsWith('occupation::key_') 
@@ -108,7 +127,7 @@ export default function SpacePage() {
         return;
       }
       
-      await deleteRecommendation(identifier);
+      await deleteRecommendation(token, identifier);
       setRecommendations(prev => prev.filter(r => r.id !== recommendation.id));
       if (selected?.id === recommendation.id) setSelected(null);
       toast.success('Recommendation deleted');
@@ -125,7 +144,12 @@ export default function SpacePage() {
 
   const handleDeleteJob = async (id: number) => {
     try {
-      await deleteSavedJob(id);
+      const token = await getToken();
+      if (!token) {
+        toast.error('Authentication required');
+        return;
+      }
+      await deleteSavedJob(token, id);
       setSavedJobs(prev => prev.filter(j => j.id !== id));
       if (selectedJob?.id === id) setSelectedJob(null);
       toast.success('Job removed');
@@ -139,7 +163,12 @@ export default function SpacePage() {
     if (!selected || !selected.id) return;
     try {
       setGenerating(true);
-      const updatedRecommendation = await generateLLMAnalysisForRecommendation(selected.id);
+      const token = await getToken();
+      if (!token) {
+        toast.error('Authentication required');
+        return;
+      }
+      const updatedRecommendation = await generateLLMAnalysisForRecommendation(token, selected.id);
       setSelected(updatedRecommendation);
       setRecommendations(prev => prev.map(r => (r.id === updatedRecommendation.id ? updatedRecommendation : r)));
       toast.success('LLM analysis generated successfully');
@@ -154,7 +183,12 @@ export default function SpacePage() {
   // Cleanup test jobs function
   const handleCleanupTestJobs = async () => {
     try {
-      const result = await cleanupTestJobs();
+      const token = await getToken();
+      if (!token) {
+        toast.error('Authentication required');
+        return;
+      }
+      const result = await cleanupTestJobs(token);
       await loadRecommendations(); // Reload the list
       toast.success(`Removed ${result.deleted_count} test jobs`);
     } catch (err) {

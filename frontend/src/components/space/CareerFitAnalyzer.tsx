@@ -3,6 +3,7 @@ import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend, 
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { analyzeCareerFit } from '@/services/spaceService';
 import type { Recommendation, SavedJob, CareerFitResponse } from '@/services/spaceService';
+import { useAuth } from '@clerk/nextjs';
 
 interface CareerFitAnalyzerProps {
   job: Recommendation | SavedJob;
@@ -11,6 +12,7 @@ interface CareerFitAnalyzerProps {
 
 
 const CareerFitAnalyzer: React.FC<CareerFitAnalyzerProps> = ({ job, jobSource }) => {
+  const { getToken } = useAuth();
   const [fitAnalysis, setFitAnalysis] = useState<CareerFitResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,12 @@ const CareerFitAnalyzer: React.FC<CareerFitAnalyzerProps> = ({ job, jobSource })
     try {
       setLoading(true);
       setError(null);
-      const analysis = await analyzeCareerFit(jobId, jobSource);
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      const analysis = await analyzeCareerFit(token, jobId, jobSource);
       setFitAnalysis(analysis);
     } catch (err: any) {
       setError('Failed to analyze career fit');

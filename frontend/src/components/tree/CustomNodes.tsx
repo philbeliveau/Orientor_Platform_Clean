@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import NoteModal from '../ui/NoteModal';
 import { updateUserXP, getUserProgress } from '../../utils/treeStorage';
 import confetti from 'canvas-confetti';
+import { useAuth } from '@clerk/nextjs';
 
 // Animation variants for nodes
 const nodeVariants = {
@@ -123,6 +124,7 @@ export function RootNode({ data, selected }: NodeProps) {
 
 // Skill Node Component with Actions Tooltip
 export function SkillNode({ data, id, selected }: NodeProps) {
+  const { getToken } = useAuth();
   const [showActions, setShowActions] = useState(false);
   const [completedActions, setCompletedActions] = useState<boolean[]>([]);
   const [showNoteModal, setShowNoteModal] = useState(false);
@@ -159,7 +161,9 @@ export function SkillNode({ data, id, selected }: NodeProps) {
   useEffect(() => {
     const loadCompletedActions = async () => {
       try {
-        const progress = await getUserProgress();
+        const token = await getToken();
+        if (!token) return;
+        const progress = await getUserProgress(token);
         if (progress.completed_actions && progress.completed_actions[id]) {
           setCompletedActions(progress.completed_actions[id]);
         } else {
@@ -258,8 +262,11 @@ export function SkillNode({ data, id, selected }: NodeProps) {
       });
       
       // Update XP and save completed actions in the backend
-      const response = await updateUserXP(id, 10, { [id]: newCompletedActions });
-      console.log('Backend response:', response);
+      const token = await getToken();
+      if (token) {
+        const response = await updateUserXP(id, token, 10, { [id]: newCompletedActions });
+        console.log('Backend response:', response);
+      }
       
     } catch (err) {
       console.error('Error updating action completion:', err);

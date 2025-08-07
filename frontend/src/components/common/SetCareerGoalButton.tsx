@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { CareerGoalsService } from '@/services/careerGoalsService';
+import { useClerkApi } from '@/services/api';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
 interface SetCareerGoalButtonProps {
@@ -39,6 +39,7 @@ const SetCareerGoalButton: React.FC<SetCareerGoalButtonProps> = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const api = useClerkApi();
 
   const handleSetGoal = async () => {
     setLoading(true);
@@ -50,13 +51,17 @@ const SetCareerGoalButton: React.FC<SetCareerGoalButtonProps> = ({
       const escoId = job.esco_id || job.id;
       const oasisCode = job.oasis_code || job.metadata?.oasis_code;
       
-      // Call the API to set career goal
-      const result = await CareerGoalsService.setCareerGoalFromJob({
-        esco_id: escoId,
-        oasis_code: oasisCode,
-        title: jobTitle,
-        description: jobDescription,
-        source: source
+      // Call the API to set career goal using useClerkApi pattern
+      const result = await api.request('/api/v1/career-goals', {
+        method: 'POST',
+        body: JSON.stringify({
+          esco_occupation_id: escoId,
+          oasis_code: oasisCode,
+          title: jobTitle,
+          description: jobDescription,
+          source: source,
+          target_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+        })
       });
       
       // Show success message with navigation option

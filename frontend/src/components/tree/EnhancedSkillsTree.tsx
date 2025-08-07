@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import ReactFlow, {
   Node,
   Edge,
@@ -49,6 +50,9 @@ For example:
 - What technical skills do you want to develop?`;
 
 export default function EnhancedSkillsTree() {
+  // Auth hook for token
+  const { getToken } = useAuth();
+  
   // State for the skills tree
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -70,12 +74,18 @@ export default function EnhancedSkillsTree() {
     const loadSavedTree = async () => {
       if (!treeId) return;
       
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      
       setIsLoading(true);
       setError(null);
       
       try {
         console.log('Loading tree with ID:', treeId);
-        const savedTree = await getTreePath(treeId);
+        const savedTree = await getTreePath(treeId, token);
         console.log('Loaded tree data:', savedTree);
         
         if (savedTree && savedTree.tree_json) {
@@ -97,7 +107,7 @@ export default function EnhancedSkillsTree() {
     };
 
     loadSavedTree();
-  }, [treeId, setNodes, setEdges]);
+  }, [treeId, setNodes, setEdges, getToken]);
 
   // Generate skills tree using the profile input
   const generateSkillsTree = useCallback(async () => {
@@ -135,6 +145,12 @@ export default function EnhancedSkillsTree() {
   const handleSaveTree = async () => {
     if (!nodes.length) return;
     
+    const token = await getToken();
+    if (!token) {
+      setError('Authentication required to save tree');
+      return;
+    }
+    
     setIsSaving(true);
     setSaveSuccess(false);
     
@@ -171,7 +187,7 @@ export default function EnhancedSkillsTree() {
       const treeStructure = createTreeStructure(rootNodeId);
       
       // Save to backend
-      await saveTreePath(treeStructure, 'skills');
+      await saveTreePath(treeStructure, 'skills', token);
       setSaveSuccess(true);
       
       // Hide success message after a few seconds

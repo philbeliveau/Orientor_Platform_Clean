@@ -5,7 +5,7 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import WorkIcon from '@mui/icons-material/Work';
 import StarIcon from '@mui/icons-material/Star';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import { getCareerRecommendations, saveCareer } from '@/services/api';
+import { useClerkApi } from '@/services/api';
 import SetCareerGoalButton from '@/components/common/SetCareerGoalButton';
 
 interface CareerRecommendation {
@@ -30,6 +30,7 @@ const FindYourWay: React.FC = () => {
     message: '',
     severity: 'success' as 'success' | 'error',
   });
+  const api = useClerkApi();
 
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-10, 10]);
@@ -43,7 +44,7 @@ const FindYourWay: React.FC = () => {
   const fetchCareerRecommendations = async () => {
     try {
       setLoading(true);
-      const data = await getCareerRecommendations(30); // Fetch 30 recommendations
+      const data = await api.getCareerRecommendations(); // Fetch recommendations
       setCareers(data as CareerRecommendation[]);
       setCurrentIndex(0);
       setError(null);
@@ -81,7 +82,7 @@ const FindYourWay: React.FC = () => {
 
   const handleSwipeRight = async (career: CareerRecommendation) => {
     try {
-      await saveCareer(career.id);
+      await api.saveCareer({ id: career.id, title: career.title });
       setSnackbar({ open: true, message: `Saved "${career.title}" to your space!`, severity: 'success' });
       // Reset position with spring animation
       animate(x, 0, {

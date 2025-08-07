@@ -5,9 +5,11 @@ import { BookOpen, ArrowLeft, Save, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { courseAnalysisService, CourseCreate } from '@/services/courseAnalysisService';
+import { useAuth } from '@clerk/nextjs';
 
 export default function AddCoursePage() {
   const router = useRouter();
+  const { getToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState<CourseCreate>({
@@ -59,7 +61,13 @@ export default function AddCoursePage() {
       setLoading(true);
       setError(null);
       
-      const course = await courseAnalysisService.createCourse(formData);
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      
+      const course = await courseAnalysisService.createCourse(formData, token);
       router.push(`/classes/${course.id}`);
     } catch (err) {
       console.error('Error creating course:', err);

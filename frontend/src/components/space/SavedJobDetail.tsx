@@ -3,6 +3,7 @@ import { SavedJob, getJobDetails } from '@/services/spaceService';
 import ProgramRecommendationsModal from './ProgramRecommendationsModal';
 import SetCareerGoalButton from '@/components/common/SetCareerGoalButton';
 import CareerFitAnalyzer from './CareerFitAnalyzer';
+import { useAuth } from '@clerk/nextjs';
 
 interface SavedJobDetailProps {
   job: SavedJob;
@@ -21,6 +22,7 @@ interface JobDetails {
 const SavedJobDetail: React.FC<SavedJobDetailProps> = ({
   job
 }) => {
+  const { getToken } = useAuth();
   const [jobDetails, setJobDetails] = useState<JobDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,12 @@ const SavedJobDetail: React.FC<SavedJobDetailProps> = ({
       try {
         setLoading(true);
         setError(null);
-        const details = await getJobDetails(job.esco_id);
+        const token = await getToken();
+        if (!token) {
+          setError('Authentication required');
+          return;
+        }
+        const details = await getJobDetails(token, job.esco_id);
         setJobDetails(details);
       } catch (err: any) {
         setError('Failed to load job details');
@@ -43,7 +50,7 @@ const SavedJobDetail: React.FC<SavedJobDetailProps> = ({
     };
 
     fetchDetails();
-  }, [job.esco_id]);
+  }, [job.esco_id, getToken]);
 
   const getDiscoverySourceDisplay = (source: string) => {
     switch (source) {

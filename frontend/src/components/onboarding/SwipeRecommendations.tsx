@@ -5,7 +5,7 @@ import { motion, useMotionValue, useTransform, PanInfo, animate } from 'framer-m
 import { Heart, X, ArrowLeft, CheckCircle, RefreshCw } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { PsychProfile, CareerRecommendation } from '../../types/onboarding';
-import { getAllJobRecommendations } from '../../services/api';
+import { useClerkApi } from '../../services/api';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import SetCareerGoalButton from '@/components/common/SetCareerGoalButton';
@@ -20,6 +20,7 @@ const SwipeRecommendations: React.FC<SwipeRecommendationsProps> = ({
   psychProfile 
 }) => {
   const router = useRouter();
+  const api = useClerkApi();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [savedCareers, setSavedCareers] = useState<CareerRecommendation[]>([]);
   const [isComplete, setIsComplete] = useState(false);
@@ -41,7 +42,7 @@ const SwipeRecommendations: React.FC<SwipeRecommendationsProps> = ({
     try {
       setIsLoading(true);
       setError(null);
-      const response = await getAllJobRecommendations(10); // Get 10 recommendations for onboarding
+      const response = await api.getAllJobRecommendations(10) as any; // Get 10 recommendations for onboarding
       
       if (response.recommendations && response.recommendations.length > 0) {
         const formattedRecommendations: CareerRecommendation[] = response.recommendations.map((rec: any, index: number) => ({

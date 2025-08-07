@@ -4,7 +4,7 @@
  */
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { getAuthToken } from './authService';
+
 
 // Types and interfaces
 export enum MessageComponentType {
@@ -148,10 +148,7 @@ class OrientatorService {
     // Request interceptor to add auth token
     this.api.interceptors.request.use(
       (config) => {
-        const token = getAuthToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
+        // Note: Token will be added per request since Clerk tokens are async
         return config;
       },
       (error) => {
@@ -325,7 +322,7 @@ class OrientatorService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAuthToken()}`
+          // Authorization header will be added by calling code
         },
         body: JSON.stringify(request)
       });

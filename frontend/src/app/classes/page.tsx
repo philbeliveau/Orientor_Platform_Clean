@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { BookOpen, Plus, Search, Filter, Brain, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { courseAnalysisService, Course } from '@/services/courseAnalysisService';
+import { useAuth } from '@clerk/nextjs';
 
 export default function ClassesPage() {
+  const { getToken } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +22,12 @@ export default function ClassesPage() {
   const fetchCourses = async () => {
     try {
       setLoading(true);
-      const coursesData = await courseAnalysisService.getCourses();
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      const coursesData = await courseAnalysisService.getCourses(token);
       setCourses(coursesData);
     } catch (err) {
       console.error('Error fetching courses:', err);

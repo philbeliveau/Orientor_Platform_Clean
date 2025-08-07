@@ -91,6 +91,37 @@ class ClerkApiService {
       token,
     });
   }
+
+  // Additional API methods that were missing
+  async getAllJobRecommendations(token: string, limit?: number) {
+    const queryParam = limit ? `?limit=${limit}` : '';
+    return this.request(`/api/v1/jobs/recommendations${queryParam}`, {
+      method: 'GET',
+      token,
+    });
+  }
+
+  async getCareerRecommendations(token: string) {
+    return this.request('/api/v1/career/recommendations', {
+      method: 'GET',
+      token,
+    });
+  }
+
+  async saveCareer(token: string, careerData: any) {
+    return this.request('/api/v1/career/save', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(careerData),
+    });
+  }
+
+  async getJobSkillsTree(token: string, jobId: string) {
+    return this.request(`/api/v1/jobs/${jobId}/skills-tree`, {
+      method: 'GET',
+      token,
+    });
+  }
 }
 
 // Create singleton instance
@@ -139,6 +170,14 @@ export const useClerkApi = () => {
   return {
     getJobRecommendations: (topK?: number) => 
       apiCall(clerkApiService.getJobRecommendations.bind(clerkApiService), topK),
+    getAllJobRecommendations: (limit?: number) => 
+      apiCall(clerkApiService.getAllJobRecommendations.bind(clerkApiService), limit),
+    getCareerRecommendations: () => 
+      apiCall(clerkApiService.getCareerRecommendations.bind(clerkApiService)),
+    saveCareer: (careerData: any) => 
+      apiCall(clerkApiService.saveCareer.bind(clerkApiService), careerData),
+    getJobSkillsTree: (jobId: string) => 
+      apiCall(clerkApiService.getJobSkillsTree.bind(clerkApiService), jobId),
     getUserProfile: () => 
       apiCall(clerkApiService.getUserProfile.bind(clerkApiService)),
     getUserNotes: () => 
@@ -164,9 +203,25 @@ export const serverApiClient = (token?: string) => {
   return client
 }
 
-// Named exports for backward compatibility
+// Named exports for backward compatibility - these throw helpful error messages
 export const getJobRecommendations = async (topK: number = 3) => {
   throw new Error('getJobRecommendations moved to useClerkApi hook - use const { getJobRecommendations } = useClerkApi()');
+};
+
+export const getAllJobRecommendations = async (limit?: number) => {
+  throw new Error('getAllJobRecommendations moved to useClerkApi hook - use const { getAllJobRecommendations } = useClerkApi()');
+};
+
+export const getCareerRecommendations = async () => {
+  throw new Error('getCareerRecommendations moved to useClerkApi hook - use const { getCareerRecommendations } = useClerkApi()');
+};
+
+export const saveCareer = async (careerData: any) => {
+  throw new Error('saveCareer moved to useClerkApi hook - use const { saveCareer } = useClerkApi()');
+};
+
+export const getJobSkillsTree = async (jobId: string) => {
+  throw new Error('getJobSkillsTree moved to useClerkApi hook - use const { getJobSkillsTree } = useClerkApi()');
 };
 
 // Legacy compatibility export - NOTE: Use useClerkApi() for authenticated requests

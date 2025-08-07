@@ -33,12 +33,9 @@ interface ClerkAuthProviderProps {
 
 // Main Provider Component
 export function ClerkAuthProvider({ children }: ClerkAuthProviderProps) {
-  const router = useRouter();
-  
   return (
     <ClerkProvider
       publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!}
-      navigate={(to) => router.push(to)}
       appearance={{
         baseTheme: undefined, // Use system theme
         variables: {
@@ -125,8 +122,8 @@ function ClerkAuthContextProvider({ children }: { children: ReactNode }) {
     getAuthToken,
     clearError,
     clerk,
-    userId,
-    sessionId,
+    userId: userId || null,
+    sessionId: sessionId || null,
   };
 
   return (

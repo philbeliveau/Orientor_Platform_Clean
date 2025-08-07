@@ -44,21 +44,13 @@ interface CareerProgressionResponse {
   last_updated: string;
 }
 
-// Utility function to get auth headers
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('access_token');
-  return {
-    'Content-Type': 'application/json',
-    ...(token && { 'Authorization': `Bearer ${token}` }),
-  };
-};
 
 // Career Goals Service
 export class CareerGoalsService {
   /**
    * Set a career goal from any job card
    */
-  static async setCareerGoalFromJob(job: {
+  static async setCareerGoalFromJob(token: string, job: {
     esco_id?: string;
     oasis_code?: string;
     title: string;
@@ -66,9 +58,14 @@ export class CareerGoalsService {
     source?: string;
   }): Promise<{ goal: CareerGoal; timeline: any }> {
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+
       const response = await fetch(`${API_BASE}/api/v1/career-goals`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers,
         body: JSON.stringify({
           esco_occupation_id: job.esco_id,
           oasis_code: job.oasis_code,
@@ -94,15 +91,20 @@ export class CareerGoalsService {
   /**
    * Get active career goal with progression
    */
-  static async getActiveCareerGoal(): Promise<{
+  static async getActiveCareerGoal(token: string): Promise<{
     goal: CareerGoal | null;
     progression: any;
     milestones: any[];
   }> {
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+
       const response = await fetch(`${API_BASE}/api/v1/career-goals/active`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers,
       });
 
       if (!response.ok) {
@@ -121,19 +123,24 @@ export class CareerGoalsService {
   /**
    * Fetch user's career progression with GraphSage scores
    */
-  static async getCareerProgression(): Promise<CareerProgressionResponse> {
+  static async getCareerProgression(token: string): Promise<CareerProgressionResponse> {
     try {
       // First try to get active goal's progression
-      const { goal, progression } = await this.getActiveCareerGoal();
+      const { goal, progression } = await this.getActiveCareerGoal(token);
       
       if (goal && progression) {
         return progression;
       }
       
       // Fallback to generic progression endpoint if available
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+        
       const response = await fetch(`${API_BASE}/api/v1/career/progression`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers,
       });
 
       if (!response.ok) {
@@ -153,11 +160,16 @@ export class CareerGoalsService {
   /**
    * Update GraphSage confidence scores for skills
    */
-  static async updateGraphSageScores(skillIds: string[]): Promise<GraphSageScore[]> {
+  static async updateGraphSageScores(token: string, skillIds: string[]): Promise<GraphSageScore[]> {
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+        
       const response = await fetch(`${API_BASE}/api/v1/career/graphsage/update`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers,
         body: JSON.stringify({ skill_ids: skillIds }),
       });
 
@@ -176,16 +188,21 @@ export class CareerGoalsService {
   /**
    * Update career goal
    */
-  static async updateCareerGoal(goalId: number, updates: {
+  static async updateCareerGoal(token: string, goalId: number, updates: {
     title?: string;
     description?: string;
     target_date?: string;
     is_active?: boolean;
   }): Promise<CareerGoal> {
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+        
       const response = await fetch(`${API_BASE}/api/v1/career-goals/${goalId}`, {
         method: 'PUT',
-        headers: getAuthHeaders(),
+        headers,
         body: JSON.stringify(updates),
       });
 
@@ -204,18 +221,23 @@ export class CareerGoalsService {
   /**
    * Complete a milestone
    */
-  static async completeMilestone(goalId: number, milestoneId: number): Promise<{
+  static async completeMilestone(token: string, goalId: number, milestoneId: number): Promise<{
     message: string;
     xp_awarded: number;
     goal_progress: number;
     goal_achieved: boolean;
   }> {
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+        
       const response = await fetch(
         `${API_BASE}/api/v1/career-goals/${goalId}/milestones/${milestoneId}/complete`,
         {
           method: 'POST',
-          headers: getAuthHeaders(token),
+          headers,
         }
       );
 
@@ -234,13 +256,18 @@ export class CareerGoalsService {
   /**
    * Get all career goals
    */
-  static async getAllCareerGoals(includeInactive = false): Promise<CareerGoal[]> {
+  static async getAllCareerGoals(token: string, includeInactive = false): Promise<CareerGoal[]> {
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+        
       const response = await fetch(
         `${API_BASE}/api/v1/career-goals?include_inactive=${includeInactive}`,
         {
           method: 'GET',
-          headers: getAuthHeaders(token),
+          headers,
         }
       );
 
@@ -259,11 +286,16 @@ export class CareerGoalsService {
   /**
    * Get skill recommendations based on GraphSage analysis
    */
-  static async getSkillRecommendations(currentSkillIds: string[]): Promise<SkillNode[]> {
+  static async getSkillRecommendations(token: string, currentSkillIds: string[]): Promise<SkillNode[]> {
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+        
       const response = await fetch(`${API_BASE}/api/v1/career/recommendations/skills`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers,
         body: JSON.stringify({ current_skills: currentSkillIds }),
       });
 
@@ -282,7 +314,7 @@ export class CareerGoalsService {
   /**
    * Analyze skill relationships using GraphSage
    */
-  static async analyzeSkillRelationships(skillIds: string[]): Promise<{
+  static async analyzeSkillRelationships(token: string, skillIds: string[]): Promise<{
     relationships: Array<{
       source: string;
       target: string;
@@ -296,9 +328,14 @@ export class CareerGoalsService {
     }>;
   }> {
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+        
       const response = await fetch(`${API_BASE}/api/v1/career/graphsage/relationships`, {
         method: 'POST',
-        headers: getAuthHeaders(),
+        headers,
         body: JSON.stringify({ skill_ids: skillIds }),
       });
 
@@ -317,7 +354,7 @@ export class CareerGoalsService {
   /**
    * Get career path optimization suggestions
    */
-  static async getCareerPathOptimization(currentTier: number): Promise<{
+  static async getCareerPathOptimization(token: string, currentTier: number): Promise<{
     recommendations: Array<{
       skill_id: string;
       priority_score: number;
@@ -333,9 +370,14 @@ export class CareerGoalsService {
     }>;
   }> {
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+        
       const response = await fetch(`${API_BASE}/api/v1/career/optimization/${currentTier}`, {
         method: 'GET',
-        headers: getAuthHeaders(),
+        headers,
       });
 
       if (!response.ok) {

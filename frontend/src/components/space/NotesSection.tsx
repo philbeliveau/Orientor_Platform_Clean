@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Note, Recommendation } from '@/services/spaceService';
 import { createNote, updateNote, deleteNote } from '@/services/spaceService';
+import { useAuth } from '@clerk/nextjs';
 
 interface NotesSectionProps {
   recommendation: Recommendation;
 }
 
 const NotesSection: React.FC<NotesSectionProps> = ({ recommendation }) => {
+  const { getToken } = useAuth();
   const [notes, setNotes] = useState<Note[]>(recommendation.notes || []);
   const [newNote, setNewNote] = useState('');
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
@@ -16,7 +18,12 @@ const NotesSection: React.FC<NotesSectionProps> = ({ recommendation }) => {
     if (!newNote.trim()) return;
     
     try {
-      const createdNote = await createNote({
+      const token = await getToken();
+      if (!token) {
+        console.error('Authentication required');
+        return;
+      }
+      const createdNote = await createNote(token, {
         content: newNote,
         saved_recommendation_id: recommendation.id
       });
@@ -32,7 +39,12 @@ const NotesSection: React.FC<NotesSectionProps> = ({ recommendation }) => {
     if (!editingContent.trim()) return;
     
     try {
-      const updatedNote = await updateNote(noteId, {
+      const token = await getToken();
+      if (!token) {
+        console.error('Authentication required');
+        return;
+      }
+      const updatedNote = await updateNote(token, noteId, {
         content: editingContent
       });
       
@@ -49,7 +61,12 @@ const NotesSection: React.FC<NotesSectionProps> = ({ recommendation }) => {
 
   const handleDeleteNote = async (noteId: number) => {
     try {
-      await deleteNote(noteId);
+      const token = await getToken();
+      if (!token) {
+        console.error('Authentication required');
+        return;
+      }
+      await deleteNote(token, noteId);
       setNotes(notes.filter(note => note.id !== noteId));
     } catch (error) {
       console.error('Error deleting note:', error);

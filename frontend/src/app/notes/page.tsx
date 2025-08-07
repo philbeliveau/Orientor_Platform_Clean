@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { fetchAllUserNotes, createStandaloneNote, updateNote, deleteNote, Note } from '@/services/spaceService';
+import { useAuth } from '@clerk/nextjs';
 
 export default function NotesPage() {
+  const { getToken } = useAuth();
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +22,12 @@ export default function NotesPage() {
   const loadNotes = async () => {
     try {
       setLoading(true);
-      const userNotes = await fetchAllUserNotes();
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      const userNotes = await fetchAllUserNotes(token);
       setNotes(userNotes.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
     } catch (err) {
       setError('Erreur lors du chargement des notes');
@@ -34,7 +41,12 @@ export default function NotesPage() {
     if (!newNoteContent.trim()) return;
     
     try {
-      const newNote = await createStandaloneNote(newNoteContent.trim());
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      const newNote = await createStandaloneNote(token, newNoteContent.trim());
       setNotes(prev => [newNote, ...prev]);
       setNewNoteContent('');
       setIsCreating(false);
@@ -48,7 +60,12 @@ export default function NotesPage() {
     if (!editContent.trim()) return;
     
     try {
-      const updatedNote = await updateNote(noteId, { content: editContent.trim() });
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      const updatedNote = await updateNote(token, noteId, { content: editContent.trim() });
       setNotes(prev => prev.map(note => note.id === noteId ? updatedNote : note));
       setEditingId(null);
       setEditContent('');
@@ -62,7 +79,12 @@ export default function NotesPage() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette note ?')) return;
     
     try {
-      await deleteNote(noteId);
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      await deleteNote(token, noteId);
       setNotes(prev => prev.filter(note => note.id !== noteId));
     } catch (err) {
       setError('Erreur lors de la suppression de la note');

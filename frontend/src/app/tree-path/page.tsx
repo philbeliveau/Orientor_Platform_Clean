@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 import XPProgress from '../../components/ui/XPProgress';
 import MainLayout from '@/components/layout/MainLayout';
+import { useAuth } from '@clerk/nextjs';
 
 interface TreePath {
   id: number; // Changed from string to number to match the API response
@@ -15,6 +16,7 @@ interface TreePath {
 }
 
 export default function TreePathPage() {
+  const { getToken } = useAuth();
   const [treePaths, setTreePaths] = useState<TreePath[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +31,12 @@ export default function TreePathPage() {
   useEffect(() => {
     const loadTreePaths = async () => {
       try {
-        const paths = await fetchUserTreePaths();
+        const token = await getToken();
+        if (!token) {
+          setError('Authentication required');
+          return;
+        }
+        const paths = await fetchUserTreePaths(token);
         setTreePaths(paths);
       } catch (err: any) {
         console.error('Error loading tree paths:', err);
@@ -46,7 +53,12 @@ export default function TreePathPage() {
   const handleDeleteTreePath = async (id: number) => { // Changed from string to number
     if (window.confirm('Are you sure you want to delete this saved tree?')) {
       try {
-        await deleteTreePath(id.toString()); // Convert id to string for the API call
+        const token = await getToken();
+        if (!token) {
+          alert('Authentication required');
+          return;
+        }
+        await deleteTreePath(id.toString(), token); // Convert id to string for the API call
         setTreePaths(treePaths.filter(path => path.id !== id));
       } catch (err: any) {
         console.error('Error deleting tree path:', err);

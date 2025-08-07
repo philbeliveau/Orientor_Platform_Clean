@@ -43,7 +43,7 @@ export const useAuthenticatedServices = () => {
       source?: string;
     }) => {
       const token = await getAuthToken();
-      return CareerGoalsService.setCareerGoalFromJob(job, token);
+      return CareerGoalsService.setCareerGoalFromJob(token, job);
     },
 
     getCareerProgression: async () => {
@@ -58,17 +58,17 @@ export const useAuthenticatedServices = () => {
       is_active?: boolean;
     }) => {
       const token = await getAuthToken();
-      return CareerGoalsService.updateCareerGoal(goalId, updates, token);
+      return CareerGoalsService.updateCareerGoal(token, goalId, updates);
     },
 
     getAllCareerGoals: async (includeInactive = false) => {
       const token = await getAuthToken();
-      return CareerGoalsService.getAllCareerGoals(includeInactive, token);
+      return CareerGoalsService.getAllCareerGoals(token, includeInactive);
     },
 
     completeMilestone: async (goalId: number, milestoneId: number) => {
       const token = await getAuthToken();
-      return CareerGoalsService.completeMilestone(goalId, milestoneId, token);
+      return CareerGoalsService.completeMilestone(token, goalId, milestoneId);
     }
   };
 

@@ -18,6 +18,7 @@ import { convertToFlowGraph, TreeNode } from '../../utils/convertToFlowGraph';
 import { saveTreePath, getTreePath } from '../../utils/treeStorage';
 import XPProgress from '../ui/XPProgress';
 import { useSearchParams } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 
 // Define custom node types
@@ -80,6 +81,7 @@ function convertCareerToTreeNode(careerNode: CareerTreeNode): TreeNode {
 }
 
 export default function CareerTree() {
+  const { getToken } = useAuth();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -103,7 +105,12 @@ export default function CareerTree() {
       
       try {
         console.log('Loading tree with ID:', treeId);
-        const savedTree = await getTreePath(treeId);
+        const token = await getToken();
+        if (!token) {
+          setError('Authentication required');
+          return;
+        }
+        const savedTree = await getTreePath(token, treeId);
         console.log('Loaded tree data:', savedTree);
         
         if (savedTree && savedTree.tree_json) {
@@ -170,6 +177,11 @@ export default function CareerTree() {
     setSaveSuccess(false);
     
     try {
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
       // Find the root node
       const rootNodeId = nodes.find(node => node.type === 'rootNode')?.id || 'root';
       const rootNode = nodes.find(node => node.id === rootNodeId);
@@ -202,7 +214,7 @@ export default function CareerTree() {
       const treeStructure = createTreeStructure(rootNodeId);
       
       // Save to backend
-      await saveTreePath(treeStructure, 'career');
+      await saveTreePath(treeStructure, 'career', token);
       setSaveSuccess(true);
       
       // Hide success message after a few seconds

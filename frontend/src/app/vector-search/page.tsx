@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { saveRecommendation } from '@/services/spaceService';
+import { useAuth } from '@clerk/nextjs';
 import axios from 'axios';
 
 interface SearchResult {
@@ -46,6 +47,7 @@ interface SkillValues {
 }
 
 export default function VectorSearchPage() {
+  const { getToken } = useAuth();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -104,7 +106,11 @@ export default function VectorSearchPage() {
         all_fields: result.all_fields || {}
       };
 
-      await saveRecommendation(recommendation);
+      const token = await getToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      await saveRecommendation(token, recommendation);
 
       setSaveSuccess(`Successfully saved "${result.label}" to your Space`);
       setSavingIds(prev => {

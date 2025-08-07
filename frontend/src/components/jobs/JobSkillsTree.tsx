@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { getJobSkillsTree } from '@/services/api';
+import { useClerkApi } from '@/services/api';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import ReactFlow, {
   Background,
@@ -56,6 +56,7 @@ const JobSkillsTree: React.FC<JobSkillsTreeProps> = ({ jobId, className = '', he
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [topSkills, setTopSkills] = useState<Node[]>([]);
+  const api = useClerkApi();
   
   // États pour les paramètres de l'arbre
   const [treeDepth, setTreeDepth] = useState<number>(1);
@@ -377,7 +378,7 @@ const JobSkillsTree: React.FC<JobSkillsTreeProps> = ({ jobId, className = '', he
 
     try {
       console.log(`Demande d'arbre avec profondeur=${treeDepth}, nodesPerLevel=${nodesPerLevel}`);
-      const data = await getJobSkillsTree(jobId, treeDepth, nodesPerLevel);
+      const data = await api.getJobSkillsTree(jobId);
       const typedData = data as SkillTreeData;
       setSkillTreeData(typedData);
       

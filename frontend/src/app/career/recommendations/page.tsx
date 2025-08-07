@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
-import { getAllJobRecommendations } from '@/services/api';
+import { useClerkApi } from '@/services/api';
 import JobSkillsTree from '@/components/jobs/JobSkillsTree';
 import JobCard, { Job } from '@/components/jobs/JobCard';
 import LoadingScreen from '@/components/ui/LoadingScreen';
@@ -14,18 +14,25 @@ export default function CareerRecommendationsPage() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const api = useClerkApi();
 
   useEffect(() => {
     const fetchRecommendations = async () => {
       try {
         setLoading(true);
-        const response = await getAllJobRecommendations(30);
+        const response = await api.getAllJobRecommendations(30);
         console.log('Fetched recommendations:', response);
-        if (response && response.recommendations) {
-          setRecommendations(response.recommendations);
+        if (response && Array.isArray(response)) {
+          setRecommendations(response);
           // Set the first job as selected by default
-          if (response.recommendations.length > 0) {
-            setSelectedJob(response.recommendations[0]);
+          if (response.length > 0) {
+            setSelectedJob(response[0]);
+          }
+        } else if (response && (response as any).recommendations) {
+          const recommendations = (response as any).recommendations;
+          setRecommendations(recommendations);
+          if (recommendations.length > 0) {
+            setSelectedJob(recommendations[0]);
           }
         }
       } catch (err) {

@@ -5,10 +5,12 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, BookOpen, Brain, TrendingUp, Target, Download, Share2 } from 'lucide-react';
 import Link from 'next/link';
 import { courseAnalysisService, Course, PsychologicalInsight } from '@/services/courseAnalysisService';
+import { useAuth } from '@clerk/nextjs';
 
 export default function CourseInsightsPage() {
   const params = useParams();
   const courseId = params ? parseInt(params.id as string) : null;
+  const { getToken } = useAuth();
   
   const [course, setCourse] = useState<Course | null>(null);
   const [insights, setInsights] = useState<PsychologicalInsight[]>([]);
@@ -24,9 +26,14 @@ export default function CourseInsightsPage() {
   const fetchData = async () => {
     if (!courseId) return;
     try {
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
       const [courseData, insightsData] = await Promise.all([
-        courseAnalysisService.getCourse(courseId),
-        courseAnalysisService.getCourseInsights(courseId)
+        courseAnalysisService.getCourse(courseId, token),
+        courseAnalysisService.getCourseInsights(courseId, token)
       ]);
       
       setCourse(courseData);

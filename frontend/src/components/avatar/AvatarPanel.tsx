@@ -4,12 +4,14 @@ import AvatarCard from './AvatarCard';
 import AvatarService, { AvatarData } from '@/services/avatarService';
 import styles from './AvatarPanel.module.css';
 import LoadingScreen from '@/components/ui/LoadingScreen';
+import { useAuth } from '@clerk/nextjs';
 
 interface AvatarPanelProps {
   className?: string;
 }
 
 const AvatarPanel: React.FC<AvatarPanelProps> = ({ className = '' }) => {
+  const { getToken } = useAuth();
   const [avatarData, setAvatarData] = useState<AvatarData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -24,7 +26,12 @@ const AvatarPanel: React.FC<AvatarPanelProps> = ({ className = '' }) => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await AvatarService.getUserAvatar();
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      const data = await AvatarService.getUserAvatar(token);
       setAvatarData(data);
     } catch (err: any) {
       console.log('Aucun avatar existant trouvé');
@@ -40,7 +47,13 @@ const AvatarPanel: React.FC<AvatarPanelProps> = ({ className = '' }) => {
       setIsGenerating(true);
       setError(null);
       
-      const response = await AvatarService.generateAvatar();
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      
+      const response = await AvatarService.generateAvatar(token);
       
       // Mettre à jour les données d'avatar avec la réponse
       setAvatarData({

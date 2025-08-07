@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { saveNodeNote, fetchNodeNotes } from '../../utils/treeStorage';
 
 interface NoteModalProps {
@@ -10,6 +11,9 @@ interface NoteModalProps {
 }
 
 export default function NoteModal({ isOpen, onClose, nodeId, actionIndex, actionText }: NoteModalProps) {
+  // Auth hook for token
+  const { getToken } = useAuth();
+  
   const [noteText, setNoteText] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,8 +22,14 @@ export default function NoteModal({ isOpen, onClose, nodeId, actionIndex, action
   useEffect(() => {
     if (isOpen && nodeId) {
       const fetchNote = async () => {
+        const token = await getToken();
+        if (!token) {
+          setError('Authentication required');
+          return;
+        }
+        
         try {
-          const notes = await fetchNodeNotes(nodeId);
+          const notes = await fetchNodeNotes(nodeId, token);
           const existingNote = notes.find(note => note.action_index === actionIndex);
           if (existingNote) {
             setNoteText(existingNote.note_text);
@@ -33,11 +43,17 @@ export default function NoteModal({ isOpen, onClose, nodeId, actionIndex, action
       };
       fetchNote();
     }
-  }, [isOpen, nodeId, actionIndex]);
+  }, [isOpen, nodeId, actionIndex, getToken]);
 
   // Handle save note
   const handleSaveNote = async () => {
     if (!noteText.trim()) {
+      return;
+    }
+    
+    const token = await getToken();
+    if (!token) {
+      setError('Authentication required');
       return;
     }
 
@@ -45,7 +61,7 @@ export default function NoteModal({ isOpen, onClose, nodeId, actionIndex, action
     setError(null);
 
     try {
-      await saveNodeNote(nodeId, actionIndex, noteText);
+      await saveNodeNote(nodeId, actionIndex, noteText, token);
       onClose();
     } catch (err: any) {
       console.error('Error saving note:', err);

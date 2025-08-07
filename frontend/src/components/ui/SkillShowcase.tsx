@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import SkillCard from './SkillCard';
 import BasicSkillCard from './BasicSkillCard';
 import LoadingSpinner from './LoadingSpinner';
@@ -23,6 +24,9 @@ interface AnchorSkill {
 }
 
 const SkillShowcase: React.FC<SkillShowcaseProps> = ({ userId, className = '' }) => {
+  // Auth hook for token
+  const { getToken } = useAuth();
+  
   const [skills, setSkills] = useState<AnchorSkill[]>([]);
   const [basicSkills, setBasicSkills] = useState<UserSkills | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -87,8 +91,14 @@ const SkillShowcase: React.FC<SkillShowcaseProps> = ({ userId, className = '' })
 
   // Fetch basic skills
   const fetchBasicSkills = async () => {
+    const token = await getToken();
+    if (!token) {
+      console.log('No auth token available for fetching skills');
+      return;
+    }
+    
     try {
-      const userSkills = await getUserSkills();
+      const userSkills = await getUserSkills(token);
       setBasicSkills(userSkills);
       
       // Check if user has any non-null skill values

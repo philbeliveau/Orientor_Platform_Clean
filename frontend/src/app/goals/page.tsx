@@ -6,8 +6,27 @@ import TimelineVisualization, { SkillNode, TimelineTier } from '@/components/car
 import SkillRelationshipGraph from '@/components/career/SkillRelationshipGraph';
 // import { motion } from 'framer-motion'; // Removed for build compatibility
 import { toast } from 'react-hot-toast';
-import { CareerGoalsService, CareerGoal } from '@/services/careerGoalsService';
+import { useClerkApi } from '@/services/api';
 import { useRouter } from 'next/navigation';
+
+// CareerGoal type definition (from the service)
+export interface CareerGoal {
+  id: number;
+  user_id: number;
+  esco_occupation_id?: string;
+  oasis_code?: string;
+  title: string;
+  description?: string;
+  target_date: string;
+  is_active: boolean;
+  progress_percentage: number;
+  created_at: string;
+  updated_at: string;
+  achieved_at?: string;
+  source?: string;
+  milestones_count?: number;
+  completed_milestones?: number;
+}
 
 // Mock data generator with GraphSage-style scoring
 const generateMockCareerData = (): TimelineTier[] => {
@@ -325,6 +344,7 @@ const GoalsPage: React.FC = () => {
   const [activeGoal, setActiveGoal] = useState<CareerGoal | null>(null);
   const [milestones, setMilestones] = useState<any[]>([]);
   const router = useRouter();
+  const api = useClerkApi();
 
   useEffect(() => {
     loadActiveGoalAndProgression();
@@ -334,8 +354,15 @@ const GoalsPage: React.FC = () => {
     setLoading(true);
     
     try {
-      // Fetch active career goal
-      const { goal, progression, milestones: goalMilestones } = await CareerGoalsService.getActiveCareerGoal();
+      // Fetch active career goal using useClerkApi pattern
+      const response = await api.request<{
+        goal: CareerGoal | null;
+        progression: any;
+        milestones: any[];
+      }>('/api/v1/career-goals/active', {
+        method: 'GET'
+      });
+      const { goal, progression, milestones: goalMilestones } = response;
       
       if (goal) {
         setActiveGoal(goal);

@@ -117,7 +117,7 @@ export default function Dashboard() {
 
         console.log('[DEBUG] Fetching Holland results with token:', token.substring(0, 20) + '...');
         const results = await api.getHollandResults();
-        setHollandResults(results);
+        setHollandResults(results as ScoreResponse);
         console.log('[DEBUG] Holland results fetched successfully');
       } catch (err) {
         console.error('Error fetching Holland results:', err);
@@ -275,7 +275,8 @@ export default function Dashboard() {
         
         const notes = await api.getUserNotes();
         // Get top 3 most recent notes for home page
-        const recentNotes = notes.slice(0, 3);
+        const notesArray = Array.isArray(notes) ? notes : [];
+        const recentNotes = notesArray.slice(0, 3);
         setUserNotes(recentNotes);
       } catch (err: any) {
         console.error('Error fetching user notes:', err);
@@ -309,9 +310,9 @@ export default function Dashboard() {
         const profile = await api.getUserProfile();
         setUserProfile(profile);
         
-        if (profile && profile.id) {
-          setCurrentUserId(profile.id);
-          console.log('[DEBUG] Database user ID set:', profile.id);
+        if (profile && (profile as any).id) {
+          setCurrentUserId((profile as any).id);
+          console.log('[DEBUG] Database user ID set:', (profile as any).id);
         } else {
           console.warn('[DEBUG] No id in profile response:', profile);
         }
