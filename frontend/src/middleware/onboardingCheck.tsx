@@ -1,16 +1,20 @@
 // React and Next.js imports
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { onboardingService } from '../services/onboardingService';
+import { clerkApiService } from '../services/api';
+import { useAuth } from '@clerk/nextjs';
 
 /**
  * Check if the current user needs onboarding
  * This can be used in pages that require completed onboarding
  */
-export const checkOnboardingRequired = async (): Promise<boolean> => {
+export const checkOnboardingRequired = async (token: string): Promise<boolean> => {
   try {
-    const status = await onboardingService.getStatus();
-    return !status.isComplete;
+    const status = await clerkApiService.request('/auth/onboarding-status', {
+      method: 'GET',
+      token
+    }) as { completed: boolean };
+    return !status.completed;
   } catch (error) {
     console.error('Error checking onboarding status:', error);
     // If we can't check, assume they need onboarding for safety
@@ -25,19 +29,31 @@ export const withOnboardingCheck = (WrappedComponent: React.ComponentType<any>) 
   return function OnboardingProtectedComponent(props: any) {
     const [needsOnboarding, setNeedsOnboarding] = React.useState<boolean | null>(null);
     const router = useRouter();
+    const { getToken } = useAuth();
 
     React.useEffect(() => {
       const checkOnboarding = async () => {
-        const required = await checkOnboardingRequired();
-        if (required) {
-          router.push('/onboarding');
-        } else {
-          setNeedsOnboarding(false);
+        try {
+          const token = await getToken({ template: 'orientor-jwt' });
+          if (!token) {
+            router.push('/sign-in');
+            return;
+          }
+          
+          const required = await checkOnboardingRequired(token);
+          if (required) {
+            router.push('/onboarding');
+          } else {
+            setNeedsOnboarding(false);
+          }
+        } catch (error) {
+          console.error('Error checking onboarding:', error);
+          router.push('/sign-in');
         }
       };
 
       checkOnboarding();
-    }, [router]);
+    }, [router, getToken]);
 
     if (needsOnboarding === null) {
       return (

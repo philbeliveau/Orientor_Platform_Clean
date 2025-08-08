@@ -181,7 +181,8 @@ class EducationService {
    */
   async getPersonalizedRecommendations(
     userId: number, 
-    limit: number = 10
+    limit: number = 10,
+    token?: string
   ): Promise<ProgramSearchResponse> {
     const searchRequest: ProgramSearchRequest = {
       user_id: userId,
@@ -190,27 +191,27 @@ class EducationService {
       offset: 0,
     };
 
-    return this.searchPrograms(searchRequest);
+    return this.searchPrograms(searchRequest, token);
   }
 
   /**
    * Save a program to user's saved list
    */
-  async saveProgram(programId: string, userId: number): Promise<void> {
+  async saveProgram(programId: string, userId: number, token?: string): Promise<void> {
     await this.makeRequest(`/api/v1/education/programs/${programId}/save`, {
       method: 'POST',
       body: JSON.stringify({ user_id: userId }),
-    });
+    }, token);
   }
 
   /**
    * Remove a program from user's saved list
    */
-  async unsaveProgram(programId: string, userId: number): Promise<void> {
+  async unsaveProgram(programId: string, userId: number, token?: string): Promise<void> {
     await this.makeRequest(`/api/v1/education/programs/${programId}/save`, {
       method: 'DELETE',
       body: JSON.stringify({ user_id: userId }),
-    });
+    }, token);
   }
 
   /**

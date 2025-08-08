@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useAuth } from '@clerk/nextjs';
 import MainLayout from '@/components/layout/MainLayout';
 import educationService, { 
   Program, 
@@ -430,6 +431,7 @@ const ProgramCard: React.FC<ProgramCardProps> = ({ program, onSave, onUnsave, is
 
 // Main Education Page Component
 export default function EducationPage() {
+  const { getToken } = useAuth();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [metadata, setMetadata] = useState<SearchMetadata | null>(null);
   const [savedPrograms, setSavedPrograms] = useState<string[]>([]);
@@ -445,12 +447,19 @@ export default function EducationPage() {
         setIsLoading(true);
         setError(null);
 
+        // Get authentication token
+        const token = await getToken();
+        if (!token) {
+          setError('Authentication required. Please sign in to view education programs.');
+          return;
+        }
+
         // Load search metadata
-        const metadataResponse = await educationService.getSearchMetadata();
+        const metadataResponse = await educationService.getSearchMetadata(token);
         setMetadata(metadataResponse);
 
-        // Load personalized recommendations
-        const recommendationsResponse = await educationService.getPersonalizedRecommendations(1, 20);
+        // Load personalized recommendations  
+        const recommendationsResponse = await educationService.getPersonalizedRecommendations(1, 20, token);
         setPrograms(recommendationsResponse.programs);
         setSearchMetadata(recommendationsResponse.search_metadata);
 
@@ -466,7 +475,7 @@ export default function EducationPage() {
     };
 
     loadInitialData();
-  }, []);
+  }, [getToken]);
 
   const handleSearch = async (searchRequest: ProgramSearchRequest) => {
     try {
@@ -474,7 +483,14 @@ export default function EducationPage() {
       setError(null);
       setHasSearched(true);
 
-      const response = await educationService.searchPrograms(searchRequest);
+      // Get authentication token
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required. Please sign in to search programs.');
+        return;
+      }
+
+      const response = await educationService.searchPrograms(searchRequest, token);
       setPrograms(response.programs);
       setSearchMetadata(response.search_metadata);
 
@@ -488,19 +504,33 @@ export default function EducationPage() {
 
   const handleSaveProgram = async (programId: string) => {
     try {
-      await educationService.saveProgram(programId, 1);
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required. Please sign in to save programs.');
+        return;
+      }
+
+      await educationService.saveProgram(programId, 1, token);
       setSavedPrograms(prev => [...prev, programId]);
     } catch (err) {
       console.error('Error saving program:', err);
+      setError('Failed to save program. Please try again.');
     }
   };
 
   const handleUnsaveProgram = async (programId: string) => {
     try {
-      await educationService.unsaveProgram(programId, 1);
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required. Please sign in to manage saved programs.');
+        return;
+      }
+
+      await educationService.unsaveProgram(programId, 1, token);
       setSavedPrograms(prev => prev.filter(id => id !== programId));
     } catch (err) {
       console.error('Error unsaving program:', err);
+      setError('Failed to remove saved program. Please try again.');
     }
   };
 

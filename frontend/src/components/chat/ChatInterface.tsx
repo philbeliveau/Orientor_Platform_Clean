@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import axios from 'axios';
 import ChatMessage from './ChatMessage';
 import ConversationList from './ConversationList';
@@ -176,6 +177,7 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
   
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { getToken } = useAuth();
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Persist chat mode changes to localStorage
@@ -189,9 +191,9 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
   const handleComponentAction = useCallback(async (action: ComponentAction, componentId: string) => {
     console.log('Component action:', action, 'for component:', componentId);
     
-    const token = localStorage.getItem('access_token');
+    const token = await getToken();
     if (!token) {
-      router.push('/login');
+      router.push('/sign-in');
       return;
     }
 
@@ -304,9 +306,10 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
       console.log('🔍 Loading messages from endpoint:', endpoint);
       console.log('🔍 Chat mode:', chatMode, '| Default mode:', isDefaultMode, '| Orientator enabled:', enableOrientator);
         
+      const token = await getToken();
       const response = await axios.get(endpoint, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -353,11 +356,12 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
       const isDefaultMode = (chatMode as ChatMode) === 'default';
       if (enableOrientator && isDefaultMode) {
         try {
+          const fallbackToken = await getToken();
           const fallbackResponse = await axios.get(
             `${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${currentConversation.id}/messages`,
             {
               headers: {
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                'Authorization': `Bearer ${fallbackToken}`
               }
             }
           );
@@ -399,9 +403,9 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
     sendLockRef.current = true;
     setJustSentMessage(true);
 
-    const token = localStorage.getItem('access_token');
+    const token = await getToken();
     if (!token) {
-      router.push('/login');
+      router.push('/sign-in');
       return;
     }
 
@@ -643,7 +647,7 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
       console.error('Failed to send message:', error);
       
       if (error.response?.status === 401) {
-        router.push('/login');
+        router.push('/sign-in');
         return;
       }
       
@@ -694,13 +698,14 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
     }, 100);
   };
 
-  const handleSearchResult = (conversationId: number, messageId: number) => {
+  const handleSearchResult = async (conversationId: number, messageId: number) => {
     // Load the conversation and scroll to the message
+    const token = await getToken();
     axios.get(
       `${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${conversationId}`,
       {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${token}`
         }
       }
     ).then(response => {
@@ -725,12 +730,13 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
     if (!currentConversation) return;
     
     try {
+      const token = await getToken();
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${currentConversation.id}/archive`,
         {},
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            'Authorization': `Bearer ${token}`
           }
         }
       );
@@ -746,11 +752,12 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
     if (!currentConversation) return;
     
     try {
+      const token = await getToken();
       await axios.delete(
         `${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${currentConversation.id}`,
         {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            'Authorization': `Bearer ${token}`
           }
         }
       );
@@ -795,13 +802,14 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
     }
 
     try {
+      const token = await getToken();
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${currentConversation.id}`,
         {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({ title: newTitle })
         }
