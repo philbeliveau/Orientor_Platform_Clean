@@ -301,7 +301,7 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
       const isDefaultMode = (chatMode as ChatMode) === 'default';
       const endpoint = (enableOrientator && isDefaultMode)
         ? `${process.env.NEXT_PUBLIC_API_URL}/orientator/conversations/${currentConversation.id}/messages`
-        : `${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${currentConversation.id}/messages`;
+        : `${process.env.NEXT_PUBLIC_API_URL}/conversations/${currentConversation.id}/messages`;
         
       console.log('🔍 Loading messages from endpoint:', endpoint);
       console.log('🔍 Chat mode:', chatMode, '| Default mode:', isDefaultMode, '| Orientator enabled:', enableOrientator);
@@ -358,7 +358,7 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
         try {
           const fallbackToken = await getToken();
           const fallbackResponse = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${currentConversation.id}/messages`,
+            `${process.env.NEXT_PUBLIC_API_URL}/conversations/${currentConversation.id}/messages`,
             {
               headers: {
                 'Authorization': `Bearer ${fallbackToken}`
