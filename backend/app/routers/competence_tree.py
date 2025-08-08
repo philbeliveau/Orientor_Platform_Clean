@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List
@@ -57,10 +57,19 @@ def get_competence_tree_service():
         _competence_tree_service = CompetenceTreeService()
     return _competence_tree_service
 
+async def preload_competence_tree_service():
+    """Preload competence tree service asynchronously"""
+    try:
+        get_competence_tree_service()
+        logger.info("Competence tree service preloaded successfully")
+    except Exception as e:
+        logger.error(f"Error preloading competence tree service: {str(e)}")
+
 @router.post("/generate", response_model=Dict[str, Any])
 def generate_competence_tree(
-    max_depth: int = Query(3, gt=0, le=6, description="Maximum depth of skill tree traversal"),
-    max_nodes: int = Query(50, gt=10, le=100, description="Maximum total nodes in the tree"),
+    background_tasks: BackgroundTasks,
+    max_depth: int = 3,
+    max_nodes: int = 50,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -102,6 +111,9 @@ def generate_competence_tree(
         # signal.alarm(120)  # 2 minute timeout
         
         try:
+            # Preload service asynchronously
+            background_tasks.add_task(preload_competence_tree_service)
+            
             # Create the competence tree with reduced parameters to avoid timeout
             logger.info(f"Creating competence tree for user {current_user.id} with max_depth={max_depth}, max_nodes_per_level={max(5, min(8, max_nodes // max_depth))}")
             

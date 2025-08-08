@@ -2,7 +2,7 @@ import os
 import openai
 # import pinecone
 from pinecone import Pinecone
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
 from typing import List, Optional
 from dotenv import load_dotenv
@@ -195,8 +195,16 @@ def get_embedding_model():
             )
     return _embedding_model
 
+async def preload_embedding_model():
+    """Preload embedding model asynchronously"""
+    try:
+        get_embedding_model()
+        logger.info("Embedding model preloaded successfully")
+    except Exception as e:
+        logger.error(f"Error preloading embedding model: {str(e)}")
+
 @router.post("/search", response_model=SearchResponse)
-async def search_embeddings(request: SearchRequest):
+async def search_embeddings(request: SearchRequest, background_tasks: BackgroundTasks):
     """
     Search for OaSIS records using semantic similarity with locally generated MiniLM embeddings
     """
@@ -204,6 +212,9 @@ async def search_embeddings(request: SearchRequest):
         logger.info(f"Searching with query: {request.query}")
         index = get_pinecone_index()
 
+        # Preload model asynchronously
+        background_tasks.add_task(preload_embedding_model)
+        
         # Compute query embedding
         embedding_model = get_embedding_model()
         query_embedding = embedding_model.encode(

@@ -68,13 +68,22 @@ def get_career_progression_service():
         _career_progression_service = CareerProgressionService()
     return _career_progression_service
 
+async def preload_career_progression_service():
+    """Preload career progression service asynchronously"""
+    try:
+        get_career_progression_service()
+        logger.info("Career progression service preloaded successfully")
+    except Exception as e:
+        logger.error(f"Error preloading career progression service: {str(e)}")
+
 @router.get("/{occupation_id}", response_model=Dict[str, Any])
 def get_career_progression(
-    occupation_id: str = Path(..., description="ESCO occupation ID to analyze"),
-    depth: int = Query(3, ge=1, le=6, description="Maximum GraphSage traversal depth"),
-    max_skills_per_tier: int = Query(5, ge=3, le=10, description="Maximum skills per tier"),
-    min_similarity: float = Query(0.4, ge=0.1, le=0.9, description="Minimum GraphSage similarity threshold"),
-    personalized: bool = Query(False, description="Apply user personalization"),
+    occupation_id: str,
+    background_tasks: BackgroundTasks,
+    depth: int = 3,
+    max_skills_per_tier: int = 5,
+    min_similarity: float = 0.4,
+    personalized: bool = False,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -109,6 +118,9 @@ def get_career_progression(
                 status_code=400,
                 detail="Invalid occupation_id format. Must be a valid ESCO occupation ID."
             )
+        
+        # Preload service asynchronously
+        background_tasks.add_task(preload_career_progression_service)
         
         # Get career progression service
         service = get_career_progression_service()

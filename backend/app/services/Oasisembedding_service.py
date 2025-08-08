@@ -150,6 +150,7 @@ class ModelState:
             
             while retry_count < max_retries:
                 try:
+                    logger.info(f"Loading embedding model {MODEL_NAME} (attempt {retry_count + 1}/{max_retries})...")
                     # Load llama-text-embed-v2 model and tokenizer
                     self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
                     base_model = AutoModel.from_pretrained(MODEL_NAME)
@@ -218,9 +219,9 @@ class OasisModelState:
             
             while retry_count < max_retries:
                 try:
+                    logger.info(f"Loading OaSIS embedding model {OASIS_MODEL_NAME} (attempt {retry_count + 1}/{max_retries})...")
                     # Load the lighter model for OaSIS embeddings using SentenceTransformer
                     # This will generate embeddings of dimension 384
-                    logger.info(f"Loading OaSIS embedding model {OASIS_MODEL_NAME}...")
                     
                     # Set PyTorch to use CPU device for better compatibility
                     import torch
@@ -279,9 +280,9 @@ class ESCOModelState:
             
             while retry_count < max_retries:
                 try:
+                    logger.info(f"Loading ESCO embedding model (attempt {retry_count + 1}/{max_retries})...")
                     # Load the model for ESCO embeddings using SentenceTransformer
                     # This will generate embeddings of dimension 384
-                    logger.info("Loading ESCO embedding model...")
                     
                     # Set PyTorch to use CPU device for better compatibility
                     import torch

@@ -5,6 +5,7 @@ import uvicorn
 import os
 import logging
 import time
+import asyncio
 
 # Import routers directly
 from app.routers.user import router as auth_router
@@ -289,12 +290,9 @@ async def startup_event():
         except Exception as e:
             logger.error(f"❌ Security validation error: {e}")
         
-        # Load models if available
-        try:
-            load_models()
-            logger.info("✅ Models loaded successfully")
-        except Exception as model_e:
-            logger.warning(f"⚠️ Model loading failed (continuing anyway): {str(model_e)}")
+        # Preload models asynchronously during startup
+        logger.info("🧠 Preloading ML models asynchronously...")
+        asyncio.create_task(preload_all_models())
         
         # Initialize database if not already done
         try:
@@ -353,6 +351,47 @@ def load_models():
         logger.error(f"Error in load_models: {str(e)}")
         # Don't raise the exception, just log it for graceful degradation
         pass
+
+async def preload_all_models():
+    """Preload all ML models asynchronously during startup"""
+    try:
+        logger.info("🧠 Starting asynchronous model preloading...")
+        
+        # Import and preload vector search model
+        try:
+            from .routers.vector_search import preload_embedding_model
+            await preload_embedding_model()
+        except Exception as e:
+            logger.warning(f"Failed to preload vector search model: {str(e)}")
+        
+        # Import and preload OaSIS models
+        try:
+            from .services.Oasisembedding_service import oasis_model_state, esco_model_state
+            await asyncio.get_event_loop().run_in_executor(None, oasis_model_state.load_models)
+            await asyncio.get_event_loop().run_in_executor(None, esco_model_state.load_models)
+            logger.info("✅ OaSIS and ESCO models preloaded")
+        except Exception as e:
+            logger.warning(f"Failed to preload OaSIS/ESCO models: {str(e)}")
+            
+        # Import and preload career progression service
+        try:
+            from .routers.career_progression import preload_career_progression_service
+            await preload_career_progression_service()
+        except Exception as e:
+            logger.warning(f"Failed to preload career progression service: {str(e)}")
+            
+        # Import and preload competence tree service
+        try:
+            from .routers.competence_tree import preload_competence_tree_service
+            await preload_competence_tree_service()
+        except Exception as e:
+            logger.warning(f"Failed to preload competence tree service: {str(e)}")
+        
+        logger.info("✅ Asynchronous model preloading completed")
+        
+    except Exception as e:
+        logger.error(f"Error during model preloading: {str(e)}")
+        # Don't raise - continue startup gracefully
 
 # if __name__ == "__main__":
 #     uvicorn.run("app.main:app", host="0.0.0.0", port=8000) #, reload=True)
