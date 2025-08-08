@@ -5,22 +5,30 @@ import { useRouter } from 'next/navigation';
 import ChatOnboard from '../../components/onboarding/ChatOnboard';
 import { useOnboardingService } from '../../services/onboardingService';
 import { useUser } from '@clerk/nextjs';
+import ErrorBoundary from '../../components/ui/ErrorBoundary';
+import { AlertTriangle } from 'lucide-react';
 
 const OnboardingPage: React.FC = () => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(true);
-  const onboardingService = useOnboardingService();
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   
   // Protect this route - redirect unauthenticated users to sign in
   const { isLoaded, isSignedIn, user } = useUser();
 
+  // Initialize onboarding service - hooks must be called unconditionally
+  const onboardingService = useOnboardingService();
+
   useEffect(() => {
     checkOnboardingStatus();
-  }, []);
+  }, [retryCount]);
 
   const checkOnboardingStatus = async () => {
     try {
+      setError(null);
+      
       const status = await onboardingService.getStatus();
       if (status.isComplete) {
         // User has already completed onboarding, redirect to dashboard
@@ -29,13 +37,30 @@ const OnboardingPage: React.FC = () => {
         return;
       }
       setNeedsOnboarding(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error checking onboarding status:', error);
+      
+      // Set user-friendly error message
+      if (error.message?.includes('Authentication service not available')) {
+        setError('Authentication system is initializing. Please wait...');
+      } else if (error.message?.includes('not authenticated')) {
+        setError('Please sign in to continue with onboarding.');
+        setTimeout(() => router.push('/sign-in'), 2000);
+        return;
+      } else {
+        setError('Unable to check onboarding status. Assuming you need onboarding.');
+      }
+      
       // If we can't check, assume they need onboarding
       setNeedsOnboarding(true);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleRetry = () => {
+    setIsLoading(true);
+    setRetryCount(prev => prev + 1);
   };
 
   const handleOnboardingComplete = async (responses: any[]) => {
@@ -70,6 +95,20 @@ const OnboardingPage: React.FC = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-text-secondary">Loading onboarding...</p>
+          {error && (
+            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center">
+                <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2" />
+                <p className="text-yellow-800 text-sm">{error}</p>
+              </div>
+              <button
+                onClick={handleRetry}
+                className="mt-2 text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-1 rounded transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -94,9 +133,15 @@ const OnboardingPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <ChatOnboard onComplete={handleOnboardingComplete} />
-    </div>
+    <ErrorBoundary
+      onError={(error, errorInfo) => {
+        console.error('Onboarding page error:', error, errorInfo);
+      }}
+    >
+      <div className="min-h-screen bg-background">
+        <ChatOnboard onComplete={handleOnboardingComplete} />
+      </div>
+    </ErrorBoundary>
   );
 };
 

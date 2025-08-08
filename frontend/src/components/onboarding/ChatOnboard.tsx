@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, RefreshCw, Check } from 'lucide-react';
+import { Send, RefreshCw, Check, AlertTriangle } from 'lucide-react';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { useOnboardingService } from '../../services/onboardingService';
 import { ChatMessage as ChatMessageType } from '../../types/onboarding';
@@ -16,8 +16,11 @@ interface ChatOnboardProps {
 
 const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' }) => {
   const [inputValue, setInputValue] = useState('');
+  const [serviceError, setServiceError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  
+  // Always call hooks unconditionally
   const onboardingService = useOnboardingService();
 
   // Add custom styles to override global focus styles
@@ -131,11 +134,12 @@ const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' })
 
   useEffect(() => {
     const initializeOnboarding = async () => {
-      // Load existing onboarding status first
-      await loadOnboardingStatus(onboardingService);
-      
-      // Start onboarding session if not complete
-      await startOnboarding(onboardingService);
+      try {
+        // Load existing onboarding status first
+        await loadOnboardingStatus(onboardingService);
+        
+        // Start onboarding session if not complete
+        await startOnboarding(onboardingService);
       
       if (currentQuestionIndex === 0) {
         // Show first question after welcome message
@@ -152,6 +156,10 @@ const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' })
             }, 1500);
           }
         }, 1000);
+      }
+      } catch (error) {
+        console.error('Failed to initialize onboarding:', error);
+        setServiceError('Failed to initialize onboarding chat');
       }
     };
 
@@ -190,7 +198,12 @@ const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' })
     addResponse(responseData);
 
     // Save response to API
-    await saveResponseToAPI(onboardingService, responseData);
+    try {
+      await saveResponseToAPI(onboardingService, responseData);
+    } catch (error) {
+      console.error('Failed to save response to API:', error);
+      // Continue with local flow even if API save fails
+    }
 
     setInputValue('');
 
@@ -250,9 +263,14 @@ const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' })
     useOnboardingStore.getState().setPsychProfile(profile);
     
     // Complete onboarding on the backend
-    console.log('Calling completeOnboarding...');
-    await completeOnboarding(onboardingService);
-    console.log('Onboarding completion API call finished');
+    try {
+      console.log('Calling completeOnboarding...');
+      await completeOnboarding(onboardingService);
+      console.log('Onboarding completion API call finished');
+    } catch (error) {
+      console.error('Failed to complete onboarding on backend:', error);
+      // Continue with local completion even if API fails
+    }
     
     addMessage({
       type: 'system',
@@ -265,6 +283,7 @@ const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' })
       reset();
     }
   };
+
 
 
   return (

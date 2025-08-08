@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { useAuth } from '@clerk/nextjs'
+import { useClerkAuth } from '../contexts/ClerkAuthContext'
 
 // Create basic axios client with proper base URL
 const apiClient = axios.create({
@@ -129,19 +129,34 @@ export const clerkApiService = new ClerkApiService();
 
 // React hook for using the API service with Clerk authentication
 export const useClerkApi = () => {
-  const { getToken } = useAuth();
+  const { getAuthToken, isAuthenticated, isLoading } = useClerkAuth();
 
   const apiCall = async <T>(
     apiMethod: (token: string, ...args: any[]) => Promise<T>,
     ...args: any[]
   ): Promise<T> => {
     try {
+      // Check if user is authenticated first
+      if (!isAuthenticated) {
+        console.error('[Auth] User not authenticated');
+        throw new Error('User not authenticated - please sign in');
+      }
+
+      if (isLoading) {
+        console.log('[Auth] Authentication still loading, waiting...');
+        // Wait a bit for auth to load
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
       // CRITICAL: Request JWT token with the template we created
       console.log('[Auth] Requesting JWT token with orientor-jwt template...');
-      const token = await getToken({ template: 'orientor-jwt' }).catch(async () => {
-        console.log('[Auth] Template failed, trying default token...');
-        return await getToken();
-      });
+      
+      if (!getAuthToken) {
+        console.error('[Auth] getAuthToken function is undefined');
+        throw new Error('Authentication service not properly initialized');
+      }
+
+      const token = await getAuthToken();
       
       if (!token) {
         console.error('[Auth] No token returned from Clerk');

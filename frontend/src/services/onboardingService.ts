@@ -39,230 +39,61 @@ export interface OnboardingResponsesData {
   total_items: number;
 }
 
-class OnboardingService {
-  private baseURL = '/api/v1/onboarding';
-
-  /**
-   * Get the current onboarding status for the authenticated user
-   */
-  async getStatus(token: string): Promise<OnboardingStatus> {
-    try {
-      console.log('Checking onboarding status...');
-      const response = await clerkApiService.request(`/auth/onboarding-status`, {
-        method: 'GET',
-        token
-      });
-      console.log('Onboarding status response:', response);
-      console.log('Checking response.completed:', response.completed);
-      console.log('Full response data keys:', Object.keys(response));
-
-      const isComplete = response.completed;
-      return {
-        isComplete: isComplete,
-        hasStarted: isComplete,
-      };
-    } catch (error: any) {
-      console.error('Failed to get onboarding status:', error);
-      if (error.message?.includes('401') || error.message?.includes('403')) {
-        console.error('Authentication error while checking onboarding status');
-        throw error;
-      }
-      return {
-        isComplete: false,
-        hasStarted: false,
-      };
-    }
-  }
-
-  /**
-   * Start a new onboarding session
-   */
-  async startOnboarding(token: string): Promise<OnboardingSessionResponse> {
-    try {
-      const response = await clerkApiService.request(`${this.baseURL}/start`, {
-        method: 'POST',
-        token
-      });
-      return response;
-    } catch (error) {
-      console.error('Failed to start onboarding:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Save a single onboarding response
-   */
-  async saveResponse(token: string, responseData: OnboardingResponse): Promise<OnboardingProgressResponse> {
-    try {
-      const response = await clerkApiService.request(`${this.baseURL}/response`, {
-        method: 'POST',
-        token,
-        body: JSON.stringify(responseData)
-      });
-      return response;
-    } catch (error) {
-      console.error('Failed to save onboarding response:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Complete the onboarding process
-   */
-  async completeOnboarding(token: string, data: {
-    responses: OnboardingResponse[];
-    psychProfile?: PsychProfile;
-  }): Promise<OnboardingCompleteResponse> {
-    try {
-      console.log('Sending onboarding completion data:', {
-        responses: data.responses.length,
-        psychProfile: data.psychProfile ? 'Present' : 'Missing',
-        data: data
-      });
-      const response = await clerkApiService.request(`${this.baseURL}/complete`, {
-        method: 'POST',
-        token,
-        body: JSON.stringify(data)
-      });
-      console.log('Onboarding completion response:', response);
-      return response;
-    } catch (error) {
-      console.error('Failed to complete onboarding:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get the user's onboarding psychological profile
-   */
-  async getProfile(token: string): Promise<OnboardingProfileResponse> {
-    try {
-      const response = await clerkApiService.request(`${this.baseURL}/profile`, {
-        method: 'GET',
-        token
-      });
-      return response;
-    } catch (error) {
-      console.error('Failed to get onboarding profile:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get all onboarding responses for the user
-   */
-  async getResponses(token: string): Promise<OnboardingResponsesData> {
-    try {
-      const response = await clerkApiService.request(`${this.baseURL}/responses`, {
-        method: 'GET',
-        token
-      });
-      return response;
-    } catch (error) {
-      console.error('Failed to get onboarding responses:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Reset onboarding progress for the user
-   */
-  async resetOnboarding(token: string): Promise<{ message: string }> {
-    try {
-      const response = await clerkApiService.request(`${this.baseURL}/reset`, {
-        method: 'DELETE',
-        token
-      });
-      return response;
-    } catch (error) {
-      console.error('Failed to reset onboarding:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Check if user needs onboarding
-   */
-  async needsOnboarding(token: string): Promise<boolean> {
-    try {
-      const status = await this.getStatus(token);
-      console.log('Onboarding status check result:', { isComplete: status.isComplete, hasStarted: status.hasStarted });
-      return !status.isComplete;
-    } catch (error: any) {
-      // If it's an auth error, re-throw it
-      if (error.message?.includes('401') || error.message?.includes('403')) {
-        throw error;
-      }
-      
-      // For other errors, assume they need onboarding
-      console.warn('Could not check onboarding status, assuming onboarding needed:', error.message);
-      return true;
-    }
-  }
-
-  /**
-   * Get onboarding progress percentage
-   */
-  async getProgress(token: string): Promise<number> {
-    try {
-      const responsesData = await this.getResponses(token);
-      if (responsesData.total_items === 0) return 0;
-      return Math.round((responsesData.completed_items / responsesData.total_items) * 100);
-    } catch (error) {
-      console.error('Failed to get onboarding progress:', error);
-      return 0;
-    }
-  }
-
-  /**
-   * Skip onboarding for a user by creating a default profile
-   */
-  async skipOnboarding(token: string): Promise<OnboardingCompleteResponse> {
-    try {
-      console.log('Skipping onboarding...');
-      const response = await clerkApiService.request(`${this.baseURL}/skip`, {
-        method: 'POST',
-        token
-      });
-      console.log('Skip onboarding response:', response);
-      return response;
-    } catch (error) {
-      console.error('Failed to skip onboarding:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Mark onboarding as complete in the database
-   */
-  async markOnboardingComplete(token: string): Promise<{ message: string; onboarding_completed: boolean }> {
-    try {
-      console.log('Marking onboarding as complete...');
-      const response = await clerkApiService.request('/auth/onboarding-complete', {
-        method: 'POST',
-        token
-      });
-      console.log('Onboarding completion response:', response);
-      return response;
-    } catch (error) {
-      console.error('Failed to mark onboarding complete:', error);
-      throw error;
-    }
-  }
-}
-
-export const onboardingService = new OnboardingService();
+// Legacy service class removed - now using hook-based pattern
 
 // Hook-based wrapper following Clerk pattern
 export const useOnboardingService = () => {
-  const { request } = useClerkApi();
+  const clerkApi = useClerkApi();
+  
+  // Add null check for the API service
+  if (!clerkApi || !clerkApi.request) {
+    console.error('useOnboardingService: ClerkApi not properly initialized');
+    // Return a service with safe fallbacks
+    return {
+      getStatus: async (): Promise<OnboardingStatus> => {
+        throw new Error('Authentication service not available');
+      },
+      startOnboarding: async (): Promise<OnboardingSessionResponse> => {
+        throw new Error('Authentication service not available');
+      },
+      saveResponse: async (responseData: OnboardingResponse): Promise<OnboardingProgressResponse> => {
+        throw new Error('Authentication service not available');
+      },
+      completeOnboarding: async (data: any): Promise<OnboardingCompleteResponse> => {
+        throw new Error('Authentication service not available');
+      },
+      getProfile: async (): Promise<OnboardingProfileResponse> => {
+        throw new Error('Authentication service not available');
+      },
+      getResponses: async (): Promise<OnboardingResponsesData> => {
+        throw new Error('Authentication service not available');
+      },
+      resetOnboarding: async (): Promise<{ message: string }> => {
+        throw new Error('Authentication service not available');
+      },
+      needsOnboarding: async (): Promise<boolean> => {
+        // Default to true if we can't check
+        return true;
+      },
+      getProgress: async (): Promise<number> => {
+        return 0;
+      },
+      skipOnboarding: async (): Promise<OnboardingCompleteResponse> => {
+        throw new Error('Authentication service not available');
+      },
+      markOnboardingComplete: async (): Promise<{ message: string; onboarding_completed: boolean }> => {
+        throw new Error('Authentication service not available');
+      }
+    };
+  }
+  
+  const { request } = clerkApi;
 
   return {
     getStatus: async (): Promise<OnboardingStatus> => {
       try {
         console.log('Checking onboarding status...');
-        const response = await request('/auth/onboarding-status');
+        const response = await request('/auth/onboarding-status') as { completed: boolean };
         console.log('Onboarding status response:', response);
         
         const isComplete = response.completed;
@@ -285,7 +116,7 @@ export const useOnboardingService = () => {
 
     startOnboarding: async (): Promise<OnboardingSessionResponse> => {
       try {
-        const response = await request('/api/v1/onboarding/start', { method: 'POST' });
+        const response = await request('/api/v1/onboarding/start', { method: 'POST' }) as OnboardingSessionResponse;
         return response;
       } catch (error) {
         console.error('Failed to start onboarding:', error);
@@ -298,7 +129,7 @@ export const useOnboardingService = () => {
         const response = await request('/api/v1/onboarding/response', {
           method: 'POST',
           body: JSON.stringify(responseData)
-        });
+        }) as OnboardingProgressResponse;
         return response;
       } catch (error) {
         console.error('Failed to save onboarding response:', error);
@@ -319,7 +150,7 @@ export const useOnboardingService = () => {
         const response = await request('/api/v1/onboarding/complete', {
           method: 'POST',
           body: JSON.stringify(data)
-        });
+        }) as OnboardingCompleteResponse;
         console.log('Onboarding completion response:', response);
         return response;
       } catch (error) {
@@ -330,7 +161,7 @@ export const useOnboardingService = () => {
 
     getProfile: async (): Promise<OnboardingProfileResponse> => {
       try {
-        const response = await request('/api/v1/onboarding/profile');
+        const response = await request('/api/v1/onboarding/profile') as OnboardingProfileResponse;
         return response;
       } catch (error) {
         console.error('Failed to get onboarding profile:', error);
@@ -340,7 +171,7 @@ export const useOnboardingService = () => {
 
     getResponses: async (): Promise<OnboardingResponsesData> => {
       try {
-        const response = await request('/api/v1/onboarding/responses');
+        const response = await request('/api/v1/onboarding/responses') as OnboardingResponsesData;
         return response;
       } catch (error) {
         console.error('Failed to get onboarding responses:', error);
@@ -350,7 +181,7 @@ export const useOnboardingService = () => {
 
     resetOnboarding: async (): Promise<{ message: string }> => {
       try {
-        const response = await request('/api/v1/onboarding/reset', { method: 'DELETE' });
+        const response = await request('/api/v1/onboarding/reset', { method: 'DELETE' }) as { message: string };
         return response;
       } catch (error) {
         console.error('Failed to reset onboarding:', error);
@@ -360,7 +191,7 @@ export const useOnboardingService = () => {
 
     needsOnboarding: async (): Promise<boolean> => {
       try {
-        const status = await request('/auth/onboarding-status');
+        const status = await request('/auth/onboarding-status') as { completed: boolean };
         console.log('Onboarding status check result:', { isComplete: status.completed });
         return !status.completed;
       } catch (error: any) {
@@ -374,7 +205,7 @@ export const useOnboardingService = () => {
 
     getProgress: async (): Promise<number> => {
       try {
-        const responsesData = await request('/api/v1/onboarding/responses');
+        const responsesData = await request('/api/v1/onboarding/responses') as OnboardingResponsesData;
         if (responsesData.total_items === 0) return 0;
         return Math.round((responsesData.completed_items / responsesData.total_items) * 100);
       } catch (error) {
@@ -386,7 +217,7 @@ export const useOnboardingService = () => {
     skipOnboarding: async (): Promise<OnboardingCompleteResponse> => {
       try {
         console.log('Skipping onboarding...');
-        const response = await request('/api/v1/onboarding/skip', { method: 'POST' });
+        const response = await request('/api/v1/onboarding/skip', { method: 'POST' }) as OnboardingCompleteResponse;
         console.log('Skip onboarding response:', response);
         return response;
       } catch (error) {
@@ -398,7 +229,7 @@ export const useOnboardingService = () => {
     markOnboardingComplete: async (): Promise<{ message: string; onboarding_completed: boolean }> => {
       try {
         console.log('Marking onboarding as complete...');
-        const response = await request('/auth/onboarding-complete', { method: 'POST' });
+        const response = await request('/auth/onboarding-complete', { method: 'POST' }) as { message: string; onboarding_completed: boolean };
         console.log('Onboarding completion response:', response);
         return response;
       } catch (error) {
@@ -409,4 +240,5 @@ export const useOnboardingService = () => {
   };
 };
 
-export default onboardingService;
+// Default export no longer available - use useOnboardingService hook instead
+export default useOnboardingService;
