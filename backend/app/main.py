@@ -47,6 +47,7 @@ from app.routers.llm_career_advisor import router as llm_career_advisor_router
 from app.routers.orientator import router as orientator_router
 from app.routers.auth_clerk import router as auth_clerk_router
 from app.routers.cache_monitoring import router as cache_monitoring_router
+from app.routers.test_auth import router as test_auth_router
 from fastapi import FastAPI, HTTPException
 from pathlib import Path
 # from scripts.model_loader import load_models
@@ -230,6 +231,7 @@ app.include_router(llm_career_advisor_router, prefix="/api/v1")
 app.include_router(orientator_router, prefix="/api/v1")
 app.include_router(auth_clerk_router, prefix="/api/v1")
 app.include_router(cache_monitoring_router, prefix="/api/v1")
+app.include_router(test_auth_router, prefix="/api/v1")
 logger.info("All routers included successfully")
 
 # Explicitly capture route after including it

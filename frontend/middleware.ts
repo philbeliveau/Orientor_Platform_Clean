@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { NextResponse } from 'next/server';
 
 // Define routes that should be publicly accessible
 const isPublicRoute = createRouteMatcher([
@@ -12,10 +13,30 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  // Protect all routes except public ones
-  if (!isPublicRoute(req)) {
-    await auth.protect();
+  // Skip authentication for public routes
+  if (isPublicRoute(req)) {
+    return NextResponse.next();
   }
+
+  // Handle API routes with JWT
+  if (req.nextUrl.pathname.startsWith('/api')) {
+    const session = auth();
+    if (!session.userId) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+    
+    const token = await session.getToken({ 
+      template: 'orientor-jwt'
+    });
+    
+    // Set Authorization header for API routes
+    const headers = new Headers(req.headers);
+    headers.set('Authorization', `Bearer ${token}`);
+    return NextResponse.next({ request: { headers } });
+  }
+
+  // Default protection for other routes
+  return auth().protect();
 });
 
 export const config = {

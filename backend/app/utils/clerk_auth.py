@@ -201,8 +201,12 @@ def create_clerk_user_in_db(
             logger.error(f"No email found for Clerk user {clerk_user_id}")
             return None
         
-        # Check if user exists by email (migration from old system)
-        existing_user = db.query(User).filter(User.email == email).first()
+        # First try to find user by clerk_user_id
+        existing_user = db.query(User).filter(User.clerk_user_id == clerk_user_id).first()
+        
+        # Fallback to email lookup if not found by clerk_user_id
+        if not existing_user:
+            existing_user = db.query(User).filter(User.email == email).first()
         
         if existing_user:
             # Update existing user with Clerk ID
@@ -339,6 +343,7 @@ async def get_current_user_with_db_sync(
         user_data = create_clerk_user_in_db(clerk_user_data["clerk_data"], db)
         
         if not user_data:
+            logger.error("Failed to create user in database")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to sync user with database"
@@ -347,19 +352,30 @@ async def get_current_user_with_db_sync(
         # Return SQLAlchemy User object
         user = db.query(User).filter(User.id == user_data["id"]).first()
         if not user:
+            logger.error(f"User not found in database after sync: {user_data['id']}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found in database after sync"
             )
         
+        # Verify clerk_user_id matches
+        if user.clerk_user_id != clerk_user_data["id"]:
+            logger.error(f"User ID mismatch: DB={user.clerk_user_id} vs Clerk={clerk_user_data['id']}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User ID mismatch"
+            )
+        
         # Cache the database user for this request
         request_cache.set(db_user_cache_key, user)
-        logger.debug("💾 Database user cached")
+        logger.debug(f"💾 Database user cached: {user.id}")
             
         return user
         
+    except HTTPException:
+        raise  # Re-raise existing HTTP exceptions
     except Exception as e:
-        logger.error(f"User authentication with DB sync error: {str(e)}")
+        logger.error(f"User authentication with DB sync error: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials"
