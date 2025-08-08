@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { 
   MagnifyingGlassIcon, 
   XMarkIcon,
@@ -8,6 +9,7 @@ import {
 } from '@heroicons/react/24/outline';
 import debounce from 'lodash/debounce';
 import { format } from 'date-fns';
+import { getAuthHeader, endpoint } from '@/services/api';
 
 interface SearchResult {
   conversation_id: number;
@@ -26,6 +28,7 @@ interface SearchInterfaceProps {
 }
 
 export default function SearchInterface({ onSelectResult, onClose }: SearchInterfaceProps) {
+  const { getToken } = useAuth();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,10 +54,9 @@ export default function SearchInterface({ onSelectResult, onClose }: SearchInter
           role_filter: filters.role
         });
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/search?${params}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
+        const headers = await getAuthHeader(getToken);
+        const response = await fetch(endpoint(`/chat/search?${params}`), {
+          headers
         });
 
         if (response.ok) {

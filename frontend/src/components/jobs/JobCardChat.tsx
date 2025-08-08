@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatBubbleLeftIcon, SparklesIcon, XMarkIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
 import { Job } from './JobCard';
+import { getAuthHeader, endpoint } from '@/services/api';
 
 interface Message {
   id: string;
@@ -33,6 +35,7 @@ const PRESET_QUERIES: PresetQuery[] = [
 ];
 
 export const JobCardChat: React.FC<JobCardChatProps> = ({ job, isOpen, onClose }) => {
+  const { getToken } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -70,12 +73,10 @@ export const JobCardChat: React.FC<JobCardChatProps> = ({ job, isOpen, onClose }
     setShowPresets(false);
 
     try {
-      const response = await fetch('/api/v1/job-chat/query', {
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint('/job-chat/query'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
+        headers,
         body: JSON.stringify({
           job_data: {
             id: job.id,

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { 
   FolderIcon, 
   PlusIcon,
@@ -7,6 +8,7 @@ import {
   XMarkIcon,
   CheckIcon
 } from '@heroicons/react/24/outline';
+import { getAuthHeader, endpoint } from '@/services/api';
 
 interface Category {
   id: number;
@@ -28,6 +30,7 @@ export default function CategoryManager({
   onSelectCategory,
   onClose
 }: CategoryManagerProps) {
+  const { getToken } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -55,10 +58,9 @@ export default function CategoryManager({
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/categories`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint('/chat/categories'), {
+        headers
       });
       
       if (response.ok) {
@@ -76,12 +78,10 @@ export default function CategoryManager({
     if (!formData.name.trim()) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/categories`, {
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint('/chat/categories'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        },
+        headers,
         body: JSON.stringify(formData)
       });
 
@@ -101,12 +101,10 @@ export default function CategoryManager({
     if (!category || !formData.name.trim()) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/categories/${id}`, {
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint(`/chat/categories/${id}`), {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        },
+        headers,
         body: JSON.stringify(formData)
       });
 
@@ -124,11 +122,10 @@ export default function CategoryManager({
     if (!confirm('Are you sure you want to delete this category?')) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/categories/${id}`, {
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint(`/chat/categories/${id}`), {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
+        headers
       });
 
       if (response.ok) {

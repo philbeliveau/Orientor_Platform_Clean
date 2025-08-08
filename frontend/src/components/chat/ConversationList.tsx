@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { format } from 'date-fns';
 import { 
   ChatBubbleLeftIcon, 
@@ -37,6 +38,7 @@ export default function ConversationList({
   onCreateNew,
   refreshTrigger 
 }: ConversationListProps) {
+  const { getToken } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,6 +56,9 @@ export default function ConversationList({
 
   const fetchConversations = async () => {
     try {
+      const token = await getToken();
+      if (!token) return;
+      
       const params = new URLSearchParams();
       if (filter === 'favorites') params.append('is_favorite', 'true');
       if (filter === 'archived') params.append('is_archived', 'true');
@@ -62,7 +67,7 @@ export default function ConversationList({
       
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/conversations?${params}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       
@@ -84,10 +89,13 @@ export default function ConversationList({
   const toggleFavorite = async (e: React.MouseEvent, conversationId: number) => {
     e.stopPropagation();
     try {
+      const token = await getToken();
+      if (!token) return;
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${conversationId}/favorite`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
       

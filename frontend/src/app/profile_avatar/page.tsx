@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth, useUser } from '@clerk/nextjs';
 import AvatarPanel from '@/components/avatar/AvatarPanel';
 import styles from './page.module.css';
 
@@ -15,37 +16,22 @@ interface CurrentUser {
 
 export default function ProfileAvatarPage() {
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const { isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
   const [isLoading, setIsLoading] = useState(true);
 
   // Simuler la récupération de l'utilisateur actuel
   // Dans un vrai projet, ceci viendrait d'un service d'authentification
   useEffect(() => {
-    const loadCurrentUser = async () => {
-      try {
-        // Simuler un délai de chargement
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Simuler un utilisateur connecté
-        // Dans un vrai projet, récupérer depuis le contexte d'auth ou localStorage
-        const mockUser: CurrentUser = {
-          id: 1, // ID utilisateur par défaut pour la démo
-          name: 'Philippe B.',
-          email: 'philippe@example.com'
-        };
-        
-        setCurrentUser(mockUser);
-      } catch (error) {
-        console.error('Erreur lors du chargement de l\'utilisateur:', error);
-        // Rediriger vers la page de connexion en cas d'erreur
-        router.push('/login');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadCurrentUser();
-  }, [router]);
+    if (!isLoaded) return; // Wait for auth to load
+    
+    if (!isSignedIn) {
+      router.push('/sign-in');
+      return;
+    }
+    
+    setIsLoading(false);
+  }, [isLoaded, isSignedIn, router]);
 
   const handleBackToHome = () => {
     router.push('/');
@@ -62,7 +48,7 @@ export default function ProfileAvatarPage() {
     );
   }
 
-  if (!currentUser) {
+  if (!user) {
     return (
       <div className={styles.pageContainer}>
         <div className={styles.errorContainer}>
@@ -90,7 +76,7 @@ export default function ProfileAvatarPage() {
         
         <div className={styles.userInfo}>
           <h1 className={styles.pageTitle}>Profil Avatar</h1>
-          <p className={styles.userName}>Bienvenue, {currentUser.name}</p>
+          <p className={styles.userName}>Bienvenue, {user?.fullName || user?.firstName || 'User'}</p>
         </div>
       </header>
 

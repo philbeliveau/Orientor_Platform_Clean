@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { getAuthHeader, endpoint } from '../utils/api';
 
 // Define TreeNode interface for the skills tree
 export interface SkillsTreeNode {
@@ -169,26 +168,20 @@ Strict JSON only. Do not explain.`;
 export const skillsTreeService = {
   /**
    * Generate a technical skills tree based on the provided profile
+   * @param getToken - Clerk getToken function for authentication
    * @param profile - The technical profile (languages, technologies, goals, etc.)
    * @returns The generated skills tree
    */
-  async generateSkillsTree(profile: string): Promise<SkillsTreeNode> {
-    console.log(`skillsTreeService: Generating tree with API URL: ${API_URL}`);
+  async generateSkillsTree(getToken: () => Promise<string | null>, profile: string): Promise<SkillsTreeNode> {
+    console.log(`skillsTreeService: Generating skills tree`);
     console.log(`skillsTreeService: Profile length: ${profile.length} characters`);
     
     try {
-      // Get auth token if available
-      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-      console.log(`skillsTreeService: Auth token ${token ? 'found' : 'not found'}`);
+      // Get authentication headers using Clerk
+      const headers = await getAuthHeader(getToken);
+      console.log(`skillsTreeService: Auth headers ${Object.keys(headers).length ? 'configured' : 'missing'}`);
       
-      // Set up request config with auth header if token exists
-      const config = token ? {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      } : {};
-      
-      console.log(`skillsTreeService: Making POST request to ${API_URL}/tree/skills`);
+      console.log(`skillsTreeService: Making POST request to skills tree endpoint`);
       console.time('skillsTreeService:apiCall');
       
       // Replace the placeholder in the prompt with the actual user input
@@ -196,12 +189,12 @@ export const skillsTreeService = {
       
       // Use a specialized endpoint for skills trees
       const response = await axios.post<SkillsTreeResponse>(
-        `${API_URL}/tree/skills`, 
+        endpoint('/tree/skills'), 
         { 
           profile,
           custom_prompt: customPrompt
         },
-        config
+        { headers }
       );
       
       console.timeEnd('skillsTreeService:apiCall');
@@ -236,7 +229,7 @@ export const skillsTreeService = {
         // If the endpoint doesn't exist, try the fallback endpoint
         if (error.response.status === 404) {
           console.log('skillsTreeService: Specialized endpoint not found, trying fallback endpoint');
-          return this.generateSkillsTreeFallback(profile);
+          return this.generateSkillsTreeFallback(getToken, profile);
         }
         
         // Add specific error handling for common status codes
@@ -265,19 +258,12 @@ export const skillsTreeService = {
    * Fallback method to generate a skills tree if the specialized endpoint isn't available
    * Uses the general tree endpoint with the skills prompt included in the profile
    */
-  async generateSkillsTreeFallback(profile: string): Promise<SkillsTreeNode> {
+  async generateSkillsTreeFallback(getToken: () => Promise<string | null>, profile: string): Promise<SkillsTreeNode> {
     console.log('skillsTreeService: Using fallback method to generate skills tree');
     
     try {
-      // Get auth token if available
-      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-      
-      // Set up request config with auth header if token exists
-      const config = token ? {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      } : {};
+      // Get authentication headers using Clerk
+      const headers = await getAuthHeader(getToken);
       
       // Embed the prompt in the profile for the general endpoint
       const enhancedProfile = `
@@ -288,13 +274,13 @@ export const skillsTreeService = {
       ${profile}
       `;
       
-      console.log(`skillsTreeService: Making fallback POST request to ${API_URL}/tree`);
+      console.log(`skillsTreeService: Making fallback POST request to tree endpoint`);
       
       // Use the general tree endpoint as fallback
       const response = await axios.post<SkillsTreeResponse>(
-        `${API_URL}/tree`, 
+        endpoint('/tree'), 
         { profile: enhancedProfile },
-        config
+        { headers }
       );
       
       // Process response

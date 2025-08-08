@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { 
   ChartBarIcon, 
   ChatBubbleLeftRightIcon,
@@ -7,6 +8,7 @@ import {
   HashtagIcon,
   ArrowTrendingUpIcon
 } from '@heroicons/react/24/outline';
+import { getAuthHeader, endpoint } from '@/services/api';
 
 interface Analytics {
   user_analytics: {
@@ -32,6 +34,7 @@ interface Analytics {
 }
 
 export default function AnalyticsDashboard() {
+  const { getToken } = useAuth();
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'week' | 'month' | 'year'>('month');
@@ -42,10 +45,9 @@ export default function AnalyticsDashboard() {
 
   const fetchAnalytics = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/analytics/summary`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint('/chat/analytics/summary'), {
+        headers
       });
       
       if (response.ok) {

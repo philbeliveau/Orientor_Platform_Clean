@@ -145,3 +145,6 @@ playwright.config.ts
 
 # Package lock files (use npm ci in production)
 package-lock.json
+
+# .serena
+.serena

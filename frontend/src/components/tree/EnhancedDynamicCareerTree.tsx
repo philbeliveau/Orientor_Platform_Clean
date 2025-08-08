@@ -217,7 +217,14 @@ const EnhancedDynamicCareerTree: React.FC<EnhancedDynamicCareerTreeProps> = ({
     try {
       console.log('Generating career tree for profile:', profile.substring(0, 100) + '...');
       
-      const careerTree = await careerTreeService.generateCareerTree(profile);
+      const token = await getToken();
+      if (!token) {
+        setGenerationError('Authentication required');
+        setIsGenerating(false);
+        return;
+      }
+      
+      const careerTree = await careerTreeService.generateCareerTree(token, profile);
       
       // Convert to TreeNode format
       const treeNode = convertCareerToTreeNode(careerTree);

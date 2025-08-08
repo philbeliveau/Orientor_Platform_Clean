@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { 
   Brain, TrendingUp, Users, Target, Lightbulb, Star, 
   ArrowRight, Calendar, BookOpen, BarChart3, TreePine,
   CheckCircle, AlertTriangle, Clock
 } from 'lucide-react';
+import { getAuthHeader, endpoint } from '@/services/api';
 
 interface PsychologicalInsight {
   id: number;
@@ -48,6 +50,7 @@ interface CareerInsightsDashboardProps {
 }
 
 const CareerInsightsDashboard: React.FC<CareerInsightsDashboardProps> = ({ userId }) => {
+  const { getToken } = useAuth();
   const [insights, setInsights] = useState<PsychologicalInsight[]>([]);
   const [careerSignals, setCareerSignals] = useState<CareerSignal[]>([]);
   const [profileSummary, setProfileSummary] = useState<ProfileSummary | null>(null);
@@ -65,16 +68,9 @@ const CareerInsightsDashboard: React.FC<CareerInsightsDashboardProps> = ({ userI
       setLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        throw new Error('Authentication required');
-      }
-
-      const response = await fetch(`/api/v1/psychological-profile/${userId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint(`/psychological-profile/${userId}`), {
+        headers
       });
 
       if (!response.ok) {

@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { getAuthHeader, endpoint } from '../utils/api';
 
 // Type definitions
 export interface Recommendation {
@@ -98,38 +97,29 @@ export interface NoteUpdate {
   content: string;
 }
 
-// Create auth headers with token (for internal use)
-const getAuthHeader = (token?: string) => {
-  return {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    }
-  };
-};
 
 // Fetch saved recommendations
-export const fetchSavedRecommendations = async (token: string): Promise<Recommendation[]> => {
+export const fetchSavedRecommendations = async (getToken: () => Promise<string | null>): Promise<Recommendation[]> => {
   try {
-    console.log('Fetching saved recommendations from:', `${API_URL}/careers/saved`);
-    const response = await axios.get<Recommendation[]>(`${API_URL}/api/v1/careers/saved`, getAuthHeader(token));
+    const headers = await getAuthHeader(getToken);
+    console.log('Fetching saved recommendations from:', endpoint('/careers/saved'));
+    const response = await axios.get<Recommendation[]>(endpoint('/careers/saved'), { headers });
     console.log('API response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching saved recommendations:', error);
-    console.error('API URL used:', `${API_URL}/careers/saved`);
-    console.error('Auth header:', getAuthHeader(token));
     throw error;
   }
 };
 
 // Save a recommendation
-export const saveRecommendation = async (token: string, recommendation: Recommendation): Promise<Recommendation> => {
+export const saveRecommendation = async (getToken: () => Promise<string | null>, recommendation: Recommendation): Promise<Recommendation> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.post<Recommendation>(
-      `${API_URL}/api/v1/space/recommendations`,
+      endpoint('/space/recommendations'),
       recommendation,
-      getAuthHeader(token)
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -140,7 +130,7 @@ export const saveRecommendation = async (token: string, recommendation: Recommen
 
 // Save a recommendation with LLM analysis
 export const saveRecommendationWithLLMAnalysis = async (
-  token: string,
+  getToken: () => Promise<string | null>,
   recommendation: Recommendation,
   userProfile: {
     skills: UserSkills;
@@ -169,7 +159,7 @@ export const saveRecommendationWithLLMAnalysis = async (
     };
 
     // Sauvegarder la recommandation enrichie
-    return await saveRecommendation(token, enrichedRecommendation);
+    return await saveRecommendation(getToken, enrichedRecommendation);
   } catch (error) {
     console.error('Error saving recommendation with LLM analysis:', error);
     throw error;
@@ -177,11 +167,12 @@ export const saveRecommendationWithLLMAnalysis = async (
 };
 
 // Delete a saved recommendation
-export const deleteRecommendation = async (token: string, recommendationId: number | string): Promise<void> => {
+export const deleteRecommendation = async (getToken: () => Promise<string | null>, recommendationId: number | string): Promise<void> => {
   try {
+    const headers = await getAuthHeader(getToken);
     await axios.delete(
-      `${API_URL}/api/v1/space/recommendations/${recommendationId}`, 
-      getAuthHeader(token)
+      endpoint(`/space/recommendations/${recommendationId}`),
+      { headers }
     );
   } catch (error) {
     console.error('Error deleting recommendation:', error);
@@ -190,11 +181,12 @@ export const deleteRecommendation = async (token: string, recommendationId: numb
 };
 
 // Fetch notes for a recommendation
-export const fetchNotes = async (token: string, recommendationId: number): Promise<Note[]> => {
+export const fetchNotes = async (getToken: () => Promise<string | null>, recommendationId: number): Promise<Note[]> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.get<Note[]>(
-      `${API_URL}/api/v1/space/notes?saved_recommendation_id=${recommendationId}`, 
-      getAuthHeader(token)
+      endpoint(`/space/notes?saved_recommendation_id=${recommendationId}`),
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -215,7 +207,7 @@ let notesCache: {
   pendingRequest: null
 };
 
-export const fetchAllUserNotes = async (token: string): Promise<Note[]> => {
+export const fetchAllUserNotes = async (getToken: () => Promise<string | null>): Promise<Note[]> => {
   // Return cached data if it's fresh (5 seconds)
   if (notesCache.data && Date.now() - notesCache.timestamp < 5000) {
     return notesCache.data;
@@ -228,9 +220,10 @@ export const fetchAllUserNotes = async (token: string): Promise<Note[]> => {
 
   try {
     // Create new pending request
+    const headers = await getAuthHeader(getToken);
     notesCache.pendingRequest = axios.get<Note[]>(
-      `${API_URL}/api/v1/space/notes`, 
-      getAuthHeader(token)
+      endpoint('/space/notes'),
+      { headers }
     ).then(response => {
       notesCache.data = response.data;
       notesCache.timestamp = Date.now();
@@ -247,12 +240,13 @@ export const fetchAllUserNotes = async (token: string): Promise<Note[]> => {
 };
 
 // Create a standalone note (not tied to a recommendation)
-export const createStandaloneNote = async (token: string, content: string): Promise<Note> => {
+export const createStandaloneNote = async (getToken: () => Promise<string | null>, content: string): Promise<Note> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.post<Note>(
-      `${API_URL}/api/v1/space/notes`, 
-      { content }, 
-      getAuthHeader(token)
+      endpoint('/space/notes'),
+      { content },
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -262,12 +256,13 @@ export const createStandaloneNote = async (token: string, content: string): Prom
 };
 
 // Create a new note
-export const createNote = async (token: string, note: NoteCreate): Promise<Note> => {
+export const createNote = async (getToken: () => Promise<string | null>, note: NoteCreate): Promise<Note> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.post<Note>(
-      `${API_URL}/api/v1/space/notes`, 
-      note, 
-      getAuthHeader(token)
+      endpoint('/space/notes'),
+      note,
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -277,12 +272,13 @@ export const createNote = async (token: string, note: NoteCreate): Promise<Note>
 };
 
 // Update a note
-export const updateNote = async (token: string, noteId: number, updates: NoteUpdate): Promise<Note> => {
+export const updateNote = async (getToken: () => Promise<string | null>, noteId: number, updates: NoteUpdate): Promise<Note> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.put<Note>(
-      `${API_URL}/api/v1/space/notes/${noteId}`, 
-      updates, 
-      getAuthHeader(token)
+      endpoint(`/space/notes/${noteId}`),
+      updates,
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -292,11 +288,12 @@ export const updateNote = async (token: string, noteId: number, updates: NoteUpd
 };
 
 // Delete a note
-export const deleteNote = async (token: string, noteId: number): Promise<void> => {
+export const deleteNote = async (getToken: () => Promise<string | null>, noteId: number): Promise<void> => {
   try {
+    const headers = await getAuthHeader(getToken);
     await axios.delete(
-      `${API_URL}/api/v1/space/notes/${noteId}`, 
-      getAuthHeader(token)
+      endpoint(`/space/notes/${noteId}`),
+      { headers }
     );
   } catch (error) {
     console.error('Error deleting note:', error);
@@ -324,12 +321,13 @@ export interface LLMAnalysisResult {
 }
 
 // Generate LLM analysis for a recommendation by recommendation ID
-export const generateLLMAnalysisForRecommendation = async (token: string, recommendationId: number): Promise<Recommendation> => {
+export const generateLLMAnalysisForRecommendation = async (getToken: () => Promise<string | null>, recommendationId: number): Promise<Recommendation> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.post<Recommendation>(
-      `${API_URL}/api/v1/space/recommendations/${recommendationId}/generate-analysis`,
+      endpoint(`/space/recommendations/${recommendationId}/generate-analysis`),
       {},
-      getAuthHeader(token)
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -360,11 +358,12 @@ export const generateLLMAnalysis = async (input: LLMAnalysisInput): Promise<LLMA
 };
 
 // Get user skills
-export const getUserSkills = async (token: string): Promise<UserSkills> => {
+export const getUserSkills = async (getToken: () => Promise<string | null>): Promise<UserSkills> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.get<UserSkills>(
-      `${API_URL}/api/v1/space/skills`, 
-      getAuthHeader(token)
+      endpoint('/space/skills'),
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -374,12 +373,13 @@ export const getUserSkills = async (token: string): Promise<UserSkills> => {
 };
 
 // Update user skills
-export const updateUserSkills = async (token: string, skills: UserSkills): Promise<UserSkills> => {
+export const updateUserSkills = async (getToken: () => Promise<string | null>, skills: UserSkills): Promise<UserSkills> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.put<UserSkills>(
-      `${API_URL}/api/v1/space/skills`, 
-      skills, 
-      getAuthHeader(token)
+      endpoint('/space/skills'),
+      skills,
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -389,11 +389,12 @@ export const updateUserSkills = async (token: string, skills: UserSkills): Promi
 };
 
 // Get skill comparison data
-export const getSkillComparison = async (token: string, oasisCode: string): Promise<any> => {
+export const getSkillComparison = async (getToken: () => Promise<string | null>, oasisCode: string): Promise<any> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.get(
-      `${API_URL}/api/v1/space/recommendations/${oasisCode}/skill-comparison`, 
-      getAuthHeader(token)
+      endpoint(`/space/recommendations/${oasisCode}/skill-comparison`),
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -405,11 +406,12 @@ export const getSkillComparison = async (token: string, oasisCode: string): Prom
 // ===== SAVED JOBS FUNCTIONALITY =====
 
 // Fetch saved jobs from tree exploration
-export const fetchSavedJobs = async (token: string): Promise<SavedJob[]> => {
+export const fetchSavedJobs = async (getToken: () => Promise<string | null>): Promise<SavedJob[]> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.get<{jobs: SavedJob[], total: number}>(
-      `${API_URL}/api/v1/jobs/saved`, 
-      getAuthHeader(token)
+      endpoint('/jobs/saved'),
+      { headers }
     );
     return response.data.jobs;
   } catch (error) {
@@ -419,11 +421,12 @@ export const fetchSavedJobs = async (token: string): Promise<SavedJob[]> => {
 };
 
 // Delete a saved job
-export const deleteSavedJob = async (token: string, jobId: number): Promise<void> => {
+export const deleteSavedJob = async (getToken: () => Promise<string | null>, jobId: number): Promise<void> => {
   try {
+    const headers = await getAuthHeader(getToken);
     await axios.delete(
-      `${API_URL}/api/v1/jobs/${jobId}`, 
-      getAuthHeader(token)
+      endpoint(`/jobs/${jobId}`),
+      { headers }
     );
   } catch (error) {
     console.error('Error deleting saved job:', error);
@@ -432,11 +435,12 @@ export const deleteSavedJob = async (token: string, jobId: number): Promise<void
 };
 
 // Get job details from ESCO
-export const getJobDetails = async (token: string, escoId: string): Promise<any> => {
+export const getJobDetails = async (getToken: () => Promise<string | null>, escoId: string): Promise<any> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.get(
-      `${API_URL}/api/v1/jobs/${escoId}/details`, 
-      getAuthHeader(token)
+      endpoint(`/jobs/${escoId}/details`),
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -473,15 +477,16 @@ export interface CareerFitResponse {
 }
 
 // Analyze career fit for a job
-export const analyzeCareerFit = async (token: string, jobId: string, jobSource: 'esco' | 'oasis'): Promise<CareerFitResponse> => {
+export const analyzeCareerFit = async (getToken: () => Promise<string | null>, jobId: string, jobSource: 'esco' | 'oasis'): Promise<CareerFitResponse> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.post<CareerFitResponse>(
-      `${API_URL}/api/v1/careers/fit-analysis`,
+      endpoint('/careers/fit-analysis'),
       {
         job_id: jobId,
         job_source: jobSource
       },
-      getAuthHeader(token)
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -491,11 +496,12 @@ export const analyzeCareerFit = async (token: string, jobId: string, jobSource: 
 };
 
 // Cleanup fake test jobs
-export const cleanupTestJobs = async (token: string): Promise<{success: boolean, message: string, deleted_count: number}> => {
+export const cleanupTestJobs = async (getToken: () => Promise<string | null>): Promise<{success: boolean, message: string, deleted_count: number}> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.delete<{success: boolean, message: string, deleted_count: number}>(
-      `${API_URL}/api/v1/careers/cleanup-test-jobs`,
-      getAuthHeader(token)
+      endpoint('/careers/cleanup-test-jobs'),
+      { headers }
     );
     return response.data;
   } catch (error) {

@@ -4,6 +4,7 @@
  */
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
+import { getAuthHeader, endpoint } from '../utils/api';
 
 
 // Types and interfaces
@@ -161,8 +162,8 @@ class OrientatorService {
       (response) => response,
       (error: AxiosError) => {
         if (error.response?.status === 401) {
-          // Handle unauthorized - redirect to login
-          window.location.href = '/login';
+          // Handle unauthorized - let components handle auth redirect
+          console.warn('API returned 401 - authentication required');
         }
         return Promise.reject(error);
       }
@@ -172,9 +173,10 @@ class OrientatorService {
   /**
    * Send a message to Orientator AI
    */
-  async sendMessage(request: SendMessageRequest): Promise<OrientatorMessage> {
+  async sendMessage(getToken: () => Promise<string | null>, request: SendMessageRequest): Promise<OrientatorMessage> {
     try {
-      const response = await this.api.post<OrientatorMessage>('/api/v1/message', request);
+      const headers = await getAuthHeader(getToken);
+      const response = await this.api.post<OrientatorMessage>('/api/v1/message', request, { headers });
       return response.data;
     } catch (error) {
       console.error('Error sending message to Orientator:', error);
@@ -185,9 +187,10 @@ class OrientatorService {
   /**
    * Save a component to user's space
    */
-  async saveComponent(request: SaveComponentRequest): Promise<SaveComponentResponse> {
+  async saveComponent(getToken: () => Promise<string | null>, request: SaveComponentRequest): Promise<SaveComponentResponse> {
     try {
-      const response = await this.api.post<SaveComponentResponse>('/api/v1/save-component', request);
+      const headers = await getAuthHeader(getToken);
+      const response = await this.api.post<SaveComponentResponse>('/api/v1/save-component', request, { headers });
       return response.data;
     } catch (error) {
       console.error('Error saving component:', error);
@@ -198,9 +201,10 @@ class OrientatorService {
   /**
    * Get user's career journey
    */
-  async getUserJourney(userId: number): Promise<UserJourney> {
+  async getUserJourney(getToken: () => Promise<string | null>, userId: number): Promise<UserJourney> {
     try {
-      const response = await this.api.get<UserJourney>(`/journey/${userId}`);
+      const headers = await getAuthHeader(getToken);
+      const response = await this.api.get<UserJourney>(`/journey/${userId}`, { headers });
       return response.data;
     } catch (error) {
       console.error('Error fetching user journey:', error);
@@ -211,9 +215,11 @@ class OrientatorService {
   /**
    * Get Orientator conversations
    */
-  async getConversations(limit: number = 20, offset: number = 0): Promise<ConversationSummary[]> {
+  async getConversations(getToken: () => Promise<string | null>, limit: number = 20, offset: number = 0): Promise<ConversationSummary[]> {
     try {
+      const headers = await getAuthHeader(getToken);
       const response = await this.api.get<ConversationSummary[]>('/api/v1/conversations', {
+        headers,
         params: { limit, offset }
       });
       return response.data;
@@ -226,9 +232,10 @@ class OrientatorService {
   /**
    * Get tool usage analytics
    */
-  async getToolAnalytics(): Promise<ToolAnalytics> {
+  async getToolAnalytics(getToken: () => Promise<string | null>): Promise<ToolAnalytics> {
     try {
-      const response = await this.api.get<ToolAnalytics>('/api/v1/tool-analytics');
+      const headers = await getAuthHeader(getToken);
+      const response = await this.api.get<ToolAnalytics>('/api/v1/tool-analytics', { headers });
       return response.data;
     } catch (error) {
       console.error('Error fetching tool analytics:', error);
@@ -239,9 +246,11 @@ class OrientatorService {
   /**
    * Submit feedback for an AI response
    */
-  async submitFeedback(request: FeedbackRequest): Promise<{ success: boolean; message: string }> {
+  async submitFeedback(getToken: () => Promise<string | null>, request: FeedbackRequest): Promise<{ success: boolean; message: string }> {
     try {
+      const headers = await getAuthHeader(getToken);
       const response = await this.api.post('/api/v1/feedback', request, {
+        headers,
         params: {
           message_id: request.message_id,
           rating: request.rating
@@ -270,18 +279,20 @@ class OrientatorService {
   /**
    * Execute a component action
    */
-  async executeAction(action: ComponentAction, componentData?: any): Promise<any> {
+  async executeAction(getToken: () => Promise<string | null>, action: ComponentAction, componentData?: any): Promise<any> {
     try {
       if (!action.endpoint) {
         throw new Error('Action endpoint not defined');
       }
 
+      const headers = await getAuthHeader(getToken);
       // Determine HTTP method based on action type
       const method = action.type === ComponentActionType.SAVE ? 'post' : 'get';
       
       const response = await this.api.request({
         method,
         url: action.endpoint,
+        headers,
         data: method === 'post' ? { ...action.params, ...componentData } : undefined,
         params: method === 'get' ? action.params : undefined
       });
@@ -316,13 +327,14 @@ class OrientatorService {
   /**
    * Process streaming responses (for future real-time features)
    */
-  async *streamMessage(request: SendMessageRequest): AsyncGenerator<Partial<OrientatorMessage>> {
+  async *streamMessage(getToken: () => Promise<string | null>, request: SendMessageRequest): AsyncGenerator<Partial<OrientatorMessage>> {
     try {
+      const authHeaders = await getAuthHeader(getToken);
       const response = await fetch(`${this.baseURL}/api/v1/orientator/message/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Authorization header will be added by calling code
+          ...authHeaders,
         },
         body: JSON.stringify(request)
       });

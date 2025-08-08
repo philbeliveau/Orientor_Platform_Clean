@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import SkillCard from './SkillCard';
 import BasicSkillCard from './BasicSkillCard';
@@ -24,6 +25,7 @@ interface AnchorSkill {
 }
 
 const SkillShowcase: React.FC<SkillShowcaseProps> = ({ userId, className = '' }) => {
+  const router = useRouter();
   // Auth hook for token
   const { getToken } = useAuth();
   
@@ -47,7 +49,11 @@ const SkillShowcase: React.FC<SkillShowcaseProps> = ({ userId, className = '' })
 
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const token = localStorage.getItem('access_token');
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        return;
+      }
       
       // Generate AI description for the skill
       const response = await fetch(`${API_URL}/api/v1/insight/generate`, {
@@ -119,7 +125,7 @@ const SkillShowcase: React.FC<SkillShowcaseProps> = ({ userId, className = '' })
 
       setIsLoading(true);
       try {
-        const token = localStorage.getItem('access_token');
+        const token = await getToken();
         if (!token) {
           console.log('No auth token available');
           setIsLoading(false);
@@ -252,11 +258,11 @@ const SkillShowcase: React.FC<SkillShowcaseProps> = ({ userId, className = '' })
               </p>
             </div>
             <button
-              onClick={() => window.location.href = '/login'}
+              onClick={() => router.push('/sign-in')}
               className="px-6 py-2 rounded-lg font-medium text-white transition-all duration-200 hover:opacity-90 hover:transform hover:scale-105"
               style={{ backgroundColor: 'var(--accent-color)' }}
             >
-              Login
+              Sign In
             </button>
           </div>
         </div>

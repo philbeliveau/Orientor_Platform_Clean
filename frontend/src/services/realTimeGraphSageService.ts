@@ -43,6 +43,11 @@ class RealTimeGraphSageService {
   private readonly MAX_CACHE_SIZE = 50;
   private readonly DEBOUNCE_DELAY = 300; // 300ms
   private debounceTimers: Map<string, NodeJS.Timeout> = new Map();
+  private getToken: (() => Promise<string | null>) | null = null;
+
+  constructor(getToken?: () => Promise<string | null>) {
+    this.getToken = getToken || null;
+  }
 
   /**
    * Recalculate GraphSage with real-time optimization
@@ -141,7 +146,7 @@ class RealTimeGraphSageService {
       console.log(`Request depth: ${request.depth}, nodes: ${request.nodes.length}`);
       
       // Get auth token
-      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+      const token = this.getToken ? await this.getToken() : null;
       
       const config = {
         headers: {
@@ -394,6 +399,11 @@ class RealTimeGraphSageService {
   }
 }
 
-// Export singleton instance
+// Factory function to create service instance with token provider
+export const createRealTimeGraphSageService = (getToken: () => Promise<string | null>) => {
+  return new RealTimeGraphSageService(getToken);
+};
+
+// Default export for backward compatibility (will need token injection)
 export const realTimeGraphSageService = new RealTimeGraphSageService();
 export type { GraphSageRecalculationRequest, GraphSageRecalculationResponse };

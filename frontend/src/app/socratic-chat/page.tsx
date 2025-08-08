@@ -3,18 +3,21 @@
 import React from 'react';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import SocraticChat from '@/components/chat/SocraticChat';
 
 export default function SocraticChatPage() {
   const router = useRouter();
+  const { isLoaded, isSignedIn } = useAuth();
 
   useEffect(() => {
-    // Check if user is authenticated
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      router.push('/login');
+    if (!isLoaded) return; // Wait for auth to load
+
+    if (!isSignedIn) {
+      router.push('/sign-in');
+      return;
     }
-  }, [router]);
+  }, [isLoaded, isSignedIn, router]);
 
   return <SocraticChat />;
 }

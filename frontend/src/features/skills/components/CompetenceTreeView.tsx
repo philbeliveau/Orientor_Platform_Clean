@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import { CompetenceTreeData, PositionedNode } from '../types/competence.types';
 import { calculateRadialTreeLayout } from '../utils/treeLayout';
 import { TreeNode } from './TreeNode';
@@ -22,6 +24,8 @@ interface CompetenceTreeViewProps {
 }
 
 export const CompetenceTreeView: React.FC<CompetenceTreeViewProps> = ({ graphId }) => {
+  const { getToken } = useAuth();
+  const router = useRouter();
   const [treeData, setTreeData] = useState<CompetenceTreeData | null>(null);
   const [positionedNodes, setPositionedNodes] = useState<PositionedNode[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -37,7 +41,14 @@ export const CompetenceTreeView: React.FC<CompetenceTreeViewProps> = ({ graphId 
     const fetchTreeData = async () => {
       try {
         setLoading(true);
-        const data = await getCompetenceTree(graphId);
+        const token = await getToken();
+        if (!token) {
+          router.push('/sign-in');
+          setLoading(false);
+          return;
+        }
+        
+        const data = await getCompetenceTree(token, graphId);
         setTreeData(data);
         
         // Load saved data from localStorage
@@ -84,7 +95,13 @@ export const CompetenceTreeView: React.FC<CompetenceTreeViewProps> = ({ graphId 
   // Handle node completion
   const handleNodeComplete = useCallback(async (nodeId: string) => {
     try {
-      await completeChallenge(nodeId, 1); // Using default userId 1 for now
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        return;
+      }
+      
+      await completeChallenge(token, nodeId, 1); // Using default userId 1 for now
       const newCompleted = new Set(Array.from(completedNodes).concat(nodeId));
       setCompletedNodes(newCompleted);
       localStorage.setItem('completedChallenges', JSON.stringify(Array.from(newCompleted)));

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
+import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 
 // Importez les styles existants si nécessaire
 import '../tree/treestyles.css';
@@ -544,6 +546,8 @@ const calculateRadialTreeLayout = (nodes: CompetenceNode[], edges: { source: str
 };
 
 const CompetenceTreeView: React.FC<CompetenceTreeViewProps> = ({ graphId }) => {
+  const { getToken } = useAuth();
+  const router = useRouter();
   
   const [treeData, setTreeData] = useState<CompetenceTreeData | null>(null);
   const [positionedNodes, setPositionedNodes] = useState<PositionedNode[]>([]);
@@ -637,7 +641,14 @@ const CompetenceTreeView: React.FC<CompetenceTreeViewProps> = ({ graphId }) => {
         }
       }
       
-      const data = await getCompetenceTree(graphId);
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        setLoading(false);
+        return;
+      }
+      
+      const data = await getCompetenceTree(token, graphId);
       
       setTreeData(data);
       
@@ -668,8 +679,14 @@ const CompetenceTreeView: React.FC<CompetenceTreeViewProps> = ({ graphId }) => {
   // Fonction pour marquer un défi comme complété
   const handleCompleteChallenge = async (nodeId: string) => {
     try {
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        return;
+      }
+      
       const userId = 1; // À adapter selon votre système d'authentification
-      await completeChallenge(nodeId, userId);
+      await completeChallenge(token, nodeId, userId);
       
       // Recharger l'arbre pour obtenir les nouveaux nœuds révélés
       loadCompetenceTree();

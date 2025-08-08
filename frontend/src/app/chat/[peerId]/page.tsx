@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import MainLayout from '@/components/layout/MainLayout';
 import MessageList from '@/components/chat/MessageList';
 import MessageInput from '@/components/chat/MessageInput';
@@ -29,6 +30,7 @@ export default function PeerChatPage() {
     const router = useRouter();
     const params = useParams();
     const peerId = params?.peerId as string;
+    const { getToken, isLoaded, isSignedIn } = useAuth();
     
     const [messages, setMessages] = useState<Message[]>([]);
     const [peer, setPeer] = useState<PeerProfile | null>(null);
@@ -38,10 +40,12 @@ export default function PeerChatPage() {
 
     // Function to fetch conversation history
     const fetchMessages = useCallback(async () => {
+        if (!isLoaded || !isSignedIn) return;
+        
         try {
-            const token = localStorage.getItem('access_token');
+            const token = await getToken();
             if (!token) {
-                router.push('/login');
+                router.push('/sign-in');
                 return;
             }
 
@@ -58,16 +62,22 @@ export default function PeerChatPage() {
         } catch (err: any) {
             console.error('Error fetching messages:', err);
             console.error('Error details:', err.response);
+            if (err.response?.status === 401) {
+                router.push('/sign-in');
+                return;
+            }
             setError(err.response?.data?.detail || 'Failed to load messages');
         }
-    }, [peerId, router]);
+    }, [peerId, router, getToken, isLoaded, isSignedIn]);
 
     // Function to fetch peer profile
     const fetchPeerProfile = useCallback(async () => {
+        if (!isLoaded || !isSignedIn) return;
+        
         try {
-            const token = localStorage.getItem('access_token');
+            const token = await getToken();
             if (!token) {
-                router.push('/login');
+                router.push('/sign-in');
                 return;
             }
 
@@ -81,16 +91,22 @@ export default function PeerChatPage() {
             setPeer(response.data);
         } catch (err: any) {
             console.error('Error fetching peer profile:', err);
+            if (err.response?.status === 401) {
+                router.push('/sign-in');
+                return;
+            }
             setError(err.response?.data?.detail || 'Failed to load peer profile');
         }
-    }, [peerId, router]);
+    }, [peerId, router, getToken, isLoaded, isSignedIn]);
 
     // Function to get current user ID
     const fetchCurrentUserId = useCallback(async () => {
+        if (!isLoaded || !isSignedIn) return;
+        
         try {
-            const token = localStorage.getItem('access_token');
+            const token = await getToken();
             if (!token) {
-                router.push('/login');
+                router.push('/sign-in');
                 return;
             }
 
@@ -107,16 +123,22 @@ export default function PeerChatPage() {
         } catch (err: any) {
             console.error('Error fetching current user:', err);
             console.error('Error details:', err.response);
+            if (err.response?.status === 401) {
+                router.push('/sign-in');
+                return;
+            }
             setError(err.response?.data?.detail || 'Failed to load user information');
         }
-    }, [router]);
+    }, [router, getToken, isLoaded, isSignedIn]);
 
     // Function to send a message
     const handleSendMessage = async (messageText: string) => {
+        if (!isLoaded || !isSignedIn) return;
+        
         try {
-            const token = localStorage.getItem('access_token');
+            const token = await getToken();
             if (!token) {
-                router.push('/login');
+                router.push('/sign-in');
                 return;
             }
 
@@ -135,6 +157,10 @@ export default function PeerChatPage() {
             fetchMessages();
         } catch (err: any) {
             console.error('Error sending message:', err);
+            if (err.response?.status === 401) {
+                router.push('/sign-in');
+                return;
+            }
             setError(err.response?.data?.detail || 'Failed to send message');
         }
     };
@@ -149,6 +175,13 @@ export default function PeerChatPage() {
 
     // Initial data fetch
     useEffect(() => {
+        if (!isLoaded) return; // Wait for auth to load
+        
+        if (!isSignedIn) {
+            router.push('/sign-in');
+            return;
+        }
+        
         const initializeChat = async () => {
             setLoading(true);
             setError(null);
@@ -169,7 +202,7 @@ export default function PeerChatPage() {
         if (peerId && peerId !== 'conversations') {
             initializeChat();
         }
-    }, [peerId, fetchCurrentUserId, fetchPeerProfile, fetchMessages]);
+    }, [peerId, isLoaded, isSignedIn, router, fetchCurrentUserId, fetchPeerProfile, fetchMessages]);
 
     // Set up polling for new messages  
     useEffect(() => {

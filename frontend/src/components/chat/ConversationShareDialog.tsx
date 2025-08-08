@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { 
   XMarkIcon, 
   ClipboardDocumentIcon,
@@ -6,6 +7,7 @@ import {
   GlobeAltIcon,
   ClockIcon
 } from '@heroicons/react/24/outline';
+import { getAuthHeader, endpoint } from '@/services/api';
 
 interface ConversationShareDialogProps {
   conversationId: number;

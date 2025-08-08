@@ -9,12 +9,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Brain, Zap, Send } from 'lucide-react';
 import axios from 'axios';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { getAuthHeader, endpoint } from '@/services/api';
 
 type ChatMode = 'socratic' | 'claude';
 
@@ -39,6 +41,7 @@ interface ModeInfo {
 }
 
 const SocraticChat: React.FC = () => {
+  const { getToken } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -89,14 +92,11 @@ const SocraticChat: React.FC = () => {
     
     // Get introduction message for the selected mode
     try {
+      const headers = await getAuthHeader(getToken);
       const response = await axios.post(
-        '/api/v1/socratic-chat/introduction',
+        endpoint('/socratic-chat/introduction'),
         { mode },
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        }
+        { headers }
       );
       
       const introMessage: Message = {
@@ -131,18 +131,15 @@ const SocraticChat: React.FC = () => {
     setIsLoading(true);
 
     try {
+      const headers = await getAuthHeader(getToken);
       const response = await axios.post(
-        '/api/v1/socratic-chat/send',
+        endpoint('/socratic-chat/send'),
         {
           text: inputText,
           mode: selectedMode,
           conversation_id: conversationId
         },
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          }
-        }
+        { headers }
       );
 
       if (!conversationId) {

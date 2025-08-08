@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { Send, Brain, Lightbulb, TrendingUp, MessageCircle, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { getAuthHeader, endpoint } from '@/services/api';
 
 interface Question {
   id: string;
@@ -62,6 +64,7 @@ const CareerAnalysisChat: React.FC<CareerAnalysisChatProps> = ({
   onInsightsDiscovered,
   onSessionComplete
 }) => {
+  const { getToken } = useAuth();
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [userResponse, setUserResponse] = useState('');
@@ -91,18 +94,10 @@ const CareerAnalysisChat: React.FC<CareerAnalysisChatProps> = ({
       setIsLoading(true);
       setError(null);
       
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        throw new Error('Authentication required');
-      }
-
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${API_URL}/api/v1/courses/${courseId}/targeted-analysis/`, {
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint(`/courses/${courseId}/targeted-analysis/`), {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify({
           focus_areas: ['career_preferences', 'authentic_interests', 'work_style']
         })
@@ -166,14 +161,10 @@ const CareerAnalysisChat: React.FC<CareerAnalysisChatProps> = ({
       
       setMessages(prev => [...prev, responseMessage]);
       
-      const token = localStorage.getItem('access_token');
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${API_URL}/api/v1/conversations/${sessionId}/respond`, {
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint(`/conversations/${sessionId}/respond`), {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers,
         body: JSON.stringify({
           question_id: currentQuestion.id,
           response: userResponse
@@ -260,12 +251,9 @@ const CareerAnalysisChat: React.FC<CareerAnalysisChatProps> = ({
     if (!sessionId) return null;
     
     try {
-      const token = localStorage.getItem('access_token');
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${API_URL}/api/v1/conversations/${sessionId}/summary`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint(`/conversations/${sessionId}/summary`), {
+        headers
       });
       
       if (response.ok) {

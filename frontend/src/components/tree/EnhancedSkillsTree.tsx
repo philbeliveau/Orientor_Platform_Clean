@@ -121,7 +121,14 @@ export default function EnhancedSkillsTree() {
     setIsSubmitted(true);
     
     try {
-      const tree = await skillsTreeService.generateSkillsTree(profile);
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        setIsLoading(false);
+        return;
+      }
+      
+      const tree = await skillsTreeService.generateSkillsTree(token, profile);
       
       // Convert tree data to ReactFlow format using the utility function
       const { nodes: treeNodes, edges: treeEdges } = convertToFlowGraph(tree);

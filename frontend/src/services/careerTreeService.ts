@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { getAuthHeader, endpoint } from '../utils/api';
 
 // Define TreeNode interface for the career tree
 export interface CareerTreeNode {
@@ -20,33 +19,27 @@ interface CareerTreeResponse {
 export const careerTreeService = {
   /**
    * Generate a career exploration tree based on the provided profile
+   * @param getToken - Clerk getToken function for authentication
    * @param profile - The student profile (interests, traits, etc.)
    * @returns The generated career tree
    */
-  async generateCareerTree(profile: string): Promise<CareerTreeNode> {
-    console.log(`careerTreeService: Generating tree with API URL: ${API_URL}`);
+  async generateCareerTree(getToken: () => Promise<string | null>, profile: string): Promise<CareerTreeNode> {
+    console.log(`careerTreeService: Generating tree`);
     console.log(`careerTreeService: Profile length: ${profile.length} characters`);
     
     try {
-      // Get auth token if available
-      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-      console.log(`careerTreeService: Auth token ${token ? 'found' : 'not found'}`);
+      // Get authentication headers using Clerk
+      const headers = await getAuthHeader(getToken);
+      console.log(`careerTreeService: Auth headers ${Object.keys(headers).length ? 'configured' : 'missing'}`);
       
-      // Set up request config with auth header if token exists
-      const config = token ? {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      } : {};
-      
-      console.log(`careerTreeService: Making POST request to ${API_URL}/tree`);
+      console.log(`careerTreeService: Making POST request to tree endpoint`);
       console.time('careerTreeService:apiCall');
       
-      // Use the existing /tree endpoint
+      // Use the existing /tree endpoint with proper auth headers
       const response = await axios.post<CareerTreeResponse>(
-        `${API_URL}/tree`, 
+        endpoint('/tree'), 
         { profile },
-        config
+        { headers }
       );
       
       console.timeEnd('careerTreeService:apiCall');

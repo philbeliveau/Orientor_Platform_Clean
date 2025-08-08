@@ -166,19 +166,12 @@ export default function MainLayout({
     const isPublicRoute = pathname ? publicRoutes.includes(pathname) : false;
 
     useEffect(() => {
-        // Check if user is logged in
-        const token = localStorage.getItem('access_token') || '';
-        console.log('Auth check - Token:', token ? 'Found' : 'Not found', 'Pathname:', pathname);
+        // Note: This is a development copy with disabled auth checks
+        // In production, use proper Clerk authentication
+        console.log('Auth check - Development mode, Pathname:', pathname);
         
-        // Désactivé temporairement pour le développement
-        // if (!token && !isPublicRoute && showNav) {
-        //     console.log('No token found, redirecting to login');
-        //     router.push('/login');
-        //     return;
-        // }
-        
-        // Pour le développement, considérer l'utilisateur comme connecté
-        const loggedIn = true; // !!token;
+        // For development, consider the user as logged in
+        const loggedIn = true;
         console.log('Setting isLoggedIn to:', loggedIn);
         setIsLoggedIn(loggedIn);
         setIsLoading(false);
@@ -214,8 +207,8 @@ export default function MainLayout({
 
     const handleLogout = () => {
         console.log('Logging out user');
-        localStorage.removeItem('access_token');
-        router.push('/login');
+        // Note: In production, use proper Clerk signOut method
+        router.push('/sign-in');
     };
 
     const toggleCareerDropdown = () => {

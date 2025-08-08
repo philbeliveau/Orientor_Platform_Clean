@@ -8,9 +8,14 @@ import { Program, SearchFilters, SearchResults } from '@/components/school-progr
 
 class SchoolProgramsService {
   private baseUrl = '/api/v1/school-programs';
+  private getToken: (() => Promise<string | null>) | null = null;
+
+  constructor(getToken?: () => Promise<string | null>) {
+    this.getToken = getToken || null;
+  }
 
   private async makeRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    const token = localStorage.getItem('access_token');
+    const token = this.getToken ? await this.getToken() : null;
     
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
@@ -123,4 +128,10 @@ class SchoolProgramsService {
   }
 }
 
+// Factory function to create service instance with token provider
+export const createSchoolProgramsService = (getToken: () => Promise<string | null>) => {
+  return new SchoolProgramsService(getToken);
+};
+
+// Default export for backward compatibility (will need token injection)
 export const schoolProgramsService = new SchoolProgramsService();

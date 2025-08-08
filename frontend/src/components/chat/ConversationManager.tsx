@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { 
   EllipsisVerticalIcon, 
   PencilIcon, 
@@ -9,6 +10,7 @@ import {
   ChartBarIcon,
   FolderIcon
 } from '@heroicons/react/24/outline';
+import { getAuthHeader, endpoint } from '@/services/api';
 import ConversationShareDialog from './ConversationShareDialog';
 import ConversationExportDialog from './ConversationExportDialog';
 
@@ -31,6 +33,7 @@ export default function ConversationManager({
   onDelete,
   onRefresh
 }: ConversationManagerProps) {
+  const { getToken } = useAuth();
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(conversationTitle);
@@ -40,12 +43,10 @@ export default function ConversationManager({
   const handleTitleSubmit = async () => {
     if (editedTitle.trim() && editedTitle !== conversationTitle) {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${conversationId}`, {
+        const headers = await getAuthHeader(getToken);
+        const response = await fetch(endpoint(`/chat/conversations/${conversationId}`), {
           method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-          },
+          headers,
           body: JSON.stringify({ title: editedTitle })
         });
 
@@ -61,11 +62,10 @@ export default function ConversationManager({
 
   const handleGenerateTitle = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${conversationId}/generate-title`, {
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint(`/chat/conversations/${conversationId}/generate-title`), {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
+        headers
       });
 
       if (response.ok) {
@@ -79,7 +79,7 @@ export default function ConversationManager({
   };
 
   const handleViewAnalytics = () => {
-    window.open(`${process.env.NEXT_PUBLIC_API_URL}/chat/analytics?conversation=${conversationId}`, '_blank');
+    window.open(endpoint(`/chat/analytics?conversation=${conversationId}`), '_blank');
   };
 
   return (

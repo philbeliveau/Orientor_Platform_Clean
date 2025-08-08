@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_URL = 'http://localhost:8000/api/v1';
+import { getAuthHeader, endpoint } from '../utils/api';
 
 export interface CompetenceNode {
   id: string;
@@ -20,21 +19,21 @@ export interface CompetenceTreeData {
   graph_id: string;
 }
 
-export const generateCompetenceTree = async (userId: number): Promise<{ graph_id: string }> => {
+export const generateCompetenceTree = async (getToken: () => Promise<string | null>, userId: number): Promise<{ graph_id: string }> => {
   try {
     console.log(`Génération d'un arbre de compétences pour l'utilisateur ${userId}`);
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      throw new Error('Authentication token not found');
+    
+    // Get authentication headers using Clerk
+    const headers = await getAuthHeader(getToken);
+    if (!Object.keys(headers).length) {
+      throw new Error('Authentication required');
     }
     
     const response = await axios.post(
-      `${API_URL}/competence-tree/generate`,
+      endpoint('/api/v1/competence-tree/generate'),
       {},
       {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers,
         timeout: 180000, // 3 minute timeout
         params: {
           max_depth: 3,
@@ -70,16 +69,16 @@ export const generateCompetenceTree = async (userId: number): Promise<{ graph_id
   }
 };
 
-export const getCompetenceTree = async (graphId: string): Promise<CompetenceTreeData> => {
+export const getCompetenceTree = async (getToken: () => Promise<string | null>, graphId: string): Promise<CompetenceTreeData> => {
   try {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      throw new Error('Authentication token not found');
+    // Get authentication headers using Clerk
+    const headers = await getAuthHeader(getToken);
+    if (!Object.keys(headers).length) {
+      throw new Error('Authentication required');
     }
-    const response = await axios.get(`${API_URL}/competence-tree/${graphId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
+    
+    const response = await axios.get(endpoint(`/api/v1/competence-tree/${graphId}`), {
+      headers
     });
     return response.data as CompetenceTreeData;
   } catch (error) {
@@ -88,21 +87,20 @@ export const getCompetenceTree = async (graphId: string): Promise<CompetenceTree
   }
 };
 
-export const completeChallenge = async (nodeId: string, userId: number): Promise<{ success: boolean }> => {
+export const completeChallenge = async (getToken: () => Promise<string | null>, nodeId: string, userId: number): Promise<{ success: boolean }> => {
   try {
     console.log(`Complétion du défi ${nodeId} pour l'utilisateur ${userId}`);
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      throw new Error('Authentication token not found');
+    
+    // Get authentication headers using Clerk
+    const headers = await getAuthHeader(getToken);
+    if (!Object.keys(headers).length) {
+      throw new Error('Authentication required');
     }
+    
     const response = await axios.patch(
-      `${API_URL}/competence-tree/node/${nodeId}/complete?user_id=${userId}`,
+      endpoint(`/api/v1/competence-tree/node/${nodeId}/complete?user_id=${userId}`),
       {},
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }
+      { headers }
     );
     console.log('Réponse de complétion:', response.data);
     return response.data as { success: boolean };
@@ -137,21 +135,18 @@ export interface SavedJobResponse {
   already_saved: boolean;
 }
 
-export const saveJobFromTree = async (jobData: SaveJobRequest): Promise<SavedJobResponse> => {
+export const saveJobFromTree = async (getToken: () => Promise<string | null>, jobData: SaveJobRequest): Promise<SavedJobResponse> => {
   try {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      throw new Error('Authentication token not found');
+    // Get authentication headers using Clerk
+    const headers = await getAuthHeader(getToken);
+    if (!Object.keys(headers).length) {
+      throw new Error('Authentication required');
     }
     
     const response = await axios.post(
-      `${API_URL}/api/v1/jobs/save`,
+      endpoint('/api/v1/jobs/save'),
       jobData,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }
+      { headers }
     );
     
     console.log('Job saved successfully:', response.data);
@@ -165,20 +160,17 @@ export const saveJobFromTree = async (jobData: SaveJobRequest): Promise<SavedJob
   }
 };
 
-export const getSavedJobs = async (): Promise<SavedJobResponse[]> => {
+export const getSavedJobs = async (getToken: () => Promise<string | null>): Promise<SavedJobResponse[]> => {
   try {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      throw new Error('Authentication token not found');
+    // Get authentication headers using Clerk
+    const headers = await getAuthHeader(getToken);
+    if (!Object.keys(headers).length) {
+      throw new Error('Authentication required');
     }
     
     const response = await axios.get(
-      `${API_URL}/api/v1/jobs/saved`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }
+      endpoint('/api/v1/jobs/saved'),
+      { headers }
     );
     
     return response.data.jobs as SavedJobResponse[];
@@ -189,16 +181,18 @@ export const getSavedJobs = async (): Promise<SavedJobResponse[]> => {
 };
 
 export const generateTreeFromAnchors = async (
+  getToken: () => Promise<string | null>,
   anchorSkills: string[]
 ): Promise<{ graph_id: string }> => {
   try {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      throw new Error('Authentication token not found');
+    // Get authentication headers using Clerk
+    const headers = await getAuthHeader(getToken);
+    if (!Object.keys(headers).length) {
+      throw new Error('Authentication required');
     }
     
     const response = await axios.post(
-      `${API_URL}/competence-tree/generate-from-anchors`,
+      endpoint('/api/v1/competence-tree/generate-from-anchors'),
       {
         anchor_skills: anchorSkills,
         max_depth: 3,
@@ -206,9 +200,7 @@ export const generateTreeFromAnchors = async (
         include_occupations: true
       },
       {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers,
         timeout: 60000 // 1 minute timeout
       }
     );

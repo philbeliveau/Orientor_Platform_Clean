@@ -1,6 +1,6 @@
 import axios from 'axios';
+import { getAuthHeader, endpoint } from '../utils/api';
 
-const API_URL = '/api/v1';
 
 export interface ProgramRecommendation {
   id: string;
@@ -50,19 +50,13 @@ export interface Institution {
   programs_count: number;
 }
 
-export const getProgramRecommendationsForGoal = async (goalId: number, limit: number = 10): Promise<ProgramRecommendationsResponse> => {
+export const getProgramRecommendationsForGoal = async (getToken: () => Promise<string | null>, goalId: number, limit: number = 10): Promise<ProgramRecommendationsResponse> => {
   try {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      throw new Error('Authentication token not found');
-    }
-
+    const headers = await getAuthHeader(getToken);
     const response = await axios.get(
-      `${API_URL}/program-recommendations/career-goal/${goalId}`,
+      endpoint(`/program-recommendations/career-goal/${goalId}`),
       {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers,
         params: { limit }
       }
     );
@@ -74,20 +68,14 @@ export const getProgramRecommendationsForGoal = async (goalId: number, limit: nu
   }
 };
 
-export const saveProgramRecommendation = async (goalId: number, programId: string): Promise<void> => {
+export const saveProgramRecommendation = async (getToken: () => Promise<string | null>, goalId: number, programId: string): Promise<void> => {
   try {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      throw new Error('Authentication token not found');
-    }
-
+    const headers = await getAuthHeader(getToken);
     await axios.post(
-      `${API_URL}/program-recommendations/career-goal/${goalId}/save`,
+      endpoint(`/program-recommendations/career-goal/${goalId}/save`),
       {},
       {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers,
         params: { program_id: programId }
       }
     );
@@ -97,19 +85,13 @@ export const saveProgramRecommendation = async (goalId: number, programId: strin
   }
 };
 
-export const getSavedProgramRecommendations = async (goalId: number): Promise<ProgramRecommendation[]> => {
+export const getSavedProgramRecommendations = async (getToken: () => Promise<string | null>, goalId: number): Promise<ProgramRecommendation[]> => {
   try {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      throw new Error('Authentication token not found');
-    }
-
+    const headers = await getAuthHeader(getToken);
     const response = await axios.get(
-      `${API_URL}/program-recommendations/career-goal/${goalId}/saved`,
+      endpoint(`/program-recommendations/career-goal/${goalId}/saved`),
       {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers
       }
     );
 
@@ -120,19 +102,13 @@ export const getSavedProgramRecommendations = async (goalId: number): Promise<Pr
   }
 };
 
-export const getAvailableInstitutions = async (institutionType?: string, region: string = 'Quebec'): Promise<Institution[]> => {
+export const getAvailableInstitutions = async (getToken: () => Promise<string | null>, institutionType?: string, region: string = 'Quebec'): Promise<Institution[]> => {
   try {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      throw new Error('Authentication token not found');
-    }
-
+    const headers = await getAuthHeader(getToken);
     const response = await axios.get(
-      `${API_URL}/program-recommendations/institutions`,
+      endpoint('/program-recommendations/institutions'),
       {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers,
         params: { 
           institution_type: institutionType,
           region 

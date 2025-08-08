@@ -8,10 +8,12 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { getAuthHeader, endpoint } from '@/services/api';
 
 interface SkillRelevanceInfo {
   name: string;
@@ -45,6 +47,7 @@ interface LearningRecommendation {
 }
 
 const EnhancedChat: React.FC = () => {
+  const { getToken } = useAuth();
   const [messages, setMessages] = useState<EnhancedChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -73,10 +76,9 @@ const EnhancedChat: React.FC = () => {
 
   const checkSystemStatus = async () => {
     try {
-      const response = await fetch('/api/v1/enhanced-chat/status', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint('/enhanced-chat/status'), {
+        headers
       });
       const status = await response.json();
       setSystemStatus(status);
@@ -100,12 +102,10 @@ const EnhancedChat: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/v1/enhanced-chat/send', {
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint('/enhanced-chat/send'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        },
+        headers,
         body: JSON.stringify({
           text: inputText,
           conversation_id: conversationId
@@ -148,10 +148,9 @@ const EnhancedChat: React.FC = () => {
 
   const loadLearningRecommendations = async () => {
     try {
-      const response = await fetch('/api/v1/enhanced-chat/learning-recommendations', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint('/enhanced-chat/learning-recommendations'), {
+        headers
       });
 
       if (response.ok) {
@@ -170,12 +169,10 @@ const EnhancedChat: React.FC = () => {
 
   const explainSkill = async (skillName: string) => {
     try {
-      const response = await fetch('/api/v1/enhanced-chat/skill-explanation', {
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint('/enhanced-chat/skill-explanation'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        },
+        headers,
         body: JSON.stringify({ skill_name: skillName })
       });
 

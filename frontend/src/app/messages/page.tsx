@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import MainLayout from '@/components/layout/MainLayout';
 import Link from 'next/link';
 import axios from 'axios';
@@ -21,19 +22,27 @@ interface ConversationPreview {
 
 export default function MessagesPage() {
     const router = useRouter();
+    const { getToken, isLoaded, isSignedIn } = useAuth();
     const [conversations, setConversations] = useState<ConversationPreview[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        if (!isLoaded) return; // Wait for auth to load
+        
+        if (!isSignedIn) {
+            router.push('/sign-in');
+            return;
+        }
+
         const fetchConversations = async () => {
             try {
                 setLoading(true);
                 setError(null);
                 
-                const token = localStorage.getItem('access_token');
+                const token = await getToken();
                 if (!token) {
-                    router.push('/login');
+                    router.push('/sign-in');
                     return;
                 }
                 
@@ -69,6 +78,10 @@ export default function MessagesPage() {
                 }
             } catch (err: any) {
                 console.error('Error fetching conversations:', err);
+                if (err.response?.status === 401) {
+                    router.push('/sign-in');
+                    return;
+                }
                 setError(err.response?.data?.detail || 'Failed to load conversations');
             } finally {
                 setLoading(false);
@@ -76,7 +89,7 @@ export default function MessagesPage() {
         };
         
         fetchConversations();
-    }, [router]);
+    }, [isLoaded, isSignedIn, router, getToken]);
 
     return (
         <MainLayout>

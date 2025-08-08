@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { getAuthHeader, endpoint } from '../utils/api';
 
 // Type definitions
 export interface InsightData {
@@ -9,26 +8,18 @@ export interface InsightData {
   if_you_accept: string;
 }
 
-// Configure axios with the token
-const getAuthHeader = () => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-  return token ? {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  } : { headers: {} };
-};
-
 /**
  * Génère un insight philosophique pour l'utilisateur connecté
+ * @param getToken - Clerk getToken function for authentication
  * @returns Les données d'insight générées
  */
-export const generateInsight = async (): Promise<InsightData> => {
+export const generateInsight = async (getToken: () => Promise<string | null>): Promise<InsightData> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.post<InsightData>(
-      `${API_URL}/api/v1/insight/generate`,
+      endpoint('/api/v1/insight/generate'),
       {},
-      getAuthHeader()
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -39,17 +30,19 @@ export const generateInsight = async (): Promise<InsightData> => {
 
 /**
  * Sauvegarde un insight philosophique pour l'utilisateur connecté
+ * @param getToken - Clerk getToken function for authentication
  * @param philosophicalText - Le texte philosophique à sauvegarder
  * @returns Le statut de succès
  */
-export const saveInsight = async (philosophicalText: string): Promise<{ success: boolean }> => {
+export const saveInsight = async (getToken: () => Promise<string | null>, philosophicalText: string): Promise<{ success: boolean }> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.patch<{ success: boolean }>(
-      `${API_URL}/api/v1/insight/save`,
+      endpoint('/api/v1/insight/save'),
       {
         philosophical_text: philosophicalText
       },
-      getAuthHeader()
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -60,17 +53,19 @@ export const saveInsight = async (philosophicalText: string): Promise<{ success:
 
 /**
  * Réécrit un insight philosophique basé sur le feedback de l'utilisateur connecté
+ * @param getToken - Clerk getToken function for authentication
  * @param feedback - Le feedback de l'utilisateur pour la réécriture
  * @returns Les nouvelles données d'insight générées
  */
-export const rewriteInsight = async (feedback: string): Promise<InsightData> => {
+export const rewriteInsight = async (getToken: () => Promise<string | null>, feedback: string): Promise<InsightData> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.post<InsightData>(
-      `${API_URL}/api/v1/insight/rewrite`,
+      endpoint('/api/v1/insight/rewrite'),
       {
         feedback: feedback
       },
-      getAuthHeader()
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -81,13 +76,15 @@ export const rewriteInsight = async (feedback: string): Promise<InsightData> => 
 
 /**
  * Récupère l'insight philosophique existant pour l'utilisateur connecté
+ * @param getToken - Clerk getToken function for authentication
  * @returns Les données d'insight existantes
  */
-export const getInsight = async (): Promise<InsightData> => {
+export const getInsight = async (getToken: () => Promise<string | null>): Promise<InsightData> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.get<InsightData>(
-      `${API_URL}/api/v1/insight/get`,
-      getAuthHeader()
+      endpoint('/api/v1/insight/get'),
+      { headers }
     );
     return response.data;
   } catch (error) {
@@ -98,14 +95,16 @@ export const getInsight = async (): Promise<InsightData> => {
 
 /**
  * Régénère un insight philosophique pour l'utilisateur connecté
+ * @param getToken - Clerk getToken function for authentication
  * @returns Les nouvelles données d'insight générées
  */
-export const regenerateInsight = async (): Promise<InsightData> => {
+export const regenerateInsight = async (getToken: () => Promise<string | null>): Promise<InsightData> => {
   try {
+    const headers = await getAuthHeader(getToken);
     const response = await axios.post<InsightData>(
-      `${API_URL}/api/v1/insight/regenerate`,
+      endpoint('/api/v1/insight/regenerate'),
       {},
-      getAuthHeader()
+      { headers }
     );
     return response.data;
   } catch (error) {

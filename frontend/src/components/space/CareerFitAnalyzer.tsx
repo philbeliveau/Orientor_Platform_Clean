@@ -4,6 +4,7 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { analyzeCareerFit } from '@/services/spaceService';
 import type { Recommendation, SavedJob, CareerFitResponse } from '@/services/spaceService';
 import { useAuth } from '@clerk/nextjs';
+import { getAuthHeader, endpoint } from '@/services/api';
 
 interface CareerFitAnalyzerProps {
   job: Recommendation | SavedJob;
@@ -54,17 +55,13 @@ const CareerFitAnalyzer: React.FC<CareerFitAnalyzerProps> = ({ job, jobSource })
 
     setLlmLoading(true);
     try {
-      // Get auth token
-      const token = localStorage.getItem('access_token');
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      // Get auth headers
+      const headers = await getAuthHeader(getToken);
       
       // This would call your LLM service with the job context and user query
-      const response = await fetch(`${apiUrl}/api/v1/careers/llm-query`, {
+      const response = await fetch(endpoint('/careers/llm-query'), {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
+        headers,
         body: JSON.stringify({
           job_id: jobId,
           job_source: jobSource,

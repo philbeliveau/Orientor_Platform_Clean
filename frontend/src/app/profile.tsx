@@ -1,9 +1,14 @@
 // src/app/profile/page.tsx
-import { useState } from 'react';
+'use client';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import axios from 'axios';
 // import { AxiosError } from 'axios';
 
 const ProfilePage = () => {
+    const router = useRouter();
+    const { getToken, isLoaded, isSignedIn } = useAuth();
     const [activeTab, setActiveTab] = useState('basic');
     const [formData, setFormData] = useState({
         // Basic Info
@@ -40,6 +45,15 @@ const ProfilePage = () => {
     });
     const [message, setMessage] = useState('');
 
+    useEffect(() => {
+        if (!isLoaded) return; // Wait for auth to load
+        
+        if (!isSignedIn) {
+            router.push('/sign-in');
+            return;
+        }
+    }, [isLoaded, isSignedIn, router]);
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({
@@ -50,8 +64,15 @@ const ProfilePage = () => {
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!isLoaded || !isSignedIn) return;
+        
         try {
-            const token = localStorage.getItem('access_token');
+            const token = await getToken();
+            if (!token) {
+                router.push('/sign-in');
+                return;
+            }
+            
             await axios.put( 
                 'http://localhost:8000/users/update',
                 formData,
@@ -63,7 +84,12 @@ const ProfilePage = () => {
                 }
             );
             setMessage('Profile updated successfully!');
-        } catch (error) {
+        } catch (error: any) {
+            console.error('Error updating profile:', error);
+            if (error.response?.status === 401) {
+                router.push('/sign-in');
+                return;
+            }
             const axiosError = error as { response?: { data?: { detail?: string } } };
             setMessage('Error updating profile: ' + (axiosError.response?.data?.detail || 'Unknown error'));
         }

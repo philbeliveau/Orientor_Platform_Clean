@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import LoadingSpinner from './LoadingSpinner';
 import styles from './philosophical-card.module.css';
 import { getInsight, generateInsight, mockInsightData } from '@/services/insightService';
@@ -12,6 +13,7 @@ interface PhilosophicalCardProps {
 
 const PhilosophicalCard: React.FC<PhilosophicalCardProps> = ({ previewText, userId = 1 }) => {
   const router = useRouter();
+  const { getToken } = useAuth();
   const [preview, setPreview] = useState<string>(previewText || "Chargement de votre insight philosophique...");
   const [loading, setLoading] = useState<boolean>(!previewText);
   
@@ -33,7 +35,14 @@ const PhilosophicalCard: React.FC<PhilosophicalCardProps> = ({ previewText, user
         }
         
         try {
-          const existingInsight = await getInsight();
+          const token = await getToken();
+          if (!token) {
+            setPreview("Veuillez vous connecter pour voir votre insight philosophique");
+            setLoading(false);
+            return;
+          }
+          
+          const existingInsight = await getInsight(token);
           setPreview(existingInsight.preview);
         } catch (getError) {
           console.log('Aucun insight existant trouvé');

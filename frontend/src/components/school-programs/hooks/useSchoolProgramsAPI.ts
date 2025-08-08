@@ -3,19 +3,20 @@
  */
 
 import { useCallback } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { toast } from 'react-hot-toast';
 import { Program, SearchFilters, SearchResults, UserProgramInteraction, SaveProgramRequest } from '../types';
+import { getAuthHeader, endpoint } from '@/services/api';
 
 export const useSchoolProgramsAPI = () => {
+  const { getToken } = useAuth();
 
   const searchPrograms = useCallback(async (filters: SearchFilters, page: number = 1): Promise<SearchResults> => {
     try {
-      const response = await fetch('/api/v1/school-programs/search', {
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint('/school-programs/search'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
+        headers,
         body: JSON.stringify({
           ...filters,
           pagination: { page, limit: 20 }
@@ -35,10 +36,9 @@ export const useSchoolProgramsAPI = () => {
 
   const getProgramDetails = useCallback(async (programId: string): Promise<Program> => {
     try {
-      const response = await fetch(`/api/v1/school-programs/programs/${programId}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint(`/school-programs/programs/${programId}`), {
+        headers,
       });
 
       if (!response.ok) {
@@ -54,12 +54,10 @@ export const useSchoolProgramsAPI = () => {
 
   const saveProgram = useCallback(async (programId: string, notes?: string): Promise<void> => {
     try {
-      const response = await fetch('/api/v1/school-programs/users/saved-programs', {
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint('/school-programs/users/saved-programs'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
+        headers,
         body: JSON.stringify({
           program_id: programId,
           notes: notes,
@@ -78,12 +76,10 @@ export const useSchoolProgramsAPI = () => {
 
   const recordInteraction = useCallback(async (programId: string, type: string, metadata?: any): Promise<void> => {
     try {
-      await fetch('/api/v1/school-programs/users/interactions', {
+      const headers = await getAuthHeader(getToken);
+      await fetch(endpoint('/school-programs/users/interactions'), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
+        headers,
         body: JSON.stringify({
           program_id: programId,
           interaction_type: type,
@@ -98,10 +94,9 @@ export const useSchoolProgramsAPI = () => {
 
   const getSavedPrograms = useCallback(async (): Promise<Program[]> => {
     try {
-      const response = await fetch('/api/v1/school-programs/users/saved-programs', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint('/school-programs/users/saved-programs'), {
+        headers,
       });
 
       if (!response.ok) {
@@ -117,11 +112,10 @@ export const useSchoolProgramsAPI = () => {
 
   const removeSavedProgram = useCallback(async (programId: string): Promise<void> => {
     try {
-      const response = await fetch(`/api/v1/school-programs/users/saved-programs/${programId}`, {
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint(`/school-programs/users/saved-programs/${programId}`), {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
+        headers,
       });
 
       if (!response.ok) {
@@ -136,10 +130,9 @@ export const useSchoolProgramsAPI = () => {
 
   const getAvailableFilters = useCallback(async () => {
     try {
-      const response = await fetch('/api/v1/school-programs/filters', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
+      const headers = await getAuthHeader(getToken);
+      const response = await fetch(endpoint('/school-programs/filters'), {
+        headers,
       });
 
       if (!response.ok) {

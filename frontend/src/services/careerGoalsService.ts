@@ -1,9 +1,7 @@
 import { SkillNode, TimelineTier } from '@/components/career/TimelineVisualization';
+import { endpoint } from './api';
 
-// API endpoints
-const API_BASE = process.env.NODE_ENV === 'production' 
-  ? process.env.NEXT_PUBLIC_API_URL || 'https://your-backend-api.com'
-  : 'http://localhost:8000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 // Types for API responses
 export interface CareerGoal {
@@ -50,7 +48,7 @@ export class CareerGoalsService {
   /**
    * Set a career goal from any job card
    */
-  static async setCareerGoalFromJob(token: string, job: {
+  static async setCareerGoalFromJob(getToken: () => Promise<string>, job: {
     esco_id?: string;
     oasis_code?: string;
     title: string;
@@ -58,12 +56,15 @@ export class CareerGoalsService {
     source?: string;
   }): Promise<{ goal: CareerGoal; timeline: any }> {
     try {
+      const token = await getToken();
+      if (!token) throw new Error('Authentication required');
+      
       const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       };
 
-      const response = await fetch(`${API_BASE}/api/v1/career-goals`, {
+      const response = await fetch(endpoint('/career-goals'), {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -102,7 +103,7 @@ export class CareerGoalsService {
 
   private static pendingRequest: Promise<any> | null = null;
 
-  static async getActiveCareerGoal(token: string): Promise<{
+  static async getActiveCareerGoal(getToken: () => Promise<string>): Promise<{
     goal: CareerGoal | null;
     progression: any;
     milestones: any[];
@@ -118,13 +119,16 @@ export class CareerGoalsService {
     }
 
     try {
+      const token = await getToken();
+      if (!token) throw new Error('Authentication required');
+      
       const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       };
 
       // Create and store the pending request
-      this.pendingRequest = fetch(`${API_BASE}/api/v1/career-goals/active`, {
+      this.pendingRequest = fetch(endpoint('/career-goals/active'), {
         method: 'GET',
         headers,
       }).then(async (response) => {
@@ -162,7 +166,7 @@ export class CareerGoalsService {
   static async getCareerProgression(token: string): Promise<CareerProgressionResponse> {
     try {
       // First try to get active goal's progression
-      const { goal, progression } = await this.getActiveCareerGoal(token);
+      const { goal, progression } = await this.getActiveCareerGoal(() => Promise.resolve(token));
       
       if (goal && progression) {
         return progression;
@@ -174,7 +178,7 @@ export class CareerGoalsService {
         'Authorization': `Bearer ${token}`
       };
         
-      const response = await fetch(`${API_BASE}/api/v1/career/progression`, {
+      const response = await fetch(endpoint('/api/v1/career/progression'), {
         method: 'GET',
         headers,
       });
@@ -203,7 +207,7 @@ export class CareerGoalsService {
         'Authorization': `Bearer ${token}`
       };
         
-      const response = await fetch(`${API_BASE}/api/v1/career/graphsage/update`, {
+      const response = await fetch(endpoint('/api/v1/career/graphsage/update'), {
         method: 'POST',
         headers,
         body: JSON.stringify({ skill_ids: skillIds }),
@@ -236,7 +240,7 @@ export class CareerGoalsService {
         'Authorization': `Bearer ${token}`
       };
         
-      const response = await fetch(`${API_BASE}/api/v1/career-goals/${goalId}`, {
+      const response = await fetch(endpoint(`/api/v1/career-goals/${goalId}`), {
         method: 'PUT',
         headers,
         body: JSON.stringify(updates),
@@ -270,7 +274,7 @@ export class CareerGoalsService {
       };
         
       const response = await fetch(
-        `${API_BASE}/api/v1/career-goals/${goalId}/milestones/${milestoneId}/complete`,
+        endpoint(`/api/v1/career-goals/${goalId}/milestones/${milestoneId}/complete`),
         {
           method: 'POST',
           headers,
@@ -300,7 +304,7 @@ export class CareerGoalsService {
       };
         
       const response = await fetch(
-        `${API_BASE}/api/v1/career-goals?include_inactive=${includeInactive}`,
+        endpoint(`/api/v1/career-goals?include_inactive=${includeInactive}`),
         {
           method: 'GET',
           headers,
@@ -329,7 +333,7 @@ export class CareerGoalsService {
         'Authorization': `Bearer ${token}`
       };
         
-      const response = await fetch(`${API_BASE}/api/v1/career/recommendations/skills`, {
+      const response = await fetch(endpoint('/api/v1/career/recommendations/skills'), {
         method: 'POST',
         headers,
         body: JSON.stringify({ current_skills: currentSkillIds }),
@@ -369,7 +373,7 @@ export class CareerGoalsService {
         'Authorization': `Bearer ${token}`
       };
         
-      const response = await fetch(`${API_BASE}/api/v1/career/graphsage/relationships`, {
+      const response = await fetch(endpoint('/api/v1/career/graphsage/relationships'), {
         method: 'POST',
         headers,
         body: JSON.stringify({ skill_ids: skillIds }),
@@ -411,7 +415,7 @@ export class CareerGoalsService {
         'Authorization': `Bearer ${token}`
       };
         
-      const response = await fetch(`${API_BASE}/api/v1/career/optimization/${currentTier}`, {
+      const response = await fetch(endpoint(`/api/v1/career/optimization/${currentTier}`), {
         method: 'GET',
         headers,
       });

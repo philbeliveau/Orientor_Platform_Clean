@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import ExtremeCompetenceTreeView from '../../components/tree/extreme/ExtremeCompetenceTreeView';
 import MainLayout from '../../components/layout/MainLayout';
 import { generateCompetenceTree } from '../../services/competenceTreeService';
@@ -17,6 +18,7 @@ interface ProfileResponse {
 const CompetenceTreePage: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   
   // Get graphId from URL params or try to restore from localStorage
   const urlGraphId = searchParams ? searchParams.get('graph_id') : null;
@@ -33,11 +35,13 @@ const CompetenceTreePage: React.FC = () => {
   }, [urlGraphId]);
   // Check authentication on mount
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      router.push('/login');
+    if (!isLoaded) return; // Wait for auth to load
+    
+    if (!isSignedIn) {
+      router.push('/sign-in');
+      return;
     }
-  }, [router]);
+  }, [isLoaded, isSignedIn, router]);
 
   // Fonction pour générer un nouvel arbre
   const handleGenerateTree = async () => {
@@ -48,12 +52,17 @@ const CompetenceTreePage: React.FC = () => {
       console.log("handleGenerateTree: Loading state set to true");
       
       // Get the current user's ID from the JWT token
-      const token = localStorage.getItem('access_token');
+      if (!isLoaded || !isSignedIn) {
+        setLoading(false);
+        return;
+      }
+      
+      const token = await getToken();
       if (!token) {
         console.error("No authentication token found");
         setError("Vous devez être connecté pour générer un arbre de compétences");
         setLoading(false);
-        router.push('/login');
+        router.push('/sign-in');
         return;
       }
 
@@ -78,7 +87,7 @@ const CompetenceTreePage: React.FC = () => {
       localStorage.setItem('user_id', userId.toString());
       
       console.log('🌳 Generating competence tree for userId:', userId);
-      const result = await generateCompetenceTree(userId);
+      const result = await generateCompetenceTree(token, userId);
       console.log('🎯 Tree generation result:', result);
       
       // Save as last viewed tree and update state
@@ -100,7 +109,7 @@ const CompetenceTreePage: React.FC = () => {
       
       if (err.response?.status === 401 || err.response?.status === 403) {
         setError("Votre session a expiré. Veuillez vous reconnecter.");
-        router.push('/login');
+        router.push('/sign-in');
       } else if (err.response?.status === 404) {
         setError(`API endpoint not found: ${err.config?.url}. Please check if the backend is running.`);
       } else {

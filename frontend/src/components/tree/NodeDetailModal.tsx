@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import LoadingSpinner from '../ui/LoadingSpinner';
 import { saveJobFromTree, SaveJobRequest } from '../../services/competenceTreeService';
 
@@ -34,6 +36,8 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   onCompleteChallenge,
   onSaveJob
 }) => {
+  const { getToken } = useAuth();
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
@@ -62,7 +66,14 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         }
       };
 
-      const result = await saveJobFromTree(jobData);
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        setIsLoading(false);
+        return;
+      }
+      
+      const result = await saveJobFromTree(token, jobData);
       
       if (result.already_saved) {
         setSaveMessage("✅ Job already saved to your space!");

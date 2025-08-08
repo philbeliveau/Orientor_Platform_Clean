@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { CompetenceTreeData, CompetenceNode, PositionedNode } from './types';
 import { calculateNodePositions } from './layoutAlgorithm';
 import { getCompetenceTree, completeChallenge, generateCompetenceTree } from '../../services/competenceTreeService';
 
 export const useCompetenceTree = (graphId: string) => {
+  const { getToken } = useAuth();
   const [treeData, setTreeData] = useState<CompetenceTreeData | null>(null);
   const [positionedNodes, setPositionedNodes] = useState<PositionedNode[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +37,11 @@ export const useCompetenceTree = (graphId: string) => {
       let data;
       try {
         console.log('📡 Fetching competence tree with graphId:', graphId);
-        data = await getCompetenceTree(graphId);
+        const token = await getToken();
+        if (!token) {
+          throw new Error('Authentication token not available');
+        }
+        data = await getCompetenceTree(token, graphId);
         console.log('✅ Successfully loaded tree data:', data);
       } catch (error: any) {
         console.log('❌ Error loading tree:', error);
@@ -84,7 +90,12 @@ export const useCompetenceTree = (graphId: string) => {
       return;
     }
     try {
-      await completeChallenge(nodeId, userId);
+      const token = await getToken();
+      if (!token) {
+        console.error('Authentication token not available');
+        return;
+      }
+      await completeChallenge(token, nodeId, userId);
       
       // Update local state
       setCompletedNodes(prev => new Set(Array.from(prev).concat(nodeId)));

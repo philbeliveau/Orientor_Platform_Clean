@@ -146,7 +146,12 @@ export default function CareerTree() {
     setIsSubmitted(true);
     
     try {
-      const careerTree = await careerTreeService.generateCareerTree(profile);
+      const token = await getToken();
+      if (!token) {
+        setError('Authentication required');
+        return;
+      }
+      const careerTree = await careerTreeService.generateCareerTree(token, profile);
       
       // Convert CareerTreeNode to TreeNode
       const treeNode = convertCareerToTreeNode(careerTree);

@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { useClerkAuth } from '@/contexts/ClerkAuthContext';
+import { endpoint } from '@/services/api';
 
 interface SaveJobButtonProps {
   job: {
@@ -20,6 +24,8 @@ interface SaveJobButtonProps {
 }
 
 const SaveJobButton: React.FC<SaveJobButtonProps> = ({ job, className = '', size = 'md' }) => {
+  const { getToken } = useAuth();
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -34,14 +40,6 @@ const SaveJobButton: React.FC<SaveJobButtonProps> = ({ job, className = '', size
     setSaving(true);
     
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        toast.error('Please login to save jobs');
-        return;
-      }
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      
       // Prepare the job data for saving - extract skill values
       const skillPattern = /\b(creativity|leadership|digital[\s_]literacy|critical[\s_]thinking|problem[\s_]solving):\s*(\d+(?:\.\d+)?)/gi;
       const skillValues: any = {};
@@ -89,13 +87,20 @@ const SaveJobButton: React.FC<SaveJobButtonProps> = ({ job, className = '', size
         all_fields: processedMetadata
       };
 
+      const token = await getToken();
+      if (!token) {
+        toast.error('Please sign in to save jobs');
+        router.push('/sign-in');
+        return;
+      }
+
       const response = await axios.post(
-        `${apiUrl}/space/recommendations`,
+        endpoint('/space/recommendations'),
         jobData,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           }
         }
       );

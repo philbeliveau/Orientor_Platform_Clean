@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { motion, useMotionValue, useTransform, PanInfo, animate } from 'framer-motion';
 import { Heart, X, ArrowLeft, CheckCircle, RefreshCw } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { PsychProfile, CareerRecommendation } from '../../types/onboarding';
 import { useClerkApi } from '../../services/api';
+import { getAuthHeader, endpoint } from '../../services/api';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import SetCareerGoalButton from '@/components/common/SetCareerGoalButton';
@@ -19,6 +21,7 @@ const SwipeRecommendations: React.FC<SwipeRecommendationsProps> = ({
   onComplete, 
   psychProfile 
 }) => {
+  const { getToken } = useAuth();
   const router = useRouter();
   const api = useClerkApi();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -93,12 +96,10 @@ const SwipeRecommendations: React.FC<SwipeRecommendationsProps> = ({
   const handleSwipeRight = async (career: CareerRecommendation) => {
     try {
       // Use the same save mechanism as SaveJobButton to ensure consistency with /space tab
-      const token = localStorage.getItem('access_token');
+      const token = await getToken();
       if (!token) {
         throw new Error('Authentication required');
       }
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       
       const jobData = {
         oasis_code: career.id,
@@ -133,15 +134,11 @@ const SwipeRecommendations: React.FC<SwipeRecommendationsProps> = ({
       console.log('API URL:', apiUrl);
       console.log('Token present:', !!token);
 
+      const headers = await getAuthHeader(getToken);
       const response = await axios.post(
-        `${apiUrl}/space/recommendations`,
+        endpoint('/space/recommendations'),
         jobData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
+        { headers }
       );
       
       console.log('Save response:', response.status, response.data);

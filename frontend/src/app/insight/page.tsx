@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import MainLayout from '@/components/layout/MainLayout';
 import { getInsight, generateInsight, regenerateInsight, saveInsight, rewriteInsight, InsightData, mockInsightData } from '@/services/insightService';
 import PersonalityCard from '@/components/ui/PersonalityCard';
@@ -14,6 +15,7 @@ import LoadingScreen from '@/components/ui/LoadingScreen';
 
 const InsightPage: React.FC = () => {
   const router = useRouter();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const [userId, setUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [insight, setInsight] = useState<InsightData | null>(null);
@@ -37,7 +39,19 @@ const InsightPage: React.FC = () => {
     { name: 'HEXACO Results', icon: 'Brain', path: '/profile/hexaco-results' },
   ];
 
+  // Check authentication on mount
   useEffect(() => {
+    if (!isLoaded) return; // Wait for auth to load
+    
+    if (!isSignedIn) {
+      router.push('/sign-in');
+      return;
+    }
+  }, [isLoaded, isSignedIn, router]);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    
     // Récupérer l'ID de l'utilisateur depuis le localStorage
     const fetchUserId = () => {
       try {
@@ -79,7 +93,12 @@ const InsightPage: React.FC = () => {
         // D'abord essayer de récupérer un insight existant
         try {
           console.log("Tentative de récupération d'un insight existant...");
-          const existingData = await getInsight();
+          const token = await getToken();
+          if (!token) {
+            router.push('/sign-in');
+            return;
+          }
+          const existingData = await getInsight(token);
           console.log("Insight existant trouvé:", existingData);
           setInsight(existingData);
         } catch (getError) {
@@ -120,7 +139,12 @@ const InsightPage: React.FC = () => {
     
     try {
       setSaving(true);
-      await saveInsight(insight.full_text);
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        return;
+      }
+      await saveInsight(token, insight.full_text);
       alert('Insight sauvegardé avec succès!');
       router.push('/profile'); // Rediriger vers le profil ou une autre page appropriée
     } catch (error) {
@@ -139,7 +163,12 @@ const InsightPage: React.FC = () => {
       
       // Appeler l'API même en mode développement pour tester les modifications
       console.log("Appel de l'API pour réécrire l'insight avec le feedback:", feedback);
-      const newInsight = await rewriteInsight(feedback);
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        return;
+      }
+      const newInsight = await rewriteInsight(token, feedback);
       console.log("Réponse de l'API pour la réécriture:", newInsight);
       setInsight(newInsight);
       setFeedback('');
@@ -155,7 +184,12 @@ const InsightPage: React.FC = () => {
     try {
       setLoading(true);
       console.log("Génération du premier insight...");
-      const newInsight = await generateInsight();
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        return;
+      }
+      const newInsight = await generateInsight(token);
       console.log("Premier insight généré:", newInsight);
       setInsight(newInsight);
     } catch (error) {
@@ -170,7 +204,12 @@ const InsightPage: React.FC = () => {
     try {
       setRegenerating(true);
       console.log("Régénération de l'insight...");
-      const newInsight = await regenerateInsight();
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        return;
+      }
+      const newInsight = await regenerateInsight(token);
       console.log("Insight régénéré:", newInsight);
       setInsight(newInsight);
     } catch (error) {

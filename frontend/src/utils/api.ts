@@ -21,23 +21,19 @@ export const endpoint = (path: string): string => {
 
 // Authentication helper for Clerk integration
 export const getAuthHeader = async (getToken?: () => Promise<string | null>): Promise<Record<string, string>> => {
-  // If getToken function is provided (from Clerk), use it
-  if (getToken) {
-    try {
-      const token = await getToken();
-      return token ? { 'Authorization': `Bearer ${token}` } : {};
-    } catch (error) {
-      console.error('Failed to get Clerk token:', error);
-      return {};
-    }
+  // Always require getToken function from Clerk
+  if (!getToken) {
+    console.error('getToken function is required for authentication');
+    return {};
   }
   
-  // Legacy fallback - should be removed after full Clerk migration
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('access_token');
+  try {
+    const token = await getToken();
     return token ? { 'Authorization': `Bearer ${token}` } : {};
+  } catch (error) {
+    console.error('Failed to get Clerk token:', error);
+    return {};
   }
-  return {};
 };
 
 // Debug/logging helper

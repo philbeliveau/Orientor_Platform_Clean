@@ -1,4 +1,5 @@
-import { clerkApiService } from './api';
+import { endpoint } from './api';
+import { useClerkAuth } from '@/contexts/ClerkAuthContext';
 
 export interface AvatarData {
   success: boolean;
@@ -27,7 +28,7 @@ class AvatarService {
     timestamp: number;
   } = { data: null, timestamp: 0 };
 
-  static async getUserAvatar(token: string): Promise<AvatarData> {
+  static async getUserAvatar(getToken: () => Promise<string | null>): Promise<AvatarData> {
     try {
       // Return cached data if it's fresh (5 seconds)
       const now = Date.now();
@@ -36,19 +37,34 @@ class AvatarService {
       }
 
       console.log('🔍 Récupération de l\'avatar pour l\'utilisateur authentifié');
-      const response = await clerkApiService.request<AvatarData>('/api/v1/avatar/me', {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('User not authenticated');
+      }
+      
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+      const response = await fetch(endpoint('/avatar/me'), {
         method: 'GET',
-        token
+        headers
       });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
 
       // Update cache
       this.avatarCache = {
-        data: response,
+        data,
         timestamp: now
       };
 
-      console.log('✅ Avatar récupéré:', response);
-      return response;
+      console.log('✅ Avatar récupéré:', data);
+      return data;
     } catch (error: any) {
       // Return cached data if available, even if stale
       if (this.avatarCache.data) {
@@ -63,15 +79,30 @@ class AvatarService {
   /**
    * Génère un nouvel avatar pour l'utilisateur authentifié
    */
-  static async generateAvatar(token: string): Promise<GenerateAvatarResponse> {
+  static async generateAvatar(getToken: () => Promise<string | null>): Promise<GenerateAvatarResponse> {
     try {
       console.log('🎨 Génération d\'un avatar pour l\'utilisateur authentifié');
-      const response = await clerkApiService.request<GenerateAvatarResponse>('/api/v1/avatar/generate-avatar/me', {
+      const token = await getToken();
+      if (!token) {
+        throw new Error('User not authenticated');
+      }
+      
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+      const response = await fetch(endpoint('/avatar/generate-avatar/me'), {
         method: 'POST',
-        token
+        headers
       });
-      console.log('✅ Avatar généré avec succès:', response);
-      return response;
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ Avatar généré avec succès:', data);
+      return data;
     } catch (error: any) {
       console.error('❌ Erreur lors de la génération de l\'avatar:', error);
       console.error('Détails de l\'erreur API:', error);
@@ -82,9 +113,9 @@ class AvatarService {
   /**
    * Vérifie si l'utilisateur authentifié a un avatar existant
    */
-  static async hasAvatar(token: string): Promise<boolean> {
+  static async hasAvatar(getToken: () => Promise<string | null>): Promise<boolean> {
     try {
-      const avatarData = await this.getUserAvatar(token);
+      const avatarData = await this.getUserAvatar(getToken);
       return avatarData.success && !!avatarData.avatar_name;
     } catch (error) {
       console.log('Aucun avatar trouvé pour cet utilisateur');
