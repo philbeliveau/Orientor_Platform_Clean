@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, RefreshCw, Check } from 'lucide-react';
 import { useOnboardingStore } from '../../stores/onboardingStore';
+import { useOnboardingService } from '../../services/onboardingService';
 import { ChatMessage as ChatMessageType } from '../../types/onboarding';
 import TypingIndicator from './TypingIndicator';
 import PsychProfile from './PsychProfile';
@@ -17,6 +18,7 @@ const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' })
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const onboardingService = useOnboardingService();
 
   // Add custom styles to override global focus styles
   React.useEffect(() => {
@@ -130,10 +132,10 @@ const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' })
   useEffect(() => {
     const initializeOnboarding = async () => {
       // Load existing onboarding status first
-      await loadOnboardingStatus();
+      await loadOnboardingStatus(onboardingService);
       
       // Start onboarding session if not complete
-      await startOnboarding();
+      await startOnboarding(onboardingService);
       
       if (currentQuestionIndex === 0) {
         // Show first question after welcome message
@@ -188,7 +190,7 @@ const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' })
     addResponse(responseData);
 
     // Save response to API
-    await saveResponseToAPI(responseData);
+    await saveResponseToAPI(onboardingService, responseData);
 
     setInputValue('');
 
@@ -249,7 +251,7 @@ const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' })
     
     // Complete onboarding on the backend
     console.log('Calling completeOnboarding...');
-    await completeOnboarding();
+    await completeOnboarding(onboardingService);
     console.log('Onboarding completion API call finished');
     
     addMessage({

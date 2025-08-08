@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import MainLayout from '@/components/layout/MainLayout';
 import axios from 'axios';
 
@@ -60,6 +61,7 @@ interface Profile {
 }
 
 export default function ProfilePage() {
+    const { getToken, isLoaded, isSignedIn } = useAuth();
     const [activeTab, setActiveTab] = useState('basic');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -111,8 +113,10 @@ export default function ProfilePage() {
     // Fetch existing profile data when component mounts
     useEffect(() => {
         const fetchProfile = async () => {
+            if (!isLoaded || !isSignedIn) return;
+            
             try {
-                const token = localStorage.getItem('access_token');
+                const token = await getToken();
                 if (!token) {
                     console.error('No access token found');
                     return;
@@ -153,7 +157,7 @@ export default function ProfilePage() {
             }
         };
         fetchProfile();
-    }, []);
+    }, [isLoaded, isSignedIn, getToken]);
 
     const handleProfileChange = (field: keyof Profile) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         let value: string | number | string[] | null = e.target.value;
@@ -200,7 +204,7 @@ export default function ProfilePage() {
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const token = localStorage.getItem('access_token');
+            const token = await getToken();
             
             // Process arrays and skill scores before sending
             const processedProfile = {

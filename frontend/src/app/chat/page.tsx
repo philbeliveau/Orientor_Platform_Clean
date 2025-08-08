@@ -1,33 +1,36 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth, useUser } from '@clerk/nextjs';
 import MainLayout from '@/components/layout/MainLayout';
 import ChatInterface from '@/components/chat/ChatInterface';
 
 export default function ChatPage() {
     const router = useRouter();
+    const { isLoaded, isSignedIn } = useAuth();
+    const { user } = useUser();
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [authError, setAuthError] = useState<string | null>(null);
 
     // Check authentication on mount
     useEffect(() => {
-        const token = localStorage.getItem('access_token');
-        if (!token) {
-            router.push('/login');
+        if (!isLoaded) return; // Wait for auth to load
+
+        if (!isSignedIn) {
+            router.push('/sign-in');
             return;
         }
 
-        // Get user ID from token or local storage
-        const userId = localStorage.getItem('user_id');
-        if (userId) {
-            setCurrentUserId(parseInt(userId));
-        } else {
-            // If no user ID, redirect to login
-            console.error('No user ID found in localStorage');
-            router.push('/login');
-            return;
+        // Use Clerk user ID - convert to number if needed
+        if (user?.id) {
+            // For now, use a simple hash of the user ID to generate a numeric ID
+            const numericId = Math.abs(user.id.split('').reduce((a, b) => {
+                a = ((a << 5) - a) + b.charCodeAt(0);
+                return a & a;
+            }, 0)) % 1000000;
+            setCurrentUserId(numericId);
         }
-    }, [router]);
+    }, [isLoaded, isSignedIn, user, router]);
 
     if (!currentUserId) {
         return (

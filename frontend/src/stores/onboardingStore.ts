@@ -7,7 +7,7 @@ import {
   PsychProfile,
   OnboardingQuestion 
 } from '../types/onboarding';
-import { onboardingService } from '../services/onboardingService';
+import type { useOnboardingService } from '../services/onboardingService';
 
 interface OnboardingStore extends OnboardingState {
   // Actions
@@ -19,11 +19,11 @@ interface OnboardingStore extends OnboardingState {
   complete: () => void;
   reset: () => void;
   
-  // API Actions
-  startOnboarding: () => Promise<void>;
-  saveResponseToAPI: (response: OnboardingResponse) => Promise<void>;
-  completeOnboarding: () => Promise<void>;
-  loadOnboardingStatus: () => Promise<void>;
+  // API Actions - now accept service as parameter
+  startOnboarding: (service: ReturnType<typeof useOnboardingService>) => Promise<void>;
+  saveResponseToAPI: (service: ReturnType<typeof useOnboardingService>, response: OnboardingResponse) => Promise<void>;
+  completeOnboarding: (service: ReturnType<typeof useOnboardingService>) => Promise<void>;
+  loadOnboardingStatus: (service: ReturnType<typeof useOnboardingService>) => Promise<void>;
   
   // Getters
   getCurrentQuestion: () => OnboardingQuestion | null;
@@ -170,28 +170,28 @@ export const useOnboardingStore = create<OnboardingStore>()(
       },
       
       // API Actions
-      startOnboarding: async () => {
+      startOnboarding: async (service: ReturnType<typeof useOnboardingService>) => {
         try {
-          await onboardingService.startOnboarding();
+          await service.startOnboarding();
         } catch (error) {
           console.error('Failed to start onboarding session:', error);
           // Continue with local flow even if API fails
         }
       },
       
-      saveResponseToAPI: async (response: OnboardingResponse) => {
+      saveResponseToAPI: async (service: ReturnType<typeof useOnboardingService>, response: OnboardingResponse) => {
         try {
-          await onboardingService.saveResponse(response);
+          await service.saveResponse(response);
         } catch (error) {
           console.error('Failed to save response to API:', error);
           // Continue with local flow even if API fails
         }
       },
       
-      completeOnboarding: async () => {
+      completeOnboarding: async (service: ReturnType<typeof useOnboardingService>) => {
         try {
           const { responses, psychProfile } = get();
-          await onboardingService.completeOnboarding({
+          await service.completeOnboarding({
             responses,
             psychProfile
           });
@@ -204,9 +204,9 @@ export const useOnboardingStore = create<OnboardingStore>()(
         }
       },
       
-      loadOnboardingStatus: async () => {
+      loadOnboardingStatus: async (service: ReturnType<typeof useOnboardingService>) => {
         try {
-          const status = await onboardingService.getStatus();
+          const status = await service.getStatus();
           if (status.isComplete) {
             set({ isComplete: true }, false, 'loadOnboardingStatus');
           }

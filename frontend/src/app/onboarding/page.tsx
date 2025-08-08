@@ -3,13 +3,14 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ChatOnboard from '../../components/onboarding/ChatOnboard';
-import { onboardingService } from '../../services/onboardingService';
+import { useOnboardingService } from '../../services/onboardingService';
 import { useUser } from '@clerk/nextjs';
 
 const OnboardingPage: React.FC = () => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(true);
+  const onboardingService = useOnboardingService();
   
   // Protect this route - redirect unauthenticated users to sign in
   const { isLoaded, isSignedIn, user } = useUser();
