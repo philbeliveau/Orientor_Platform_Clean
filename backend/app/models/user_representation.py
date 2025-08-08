@@ -7,7 +7,7 @@ from ..utils.database import Base
 class UserRepresentation(Base):
     __tablename__ = "user_representation"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     generated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     source = Column(String(50), nullable=False)  # 'llm_insight', etc.

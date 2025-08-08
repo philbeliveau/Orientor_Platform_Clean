@@ -201,7 +201,7 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
       switch (action.type) {
         case 'save':
           const saveResponse = await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/orientator/save-component`,
+            `${process.env.NEXT_PUBLIC_API_URL}/v1/orientator/save-component`,
             {
               component_id: componentId,
               conversation_id: currentConversation?.id,
@@ -300,8 +300,8 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
       // Socratic/Claude modes should always use the regular chat endpoint
       const isDefaultMode = (chatMode as ChatMode) === 'default';
       const endpoint = (enableOrientator && isDefaultMode)
-        ? `${process.env.NEXT_PUBLIC_API_URL}/orientator/conversations/${currentConversation.id}/messages`
-        : `${process.env.NEXT_PUBLIC_API_URL}/conversations/${currentConversation.id}/messages`;
+        ? `${process.env.NEXT_PUBLIC_API_URL}/v1/orientator/conversations/${currentConversation.id}/messages`
+        : `${process.env.NEXT_PUBLIC_API_URL}/v1/conversations/${currentConversation.id}/messages`;
         
       console.log('🔍 Loading messages from endpoint:', endpoint);
       console.log('🔍 Chat mode:', chatMode, '| Default mode:', isDefaultMode, '| Orientator enabled:', enableOrientator);
@@ -358,7 +358,7 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
         try {
           const fallbackToken = await getToken();
           const fallbackResponse = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_URL}/conversations/${currentConversation.id}/messages`,
+            `${process.env.NEXT_PUBLIC_API_URL}/v1/conversations/${currentConversation.id}/messages`,
             {
               headers: {
                 'Authorization': `Bearer ${fallbackToken}`
@@ -456,7 +456,7 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
         console.log('No conversation ID found, creating new conversation for default mode');
         try {
           const createResponse = await axios.post(
-            `${process.env.NEXT_PUBLIC_API_URL}/chat/conversations`,
+            `${process.env.NEXT_PUBLIC_API_URL}/v1/chat/conversations`,
             {
               initial_message: userMessage,
               category_id: selectedCategory?.id
@@ -500,13 +500,13 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
       if (enableOrientator && isDefaultMode) {
         console.log('🟡 TAKING ORIENTATOR PATH (default mode)');
         // Use Orientator endpoint only for default mode when enabled
-        endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/orientator/test-message`;
+        endpoint = `${process.env.NEXT_PUBLIC_API_URL}/v1/orientator/test-message`;
         requestBody = { message: userMessage };
         headers = { 'Content-Type': 'application/json' };
       } else if (chatMode === 'socratic' || chatMode === 'claude') {
         console.log('🟢 TAKING SOCRATIC CHAT PATH (socratic/claude mode)');
         // Use Socratic Chat Service for Socratic and Claude modes
-        endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/socratic-chat/send`;
+        endpoint = `${process.env.NEXT_PUBLIC_API_URL}/v1/socratic-chat/send`;
         requestBody = {
           text: userMessage,
           mode: chatMode
@@ -527,7 +527,7 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
       } else {
         console.log('🔵 TAKING REGULAR CHAT PATH (fallback default mode)');
         // Use regular chat endpoint for default mode
-        endpoint = `${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/send/${conversationId}`;
+        endpoint = `${process.env.NEXT_PUBLIC_API_URL}/v1/chat/conversations/send/${conversationId}`;
         requestBody = {
           message: userMessage,
           mode: chatMode
@@ -702,7 +702,7 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
     // Load the conversation and scroll to the message
     const token = await getToken();
     axios.get(
-      `${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${conversationId}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/v1/chat/conversations/${conversationId}`,
       {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -732,7 +732,7 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
     try {
       const token = await getToken();
       await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${currentConversation.id}/archive`,
+        `${process.env.NEXT_PUBLIC_API_URL}/v1/chat/conversations/${currentConversation.id}/archive`,
         {},
         {
           headers: {
@@ -754,7 +754,7 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
     try {
       const token = await getToken();
       await axios.delete(
-        `${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${currentConversation.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/v1/chat/conversations/${currentConversation.id}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -804,7 +804,7 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
     try {
       const token = await getToken();
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${currentConversation.id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/v1/chat/conversations/${currentConversation.id}`,
         {
           method: 'PUT',
           headers: {

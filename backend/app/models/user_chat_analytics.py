@@ -6,7 +6,7 @@ from ..utils.database import Base
 class UserChatAnalytics(Base):
     __tablename__ = "user_chat_analytics"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     date = Column(Date, nullable=False, index=True)
     messages_sent = Column(Integer, default=0)

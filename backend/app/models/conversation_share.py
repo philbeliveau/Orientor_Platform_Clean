@@ -7,7 +7,7 @@ from ..utils.database import Base
 class ConversationShare(Base):
     __tablename__ = "conversation_shares"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True)
     shared_by = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     share_token = Column(String(255), unique=True, nullable=False, index=True)

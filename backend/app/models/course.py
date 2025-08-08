@@ -6,7 +6,7 @@ from ..utils.database import Base
 class Course(Base):
     __tablename__ = "courses"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     course_name = Column(String(255), nullable=False)
     course_code = Column(String(50), nullable=True)
@@ -30,7 +30,7 @@ class Course(Base):
 class PsychologicalInsight(Base):
     __tablename__ = "psychological_insights"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=False, index=True)
     insight_type = Column(String(100), nullable=False)  # cognitive_preference/work_style/subject_affinity
@@ -49,7 +49,7 @@ class PsychologicalInsight(Base):
 class CareerSignal(Base):
     __tablename__ = "career_signals"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=True, index=True)  # Can be null for cross-course signals
     signal_type = Column(String(100), nullable=False)  # analytical_thinking/creative_problem_solving/interpersonal_skills
@@ -68,7 +68,7 @@ class CareerSignal(Base):
 class ConversationLog(Base):
     __tablename__ = "conversation_logs"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=False, index=True)
     session_id = Column(String(255), nullable=False, index=True)  # Group related conversations
@@ -88,7 +88,7 @@ class ConversationLog(Base):
 class CareerProfileAggregate(Base):
     __tablename__ = "career_profile_aggregates"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     aggregate_type = Column(String(50), nullable=False)  # semester/yearly/overall
     time_period = Column(String(50), nullable=True)  # "2024-fall", "2024", etc.

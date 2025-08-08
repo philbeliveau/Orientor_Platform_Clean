@@ -6,7 +6,7 @@ from ..utils.database import Base
 class UserNote(Base):
     __tablename__ = "user_notes"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     saved_recommendation_id = Column(Integer, ForeignKey("saved_recommendations.id"), nullable=True)
     content = Column(Text, nullable=False)

@@ -11,7 +11,7 @@ class ToolInvocation(Base):
     """
     __tablename__ = "tool_invocations"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True)
     tool_name = Column(String(50), nullable=False, index=True)
     input_params = Column(JSONB, nullable=True)

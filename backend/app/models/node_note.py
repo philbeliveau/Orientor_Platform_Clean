@@ -6,7 +6,7 @@ from ..utils.database import Base
 class NodeNote(Base):
     __tablename__ = "node_notes"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     node_id = Column(String(100), nullable=False)
     action_index = Column(Integer, nullable=False)

@@ -6,7 +6,7 @@ from ..utils.database import Base
 class SavedRecommendation(Base):
     __tablename__ = "saved_recommendations"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     oasis_code = Column(String, nullable=False)
     label = Column(String, nullable=False)

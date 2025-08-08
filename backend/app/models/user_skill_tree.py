@@ -8,7 +8,7 @@ from uuid import uuid4
 class UserSkillTree(Base):
     __tablename__ = "user_skill_trees"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     graph_id = Column(String, nullable=False, unique=True, default=lambda: str(uuid4()))
     tree_data = Column(JSONB, nullable=False)

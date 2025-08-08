@@ -6,7 +6,7 @@ from ..utils.database import Base
 class StrengthsReflectionResponse(Base):
     __tablename__ = "strengths_reflection_responses"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     question_id = Column(Integer, nullable=False)
     prompt_text = Column(Text, nullable=False)

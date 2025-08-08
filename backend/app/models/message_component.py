@@ -11,7 +11,7 @@ class MessageComponent(Base):
     """
     __tablename__ = "message_components"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     message_id = Column(Integer, ForeignKey("chat_messages.id", ondelete="CASCADE"), nullable=False, index=True)
     component_type = Column(String(50), nullable=False, index=True)
     component_data = Column(JSONB, nullable=False)

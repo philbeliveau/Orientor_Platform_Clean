@@ -11,7 +11,7 @@ class UserJourneyMilestone(Base):
     """
     __tablename__ = "user_journey_milestones"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     milestone_type = Column(String(50), nullable=False, index=True)
     milestone_data = Column(JSONB, nullable=False)

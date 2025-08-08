@@ -14,7 +14,7 @@ class CareerGoal(Base):
     """
     __tablename__ = "career_goals"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     
     # Job identifiers
@@ -53,7 +53,7 @@ class CareerMilestone(Base):
     """
     __tablename__ = "career_milestones"
     
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     goal_id = Column(Integer, ForeignKey("career_goals.id"), nullable=False)
     
     # Milestone details
