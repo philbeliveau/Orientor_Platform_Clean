@@ -44,7 +44,7 @@ export default function ConversationManager({
     if (editedTitle.trim() && editedTitle !== conversationTitle) {
       try {
         const headers = await getAuthHeader(getToken);
-        const response = await fetch(endpoint(`/chat/conversations/${conversationId}`), {
+        const response = await fetch(endpoint(`/api/v1/chat/conversations/${conversationId}`), {
           method: 'PUT',
           headers,
           body: JSON.stringify({ title: editedTitle })
@@ -63,7 +63,7 @@ export default function ConversationManager({
   const handleGenerateTitle = async () => {
     try {
       const headers = await getAuthHeader(getToken);
-      const response = await fetch(endpoint(`/chat/conversations/${conversationId}/generate-title`), {
+      const response = await fetch(endpoint(`/api/v1/chat/conversations/${conversationId}/generate-title`), {
         method: 'POST',
         headers
       });

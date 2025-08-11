@@ -30,7 +30,7 @@ export const useChat = (currentUserId: number) => {
       }
       
       const response = await axios.get(
-        `${API_BASE_URL}/api/chat/conversations/${conversationId}/messages`,
+        `${API_BASE_URL}/api/v1/chat/conversations/${conversationId}/messages`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -64,7 +64,7 @@ export const useChat = (currentUserId: number) => {
       // Create conversation if needed
       if (!state.currentConversation) {
         const createResponse = await axios.post(
-          `${API_BASE_URL}/api/chat/conversations`,
+          `${API_BASE_URL}/api/v1/chat/conversations`,
           { initial_message: message },
           {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -82,7 +82,7 @@ export const useChat = (currentUserId: number) => {
       } else {
         // Send message to existing conversation
         const response = await axios.post(
-          `${API_BASE_URL}/api/chat/conversations/${state.currentConversation.id}/messages`,
+          `${API_BASE_URL}/api/v1/chat/conversations/${state.currentConversation.id}/messages`,
           { 
             content: message,
             mode: state.chatMode 
@@ -160,7 +160,7 @@ export const useChat = (currentUserId: number) => {
         return;
       }
       await axios.patch(
-        `${API_BASE_URL}/api/chat/conversations/${state.currentConversation.id}`,
+        `${API_BASE_URL}/api/v1/chat/conversations/${state.currentConversation.id}`,
         { is_archived: true },
         {
           headers: { 'Authorization': `Bearer ${token}` }
@@ -186,7 +186,7 @@ export const useChat = (currentUserId: number) => {
         return;
       }
       await axios.delete(
-        `${API_BASE_URL}/api/chat/conversations/${state.currentConversation.id}`,
+        `${API_BASE_URL}/api/v1/chat/conversations/${state.currentConversation.id}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -211,7 +211,7 @@ export const useChat = (currentUserId: number) => {
         return;
       }
       const response = await axios.patch(
-        `${API_BASE_URL}/api/chat/conversations/${state.currentConversation.id}`,
+        `${API_BASE_URL}/api/v1/chat/conversations/${state.currentConversation.id}`,
         { title },
         {
           headers: { 'Authorization': `Bearer ${token}` }

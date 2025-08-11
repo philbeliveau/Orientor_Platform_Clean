@@ -53,7 +53,7 @@ export default function ConversationExportDialog({
         return;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${conversationId}/export`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/chat/conversations/${conversationId}/export`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

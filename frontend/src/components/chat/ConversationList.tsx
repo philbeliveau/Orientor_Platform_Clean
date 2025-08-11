@@ -65,7 +65,7 @@ export default function ConversationList({
       
       console.log('Fetching conversations with filter:', filter);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/conversations?${params}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/chat/conversations?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -92,7 +92,7 @@ export default function ConversationList({
       const token = await getToken();
       if (!token) return;
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${conversationId}/favorite`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/chat/conversations/${conversationId}/favorite`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
