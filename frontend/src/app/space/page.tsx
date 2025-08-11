@@ -17,10 +17,14 @@ import {
 } from '@/services/spaceService';
 import type { Recommendation, SavedJob } from '@/services/spaceService';
 import { toast } from 'react-hot-toast';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth, useUser } from '@clerk/nextjs';
+import { useOnboardingService } from '@/services/onboardingService';
 
 export default function SpacePage() {
-  const { getToken } = useAuth();
+  const router = useRouter();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { user } = useUser();
+  const onboardingService = useOnboardingService();
   
   // Tab state
   const [activeTab, setActiveTab] = useState<'recommendations' | 'jobs'>('recommendations');
@@ -38,8 +42,62 @@ export default function SpacePage() {
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
   
-  const router = useRouter();
+  // Onboarding check state
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+  
   const pathname = usePathname();
+
+  // Check onboarding status first
+  useEffect(() => {
+    let isCancelled = false;
+    
+    const checkOnboardingStatus = async () => {
+      try {
+        if (!isLoaded || !isSignedIn || !user?.id || isCancelled) {
+          return;
+        }
+
+        console.log('🔍 Space: Checking onboarding status for user:', user.id);
+        
+        const status = await onboardingService.getStatus();
+        console.log('📊 Onboarding status:', status);
+        
+        if (!isCancelled) {
+          if (!status.isComplete) {
+            console.log('⚠️ User has not completed onboarding, redirecting from space...');
+            router.push('/onboarding');
+            return;
+          }
+        }
+      } catch (error: any) {
+        if (!isCancelled) {
+          console.error('❌ Error checking onboarding status in space:', error);
+          
+          if (error.message?.includes('Authentication service not available')) {
+            console.log('🔄 Authentication service initializing, will retry...');
+          } else if (error.message?.includes('not authenticated')) {
+            console.log('🔑 Not authenticated, redirecting to sign-in');
+            router.push('/sign-in');
+            return;
+          } else {
+            console.log('⚠️ Cannot verify onboarding status, assuming incomplete for safety');
+            router.push('/onboarding');
+            return;
+          }
+        }
+      } finally {
+        if (!isCancelled) {
+          setCheckingOnboarding(false);
+        }
+      }
+    };
+
+    checkOnboardingStatus();
+    
+    return () => {
+      isCancelled = true;
+    };
+  }, [isLoaded, isSignedIn, user?.id, router, onboardingService]);
 
   useEffect(() => {
     console.log('Mounted at:', pathname);
@@ -196,6 +254,33 @@ export default function SpacePage() {
       toast.error('Failed to cleanup test jobs');
     }
   };
+
+  // Show loading while checking onboarding
+  if (checkingOnboarding) {
+    return (
+      <MainLayout>
+        <div className="relative flex w-full min-h-screen flex-col pb-20 overflow-x-hidden" style={{ backgroundColor: '#ffffff' }}>
+          <div className="relative z-10 w-full">
+            <div className="flex-1 w-full px-4 sm:px-6 md:px-12 lg:px-16 xl:px-24 max-w-none">
+              <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+                <div 
+                  className="p-8 text-center"
+                  style={{
+                    borderRadius: '24px',
+                    background: '#e0e0e0',
+                    boxShadow: '10px 10px 20px #bebebe, -10px -10px 20px #ffffff'
+                  }}
+                >
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Verifying onboarding status...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>

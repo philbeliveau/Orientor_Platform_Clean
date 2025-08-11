@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-import csv
-import os
-from pathlib import Path
+
 
 from ..utils.database import get_db
-from ..models.reflection import StrengthsReflectionResponse
+from ..models.reflection import StrengthsReflectionResponse, ReflectionQuestion
 from ..models.user import User
 from ..schemas.reflection import (
     ReflectionQuestionBase,
@@ -58,58 +56,28 @@ def ensure_sequence_exists(db: Session):
         # If we can't create the sequence, we'll handle it in the insert logic
         pass
 
-def load_questions_from_csv() -> List[ReflectionQuestionBase]:
-    """Charge les questions depuis le fichier CSV."""
-# ============================================================================
-# AUTHENTICATION MIGRATION - Secure Integration System
-# ============================================================================
-# This router has been migrated to use the unified secure authentication system
-# with integrated caching, security optimizations, and rollback support.
-# 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_with_db_sync
-# Current system: secure_auth_integration.get_current_user_secure_integrated
-# 
-# Benefits:
-# - AES-256 encryption for sensitive cache data
-# - Full SHA-256 cache keys (not truncated)
-# - Error message sanitization
-# - Multi-layer caching optimization  
-# - Zero-downtime rollback capability
-# - Comprehensive security monitoring
-# ============================================================================
-
-
-    questions = []
-    # Le CSV est dans le répertoire racine du projet, pas dans backend/
-    csv_path = Path(__file__).parent.parent.parent.parent / "data" / "Strengths_Reflection_Questions.csv"
-    
+def load_questions_from_db(db: Session) -> List[ReflectionQuestionBase]:
+    """Load questions from database."""
     try:
-        with open(csv_path, 'r', encoding='utf-8') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                questions.append(ReflectionQuestionBase(
-                    id=int(row['id']),
-                    question=row['question'],
-                    category=row['category']
-                ))
-    except FileNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Questions file not found"
-        )
+        questions = db.query(ReflectionQuestion).order_by(ReflectionQuestion.id).all()
+        return [
+            ReflectionQuestionBase(
+                id=q.id,
+                question=q.question,
+                category=q.category
+            )
+            for q in questions
+        ]
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error loading questions: {str(e)}"
+            detail=f"Error loading questions from database: {str(e)}"
         )
-    
-    return questions
 
 @router.get("/questions", response_model=List[ReflectionQuestionBase])
-async def get_reflection_questions():
-    """Récupère toutes les questions de réflexion depuis le CSV."""
-    return load_questions_from_csv()
+async def get_reflection_questions(db: Session = Depends(get_db)):
+    """Récupère toutes les questions de réflexion depuis la base de données."""
+    return load_questions_from_db(db)
 
 @router.get("/responses/{user_id}", response_model=List[ReflectionResponse])
 async def get_user_responses(
@@ -154,7 +122,7 @@ async def save_response(
     ensure_sequence_exists(db)
     
     # Charger les questions pour obtenir le texte et la catégorie
-    questions = load_questions_from_csv()
+    questions = load_questions_from_db(db)
     question = next((q for q in questions if q.id == response_data.question_id), None)
     
     if not question:
@@ -224,7 +192,7 @@ async def save_responses_batch(
     # Ensure sequence exists before attempting any operations
     ensure_sequence_exists(db)
     
-    questions = load_questions_from_csv()
+    questions = load_questions_from_db(db)
     questions_dict = {q.id: q for q in questions}
     
     saved_responses = []

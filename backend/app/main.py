@@ -85,10 +85,12 @@ else:
     # Production CORS settings
     origins = [
         "http://localhost:3000",  # Frontend development server
+        "http://localhost:3007",  # Frontend development server (alt port)
         "http://localhost:8000",  # Backend when served 
         "https://navigoproject.vercel.app",  # Production frontend
         "http://localhost:5173",  # Vite development server
         "https://localhost:3000",  # HTTPS local development
+        "https://localhost:3007",  # HTTPS local development (alt port)
         "https://localhost:5173",  # HTTPS Vite development
         "https://*.up.railway.app",  # Railway domains
         "https://*.railway.app",    # Railway domains  

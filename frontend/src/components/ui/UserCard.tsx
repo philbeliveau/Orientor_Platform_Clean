@@ -76,7 +76,7 @@ const UserCard: React.FC<UserCardProps> = ({
           setAvatarData(data);
         }
       } catch (err) {
-        console.log('Aucun avatar trouvé pour cet utilisateur');
+        console.log('No avatar found for this user');
         if (isMounted) {
           setAvatarData(null);
         }

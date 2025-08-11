@@ -4,13 +4,68 @@ import { useRouter } from 'next/navigation';
 import { useAuth, useUser } from '@clerk/nextjs';
 import MainLayout from '@/components/layout/MainLayout';
 import ChatInterface from '@/components/chat/ChatInterface';
+import { useOnboardingService } from '@/services/onboardingService';
 
 export default function ChatPage() {
     const router = useRouter();
     const { isLoaded, isSignedIn } = useAuth();
     const { user } = useUser();
+    const onboardingService = useOnboardingService();
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
     const [authError, setAuthError] = useState<string | null>(null);
+    const [checkingOnboarding, setCheckingOnboarding] = useState(true);
+
+    // Check onboarding status first
+    useEffect(() => {
+        let isCancelled = false;
+        
+        const checkOnboardingStatus = async () => {
+            try {
+                if (!isLoaded || !isSignedIn || !user?.id || isCancelled) {
+                    return;
+                }
+
+                console.log('🔍 Chat: Checking onboarding status for user:', user.id);
+                
+                const status = await onboardingService.getStatus();
+                console.log('📊 Onboarding status:', status);
+                
+                if (!isCancelled) {
+                    if (!status.isComplete) {
+                        console.log('⚠️ User has not completed onboarding, redirecting from chat...');
+                        router.push('/onboarding');
+                        return;
+                    }
+                }
+            } catch (error: any) {
+                if (!isCancelled) {
+                    console.error('❌ Error checking onboarding status in chat:', error);
+                    
+                    if (error.message?.includes('Authentication service not available')) {
+                        console.log('🔄 Authentication service initializing, will retry...');
+                    } else if (error.message?.includes('not authenticated')) {
+                        console.log('🔑 Not authenticated, redirecting to sign-in');
+                        router.push('/sign-in');
+                        return;
+                    } else {
+                        console.log('⚠️ Cannot verify onboarding status, assuming incomplete for safety');
+                        router.push('/onboarding');
+                        return;
+                    }
+                }
+            } finally {
+                if (!isCancelled) {
+                    setCheckingOnboarding(false);
+                }
+            }
+        };
+
+        checkOnboardingStatus();
+        
+        return () => {
+            isCancelled = true;
+        };
+    }, [isLoaded, isSignedIn, user?.id, router, onboardingService]);
 
     // Check authentication on mount
     useEffect(() => {
@@ -32,7 +87,7 @@ export default function ChatPage() {
         }
     }, [isLoaded, isSignedIn, user, router]);
 
-    if (!currentUserId) {
+    if (checkingOnboarding || !currentUserId) {
         return (
             <MainLayout>
                 <div className="relative flex w-full min-h-screen flex-col pb-20 overflow-x-hidden" style={{ backgroundColor: '#ffffff' }}>
@@ -48,7 +103,9 @@ export default function ChatPage() {
                                     }}
                                 >
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                                    <p className="text-gray-600">Loading chat...</p>
+                                    <p className="text-gray-600">
+                                        {checkingOnboarding ? 'Verifying onboarding status...' : 'Loading chat...'}
+                                    </p>
                                 </div>
                             </div>
                         </div>

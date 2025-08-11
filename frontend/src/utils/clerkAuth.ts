@@ -15,21 +15,32 @@ export const useClerkToken = () => {
   const { getToken, isSignedIn, isLoaded } = useAuth();
 
   const getAuthToken = async (): Promise<string> => {
+    console.log('[Auth] 🔍 Getting authentication token...');
+    console.log('[Auth] 📊 State:', { isLoaded, isSignedIn });
+    
     if (!isLoaded) {
+      console.error('[Auth] ❌ Clerk not loaded');
       throw new Error('Clerk not loaded');
     }
     
     if (!isSignedIn) {
+      console.error('[Auth] ❌ User not signed in');
       throw new Error('User not signed in');
     }
 
+    console.log('[Auth] 🎫 Attempting to get JWT token with orientor-jwt template...');
+    
     // Get JWT token with the orientor-jwt template, fallback to default
-    const token = await getToken({ template: 'orientor-jwt' }).catch(async () => {
-      console.warn('[Auth] orientor-jwt template not found, using default token');
-      return await getToken();
+    const token = await getToken({ template: 'orientor-jwt' }).catch(async (error) => {
+      console.warn('[Auth] ⚠️ orientor-jwt template not found, using default token');
+      console.warn('[Auth] Template error:', error.message);
+      const fallbackToken = await getToken();
+      console.log('[Auth] ✅ Fallback token obtained');
+      return fallbackToken;
     });
     
     if (!token) {
+      console.error('[Auth] ❌ No authentication token available');
       throw new Error('No authentication token available');
     }
     
@@ -39,6 +50,7 @@ export const useClerkToken = () => {
       throw new Error('Invalid JWT token format');
     }
     
+    console.log('[Auth] ✅ Valid JWT token obtained, length:', token.length);
     return token;
   };
 
@@ -54,22 +66,49 @@ export const makeAuthenticatedRequest = async (
   options: RequestInit = {},
   token?: string
 ): Promise<Response> => {
+  console.log('[API] 🌐 Making authenticated request to:', endpoint);
+  
   if (!token) {
+    console.error('[API] ❌ Authentication token required');
     throw new Error('Authentication token required');
   }
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
+  console.log('[API] 🎯 Full URL:', url);
   
-  const response = await fetch(url, {
+  const requestOptions = {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
       ...options.headers,
     },
+  };
+  
+  console.log('[API] 📦 Request options:', {
+    method: requestOptions.method || 'GET',
+    headers: {
+      ...requestOptions.headers,
+      'Authorization': `Bearer ${token.substring(0, 20)}...`
+    }
   });
 
-  return response;
+  try {
+    const response = await fetch(url, requestOptions);
+    console.log('[API] 📡 Response status:', response.status, response.statusText);
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unable to read error response');
+      console.error('[API] ❌ Request failed:', { status: response.status, statusText: response.statusText, error: errorText });
+    } else {
+      console.log('[API] ✅ Request successful');
+    }
+    
+    return response;
+  } catch (error) {
+    console.error('[API] ❌ Network error:', error);
+    throw error;
+  }
 };
 
 /**
@@ -77,6 +116,7 @@ export const makeAuthenticatedRequest = async (
  * Can be used in API routes or server components
  */
 export const createAuthenticatedFetch = (token: string) => {
+  console.log('[Auth] 🔧 Creating authenticated fetch function');
   return async (endpoint: string, options: RequestInit = {}): Promise<Response> => {
     return makeAuthenticatedRequest(endpoint, options, token);
   };

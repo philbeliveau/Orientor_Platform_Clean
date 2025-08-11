@@ -217,7 +217,7 @@ async def get_hexaco_questions(
             )
         
         # Récupérer les questions
-        questions = hexaco_service.get_questions_for_version(version_id)
+        questions = hexaco_service.get_questions_for_version(version_id, db)
         
         logger.info(f"Questions HEXACO récupérées: {len(questions)} pour version {version_id}")
         return [HexacoQuestion(**question) for question in questions]
@@ -330,7 +330,7 @@ async def get_hexaco_score(
         assessment_version = progress["assessment_version"]
         
         # Récupérer les questions pour cette version
-        questions = hexaco_service.get_questions_for_version(assessment_version)
+        questions = hexaco_service.get_questions_for_version(assessment_version, db)
         
         # Calculer les scores HEXACO
         scores = scoring_service.calculate_hexaco_scores(responses, questions)

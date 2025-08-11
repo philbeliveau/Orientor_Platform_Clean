@@ -8,6 +8,7 @@ from app.models import User, UserProfile, UserSkill
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from sqlalchemy.sql import text
 import uuid
+from app.services.profile_completion_service import ProfileCompletionCalculator, CompletionAction
 
 # Configure logging FIRST
 logger = logging.getLogger(__name__)
@@ -84,6 +85,26 @@ class ProfileResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CompletionActionResponse(BaseModel):
+    """Response model for a completion action."""
+    id: str
+    title: str
+    description: str
+    url: str
+    category: str
+    weight: float
+    estimated_time: str
+
+
+class ProfileCompletionResponse(BaseModel):
+    """Response model for profile completion analysis."""
+    overall_percentage: float
+    category_scores: Dict[str, float]
+    next_actions: List[CompletionActionResponse]
+    recommendation_eligible: bool
+    missing_critical_data: List[str]
 
 router = APIRouter(prefix="/profiles", tags=["profiles"])
 
@@ -422,6 +443,8 @@ async def update_profile(
         logger.error(f"Error updating profile: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
 @router.get("/{user_id}", response_model=ProfileResponse)
 def get_user_profile(
     user_id: int,
@@ -457,6 +480,84 @@ def get_user_profile(
     except Exception as e:
         logger.error(f"Error retrieving profile: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving profile: {str(e)}")
+
+# Profile Completion Endpoints
+@router.get("/completion", response_model=ProfileCompletionResponse)
+def get_profile_completion(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get profile completion analysis for the current user."""
+    try:
+        logger.info(f"Getting profile completion for user {current_user.clerk_user_id}")
+        
+        # Calculate profile completion
+        completion_result = ProfileCompletionCalculator.calculate_completion(
+            db, current_user.clerk_user_id
+        )
+        
+        # Convert CompletionAction objects to response models
+        next_actions = [
+            CompletionActionResponse(
+                id=action.id,
+                title=action.title,
+                description=action.description,
+                url=action.url,
+                category=action.category,
+                weight=action.weight,
+                estimated_time=action.estimated_time
+            )
+            for action in completion_result.next_actions
+        ]
+        
+        return ProfileCompletionResponse(
+            overall_percentage=completion_result.overall_percentage,
+            category_scores=completion_result.category_scores,
+            next_actions=next_actions,
+            recommendation_eligible=completion_result.recommendation_eligible,
+            missing_critical_data=completion_result.missing_critical_data
+        )
+        
+    except Exception as e:
+        logger.error(f"Error getting profile completion: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error calculating profile completion: {str(e)}")
+
+
+@router.get("/completion/recommendations", response_model=List[CompletionActionResponse])
+def get_completion_recommendations(
+    limit: int = 5,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get next recommended actions for profile completion."""
+    try:
+        logger.info(f"Getting completion recommendations for user {current_user.clerk_user_id}")
+        
+        # Calculate profile completion
+        completion_result = ProfileCompletionCalculator.calculate_completion(
+            db, current_user.clerk_user_id
+        )
+        
+        # Convert CompletionAction objects to response models
+        recommendations = [
+            CompletionActionResponse(
+                id=action.id,
+                title=action.title,
+                description=action.description,
+                url=action.url,
+                category=action.category,
+                weight=action.weight,
+                estimated_time=action.estimated_time
+            )
+            for action in completion_result.next_actions[:limit]
+        ]
+        
+        return recommendations
+        
+    except Exception as e:
+        logger.error(f"Error getting completion recommendations: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting completion recommendations: {str(e)}")
+
 
 # Add module-level debug message after routes are defined
 logger.debug("Initializing profiles router module")

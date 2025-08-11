@@ -93,10 +93,10 @@ export const useOnboardingService = () => {
     getStatus: async (): Promise<OnboardingStatus> => {
       try {
         console.log('Checking onboarding status...');
-        const response = await request('/auth/onboarding-status') as { completed: boolean };
+        const response = await request('/api/v1/onboarding/status') as { isComplete: boolean };
         console.log('Onboarding status response:', response);
         
-        const isComplete = response.completed;
+        const isComplete = response.isComplete;
         return {
           isComplete: isComplete,
           hasStarted: isComplete,
@@ -191,9 +191,9 @@ export const useOnboardingService = () => {
 
     needsOnboarding: async (): Promise<boolean> => {
       try {
-        const status = await request('/auth/onboarding-status') as { completed: boolean };
-        console.log('Onboarding status check result:', { isComplete: status.completed });
-        return !status.completed;
+        const status = await request('/api/v1/onboarding/status') as { isComplete: boolean };
+        console.log('Onboarding status check result:', { isComplete: status.isComplete });
+        return !status.isComplete;
       } catch (error: any) {
         if (error.message?.includes('401') || error.message?.includes('403')) {
           throw error;
@@ -229,7 +229,7 @@ export const useOnboardingService = () => {
     markOnboardingComplete: async (): Promise<{ message: string; onboarding_completed: boolean }> => {
       try {
         console.log('Marking onboarding as complete...');
-        const response = await request('/auth/onboarding-complete', { method: 'POST' }) as { message: string; onboarding_completed: boolean };
+        const response = await request('/api/v1/onboarding/complete', { method: 'POST' }) as { message: string; onboarding_completed: boolean };
         console.log('Onboarding completion response:', response);
         return response;
       } catch (error) {

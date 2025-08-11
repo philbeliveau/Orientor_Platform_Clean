@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getAuthHeader, endpoint } from '../utils/api';
+import { endpoint } from '../utils/api';
 
 export interface CompetenceNode {
   id: string;
@@ -19,15 +19,19 @@ export interface CompetenceTreeData {
   graph_id: string;
 }
 
-export const generateCompetenceTree = async (getToken: () => Promise<string | null>, userId: number): Promise<{ graph_id: string }> => {
+export const generateCompetenceTree = async (token: string, userId: number): Promise<{ graph_id: string }> => {
   try {
     console.log(`Génération d'un arbre de compétences pour l'utilisateur ${userId}`);
     
-    // Get authentication headers using Clerk
-    const headers = await getAuthHeader(getToken);
-    if (!Object.keys(headers).length) {
-      throw new Error('Authentication required');
+    // Get authentication headers using Clerk token directly
+    if (!token) {
+      throw new Error('Authentication token required');
     }
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
     
     const response = await axios.post(
       endpoint('/api/v1/competence-tree/generate'),
@@ -69,13 +73,17 @@ export const generateCompetenceTree = async (getToken: () => Promise<string | nu
   }
 };
 
-export const getCompetenceTree = async (getToken: () => Promise<string | null>, graphId: string): Promise<CompetenceTreeData> => {
+export const getCompetenceTree = async (token: string, graphId: string): Promise<CompetenceTreeData> => {
   try {
-    // Get authentication headers using Clerk
-    const headers = await getAuthHeader(getToken);
-    if (!Object.keys(headers).length) {
-      throw new Error('Authentication required');
+    // Get authentication headers using Clerk token directly
+    if (!token) {
+      throw new Error('Authentication token required');
     }
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
     
     const response = await axios.get(endpoint(`/api/v1/competence-tree/${graphId}`), {
       headers
@@ -87,15 +95,19 @@ export const getCompetenceTree = async (getToken: () => Promise<string | null>, 
   }
 };
 
-export const completeChallenge = async (getToken: () => Promise<string | null>, nodeId: string, userId: number): Promise<{ success: boolean }> => {
+export const completeChallenge = async (token: string, nodeId: string, userId: number): Promise<{ success: boolean }> => {
   try {
     console.log(`Complétion du défi ${nodeId} pour l'utilisateur ${userId}`);
     
-    // Get authentication headers using Clerk
-    const headers = await getAuthHeader(getToken);
-    if (!Object.keys(headers).length) {
-      throw new Error('Authentication required');
+    // Get authentication headers using Clerk token directly
+    if (!token) {
+      throw new Error('Authentication token required');
     }
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
     
     const response = await axios.patch(
       endpoint(`/api/v1/competence-tree/node/${nodeId}/complete?user_id=${userId}`),
@@ -135,13 +147,17 @@ export interface SavedJobResponse {
   already_saved: boolean;
 }
 
-export const saveJobFromTree = async (getToken: () => Promise<string | null>, jobData: SaveJobRequest): Promise<SavedJobResponse> => {
+export const saveJobFromTree = async (token: string, jobData: SaveJobRequest): Promise<SavedJobResponse> => {
   try {
-    // Get authentication headers using Clerk
-    const headers = await getAuthHeader(getToken);
-    if (!Object.keys(headers).length) {
-      throw new Error('Authentication required');
+    // Get authentication headers using Clerk token directly
+    if (!token) {
+      throw new Error('Authentication token required');
     }
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
     
     const response = await axios.post(
       endpoint('/api/v1/jobs/save'),
@@ -160,13 +176,17 @@ export const saveJobFromTree = async (getToken: () => Promise<string | null>, jo
   }
 };
 
-export const getSavedJobs = async (getToken: () => Promise<string | null>): Promise<SavedJobResponse[]> => {
+export const getSavedJobs = async (token: string): Promise<SavedJobResponse[]> => {
   try {
-    // Get authentication headers using Clerk
-    const headers = await getAuthHeader(getToken);
-    if (!Object.keys(headers).length) {
-      throw new Error('Authentication required');
+    // Get authentication headers using Clerk token directly
+    if (!token) {
+      throw new Error('Authentication token required');
     }
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
     
     const response = await axios.get(
       endpoint('/api/v1/jobs/saved'),
@@ -181,15 +201,19 @@ export const getSavedJobs = async (getToken: () => Promise<string | null>): Prom
 };
 
 export const generateTreeFromAnchors = async (
-  getToken: () => Promise<string | null>,
+  token: string,
   anchorSkills: string[]
 ): Promise<{ graph_id: string }> => {
   try {
-    // Get authentication headers using Clerk
-    const headers = await getAuthHeader(getToken);
-    if (!Object.keys(headers).length) {
-      throw new Error('Authentication required');
+    // Get authentication headers using Clerk token directly
+    if (!token) {
+      throw new Error('Authentication token required');
     }
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
     
     const response = await axios.post(
       endpoint('/api/v1/competence-tree/generate-from-anchors'),

@@ -19,7 +19,7 @@ export default function Page() {
               formFieldInput: 'border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent',
             }
           }}
-          afterSignUpUrl="/dashboard"
+          afterSignUpUrl="/onboarding"
           signInUrl="/sign-in"
           routing="path"
           path="/sign-up"

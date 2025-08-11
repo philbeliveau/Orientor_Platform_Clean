@@ -16,7 +16,7 @@ import base64
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/onboarding", tags=["onboarding"])
+router = APIRouter(tags=["onboarding"])
 
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 
@@ -76,7 +76,7 @@ class PsychProfileCreate(BaseModel):
     topTraits: List[str]
     description: str
 
-@router.get("/status", response_model=OnboardingStatus)
+@router.get("/onboarding/status", response_model=OnboardingStatus)
 def get_onboarding_status(
     current_user: User = Depends(get_current_user_with_onboarding),
     db: Session = Depends(get_db)
@@ -110,7 +110,7 @@ def get_onboarding_status(
         logger.error(f"Error getting onboarding status: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get onboarding status: {str(e)}")
 
-@router.post("/start")
+@router.post("/onboarding/start")
 def start_onboarding(
     current_user: User = Depends(get_current_user_with_onboarding),
     db: Session = Depends(get_db)
@@ -163,7 +163,7 @@ def start_onboarding(
         logger.error(f"Error starting onboarding: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to start onboarding: {str(e)}")
 
-@router.post("/response")
+@router.post("/onboarding/response")
 def save_onboarding_response(
     response_data: OnboardingResponse,
     current_user: User = Depends(get_current_user_with_onboarding),
@@ -234,7 +234,7 @@ def save_onboarding_response(
         logger.error(f"Error saving response: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to save response: {str(e)}")
 
-@router.post("/complete")
+@router.post("/onboarding/complete")
 def complete_onboarding(
     onboarding_data: OnboardingData,
     current_user: User = Depends(get_current_user_with_onboarding),
@@ -351,7 +351,7 @@ def complete_onboarding(
         logger.error(f"Error completing onboarding: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to complete onboarding: {str(e)}")
 
-@router.get("/profile")
+@router.get("/onboarding/profile")
 def get_onboarding_profile(
     current_user: User = Depends(get_current_user_with_onboarding),
     db: Session = Depends(get_db)
@@ -380,7 +380,7 @@ def get_onboarding_profile(
         logger.error(f"Error getting onboarding profile: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get profile: {str(e)}")
 
-@router.get("/responses")
+@router.get("/onboarding/responses")
 def get_onboarding_responses(
     current_user: User = Depends(get_current_user_with_onboarding),
     db: Session = Depends(get_db)
@@ -423,7 +423,7 @@ def get_onboarding_responses(
         logger.error(f"Error getting onboarding responses: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get responses: {str(e)}")
 
-@router.delete("/reset")
+@router.delete("/onboarding/reset")
 def reset_onboarding(
     current_user: User = Depends(get_current_user_with_onboarding),
     db: Session = Depends(get_db)
@@ -466,7 +466,7 @@ def reset_onboarding(
         logger.error(f"Error resetting onboarding: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to reset onboarding: {str(e)}")
 
-@router.post("/skip")
+@router.post("/onboarding/skip")
 def skip_onboarding(
     current_user: User = Depends(get_current_user_with_onboarding),
     db: Session = Depends(get_db)

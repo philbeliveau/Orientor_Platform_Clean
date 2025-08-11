@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { getAuthHeader, endpoint } from '../utils/api';
+import { clerkApiService } from './api';
 
 // Type definitions
 export interface InsightData {
@@ -10,18 +9,16 @@ export interface InsightData {
 
 /**
  * Génère un insight philosophique pour l'utilisateur connecté
- * @param getToken - Clerk getToken function for authentication
+ * @param token - Clerk JWT token for authentication
  * @returns Les données d'insight générées
  */
-export const generateInsight = async (getToken: () => Promise<string | null>): Promise<InsightData> => {
+export const generateInsight = async (token: string): Promise<InsightData> => {
   try {
-    const headers = await getAuthHeader(getToken);
-    const response = await axios.post<InsightData>(
-      endpoint('/api/v1/insight/generate'),
-      {},
-      { headers }
-    );
-    return response.data;
+    return await clerkApiService.request<InsightData>('/api/v1/insight/generate', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({})
+    });
   } catch (error) {
     console.error('Erreur lors de la génération de l\'insight philosophique:', error);
     throw error;
@@ -30,21 +27,19 @@ export const generateInsight = async (getToken: () => Promise<string | null>): P
 
 /**
  * Sauvegarde un insight philosophique pour l'utilisateur connecté
- * @param getToken - Clerk getToken function for authentication
+ * @param token - Clerk JWT token for authentication
  * @param philosophicalText - Le texte philosophique à sauvegarder
  * @returns Le statut de succès
  */
-export const saveInsight = async (getToken: () => Promise<string | null>, philosophicalText: string): Promise<{ success: boolean }> => {
+export const saveInsight = async (token: string, philosophicalText: string): Promise<{ success: boolean }> => {
   try {
-    const headers = await getAuthHeader(getToken);
-    const response = await axios.patch<{ success: boolean }>(
-      endpoint('/api/v1/insight/save'),
-      {
+    return await clerkApiService.request<{ success: boolean }>('/api/v1/insight/save', {
+      method: 'PATCH',
+      token,
+      body: JSON.stringify({
         philosophical_text: philosophicalText
-      },
-      { headers }
-    );
-    return response.data;
+      })
+    });
   } catch (error) {
     console.error('Erreur lors de la sauvegarde de l\'insight philosophique:', error);
     throw error;
@@ -53,21 +48,19 @@ export const saveInsight = async (getToken: () => Promise<string | null>, philos
 
 /**
  * Réécrit un insight philosophique basé sur le feedback de l'utilisateur connecté
- * @param getToken - Clerk getToken function for authentication
+ * @param token - Clerk JWT token for authentication
  * @param feedback - Le feedback de l'utilisateur pour la réécriture
  * @returns Les nouvelles données d'insight générées
  */
-export const rewriteInsight = async (getToken: () => Promise<string | null>, feedback: string): Promise<InsightData> => {
+export const rewriteInsight = async (token: string, feedback: string): Promise<InsightData> => {
   try {
-    const headers = await getAuthHeader(getToken);
-    const response = await axios.post<InsightData>(
-      endpoint('/api/v1/insight/rewrite'),
-      {
+    return await clerkApiService.request<InsightData>('/api/v1/insight/rewrite', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({
         feedback: feedback
-      },
-      { headers }
-    );
-    return response.data;
+      })
+    });
   } catch (error) {
     console.error('Erreur lors de la réécriture de l\'insight philosophique:', error);
     throw error;
@@ -76,18 +69,34 @@ export const rewriteInsight = async (getToken: () => Promise<string | null>, fee
 
 /**
  * Récupère l'insight philosophique existant pour l'utilisateur connecté
- * @param getToken - Clerk getToken function for authentication
- * @returns Les données d'insight existantes
+ * @param token - Clerk JWT token for authentication
+ * @returns Les données d'insight existantes ou null si aucun insight n'existe
  */
-export const getInsight = async (getToken: () => Promise<string | null>): Promise<InsightData> => {
+export const getInsight = async (token: string): Promise<InsightData | null> => {
   try {
-    const headers = await getAuthHeader(getToken);
-    const response = await axios.get<InsightData>(
-      endpoint('/api/v1/insight/get'),
-      { headers }
-    );
-    return response.data;
-  } catch (error) {
+    // Make a direct fetch call to avoid logging 404s as errors
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/insight/get`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.status === 404) {
+      // 404 is expected for users without insights - not an error
+      console.log('Aucun insight existant pour cet utilisateur - c\'est normal pour un nouveau profil');
+      return null;
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    // Only log and throw unexpected errors (not 404s)
     console.error('Erreur lors de la récupération de l\'insight philosophique:', error);
     throw error;
   }
@@ -95,18 +104,16 @@ export const getInsight = async (getToken: () => Promise<string | null>): Promis
 
 /**
  * Régénère un insight philosophique pour l'utilisateur connecté
- * @param getToken - Clerk getToken function for authentication
+ * @param token - Clerk JWT token for authentication
  * @returns Les nouvelles données d'insight générées
  */
-export const regenerateInsight = async (getToken: () => Promise<string | null>): Promise<InsightData> => {
+export const regenerateInsight = async (token: string): Promise<InsightData> => {
   try {
-    const headers = await getAuthHeader(getToken);
-    const response = await axios.post<InsightData>(
-      endpoint('/api/v1/insight/regenerate'),
-      {},
-      { headers }
-    );
-    return response.data;
+    return await clerkApiService.request<InsightData>('/api/v1/insight/regenerate', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({})
+    });
   } catch (error) {
     console.error('Erreur lors de la régénération de l\'insight philosophique:', error);
     throw error;

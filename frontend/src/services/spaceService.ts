@@ -1,5 +1,5 @@
+import { clerkApiService, getAuthHeader, endpoint } from './api';
 import axios from 'axios';
-import { getAuthHeader, endpoint } from '../utils/api';
 
 // Type definitions
 export interface Recommendation {
@@ -99,13 +99,13 @@ export interface NoteUpdate {
 
 
 // Fetch saved recommendations
-export const fetchSavedRecommendations = async (getToken: () => Promise<string | null>): Promise<Recommendation[]> => {
+export const fetchSavedRecommendations = async (token: string): Promise<Recommendation[]> => {
   try {
-    const headers = await getAuthHeader(getToken);
-    console.log('Fetching saved recommendations from:', endpoint('/careers/saved'));
-    const response = await axios.get<Recommendation[]>(endpoint('/careers/saved'), { headers });
-    console.log('API response:', response.data);
-    return response.data;
+    console.log('Fetching saved recommendations from: /api/v1/careers/saved');
+    return await clerkApiService.request<Recommendation[]>('/api/v1/careers/saved', {
+      method: 'GET',
+      token
+    });
   } catch (error) {
     console.error('Error fetching saved recommendations:', error);
     throw error;
@@ -222,7 +222,7 @@ export const fetchAllUserNotes = async (getToken: () => Promise<string | null>):
     // Create new pending request
     const headers = await getAuthHeader(getToken);
     notesCache.pendingRequest = axios.get<Note[]>(
-      endpoint('/space/notes'),
+      endpoint('/api/v1/space/notes'),
       { headers }
     ).then(response => {
       notesCache.data = response.data;
@@ -358,16 +358,14 @@ export const generateLLMAnalysis = async (input: LLMAnalysisInput): Promise<LLMA
 };
 
 // Get user skills
-export const getUserSkills = async (getToken: () => Promise<string | null>): Promise<UserSkills> => {
+export const getUserSkills = async (token: string): Promise<UserSkills> => {
   try {
-    const headers = await getAuthHeader(getToken);
-    const response = await axios.get<UserSkills>(
-      endpoint('/space/skills'),
-      { headers }
-    );
-    return response.data;
+    return await clerkApiService.request<UserSkills>('/api/v1/space/skills', {
+      method: 'GET',
+      token
+    });
   } catch (error) {
-    console.error('Error fetching skills:', error);
+    console.error('Error fetching user skills:', error);
     throw error;
   }
 };

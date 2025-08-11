@@ -21,14 +21,14 @@ export interface GenerateAvatarResponse {
 
 class AvatarService {
   /**
-   * Récupère l'avatar existant de l'utilisateur authentifié
+   * Get existing avatar for authenticated user
    */
   private static avatarCache: {
     data: AvatarData | null;
     timestamp: number;
   } = { data: null, timestamp: 0 };
 
-  static async getUserAvatar(getToken: () => Promise<string | null>): Promise<AvatarData> {
+  static async getUserAvatar(token: string): Promise<AvatarData> {
     try {
       // Return cached data if it's fresh (5 seconds)
       const now = Date.now();
@@ -36,8 +36,7 @@ class AvatarService {
         return this.avatarCache.data;
       }
 
-      console.log('🔍 Récupération de l\'avatar pour l\'utilisateur authentifié');
-      const token = await getToken();
+      console.log('🔍 Fetching avatar for authenticated user');
       if (!token) {
         throw new Error('User not authenticated');
       }
@@ -63,7 +62,7 @@ class AvatarService {
         timestamp: now
       };
 
-      console.log('✅ Avatar récupéré:', data);
+      console.log('✅ Avatar retrieved:', data);
       return data;
     } catch (error: any) {
       // Return cached data if available, even if stale
@@ -71,18 +70,17 @@ class AvatarService {
         console.warn('Using cached avatar data after error');
         return this.avatarCache.data;
       }
-      console.error('❌ Erreur lors de la récupération de l\'avatar:', error);
+      console.error('❌ Error retrieving avatar:', error);
       throw error;
     }
   }
 
   /**
-   * Génère un nouvel avatar pour l'utilisateur authentifié
+   * Generate new avatar for authenticated user
    */
-  static async generateAvatar(getToken: () => Promise<string | null>): Promise<GenerateAvatarResponse> {
+  static async generateAvatar(token: string): Promise<GenerateAvatarResponse> {
     try {
-      console.log('🎨 Génération d\'un avatar pour l\'utilisateur authentifié');
-      const token = await getToken();
+      console.log('🎨 Generating avatar for authenticated user');
       if (!token) {
         throw new Error('User not authenticated');
       }
@@ -101,58 +99,58 @@ class AvatarService {
       }
       
       const data = await response.json();
-      console.log('✅ Avatar généré avec succès:', data);
+      console.log('✅ Avatar generated successfully:', data);
       return data;
     } catch (error: any) {
-      console.error('❌ Erreur lors de la génération de l\'avatar:', error);
-      console.error('Détails de l\'erreur API:', error);
+      console.error('❌ Error generating avatar:', error);
+      console.error('API error details:', error);
       throw error;
     }
   }
 
   /**
-   * Vérifie si l'utilisateur authentifié a un avatar existant
+   * Check if authenticated user has an existing avatar
    */
-  static async hasAvatar(getToken: () => Promise<string | null>): Promise<boolean> {
+  static async hasAvatar(token: string): Promise<boolean> {
     try {
-      const avatarData = await this.getUserAvatar(getToken);
+      const avatarData = await this.getUserAvatar(token);
       return avatarData.success && !!avatarData.avatar_name;
     } catch (error) {
-      console.log('Aucun avatar trouvé pour cet utilisateur');
+      console.log('No avatar found for this user');
       return false;
     }
   }
 
   /**
-   * Obtient l'URL complète de l'image d'avatar
+   * Get complete avatar image URL
    */
   static getAvatarImageUrl(relativeUrl: string): string {
     if (!relativeUrl) return '';
     
-    // Si l'URL est déjà complète, la retourner telle quelle
+    // If URL is already complete, return as is
     if (relativeUrl.startsWith('http')) {
       return relativeUrl;
     }
     
-    // Construire l'URL complète avec l'API base URL
+    // Build complete URL with API base URL
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     return `${apiUrl}${relativeUrl}`;
   }
 
   /**
-   * Gère les erreurs d'avatar de manière standardisée
+   * Handle avatar errors in standardized way
    */
   static handleAvatarError(error: any): string {
     if (error?.response?.status === 404) {
-      return 'Aucun avatar trouvé pour cet utilisateur';
+      return 'No avatar found for this user';
     } else if (error?.response?.status === 403) {
-      return 'Vous n\'avez pas l\'autorisation de générer cet avatar';
+      return 'You are not authorized to generate this avatar';
     } else if (error?.response?.status === 500) {
-      return 'Erreur interne du serveur lors de la génération de l\'avatar';
+      return 'Internal server error while generating avatar';
     } else if (error?.response?.data?.detail) {
       return error.response.data.detail;
     } else {
-      return 'Une erreur inattendue s\'est produite';
+      return 'An unexpected error occurred';
     }
   }
 }

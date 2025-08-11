@@ -1326,6 +1326,309 @@ class CompetenceTreeService:
             logger.error(f"Erreur lors de la création de l'arbre de compétences: {str(e)}")
             logger.error(traceback.format_exc())
             return {}
+
+    def create_job_skills_tree(self, db: Session, user_id: int, job_id: str, max_depth: int = 2, max_nodes_per_level: int = 6) -> Dict[str, Any]:
+        """
+        Create a skills tree specific to a job/occupation.
+        
+        Args:
+            db: Database session
+            user_id: User ID for personalization
+            job_id: ESCO job/occupation ID (e.g., 'occupation::key_15224')
+            max_depth: Maximum depth of the tree
+            max_nodes_per_level: Maximum nodes per level
+            
+        Returns:
+            Dict[str, Any]: Job-specific skills tree
+        """
+        try:
+            logger.info(f"Creating job skills tree for job_id: {job_id}, user_id: {user_id}")
+            
+            # Generate a UUID for this job tree
+            graph_id = str(uuid4())
+            
+            # First, try to get job information from Pinecone
+            job_node = self._get_job_from_pinecone(job_id)
+            if not job_node:
+                logger.warning(f"Job {job_id} not found in Pinecone, creating basic tree")
+                return self._create_basic_job_tree(job_id, graph_id)
+            
+            # Get related skills for this job using Pinecone similarity search
+            related_skills = self._get_skills_for_job(job_id, max_nodes_per_level * max_depth)
+            
+            if not related_skills:
+                logger.warning(f"No related skills found for job {job_id}")
+                return self._create_basic_job_tree(job_id, graph_id)
+            
+            # Create the job-centered tree structure
+            tree_data = self._build_job_skills_tree(
+                job_node,
+                related_skills,
+                max_depth,
+                max_nodes_per_level,
+                graph_id
+            )
+            
+            logger.info(f"Job skills tree created successfully for {job_id}: "
+                       f"{len(tree_data.get('nodes', {}))} nodes, "
+                       f"{len(tree_data.get('edges', []))} edges")
+            
+            return tree_data
+            
+        except Exception as e:
+            logger.error(f"Error creating job skills tree: {str(e)}")
+            logger.error(traceback.format_exc())
+            # Return a basic tree as fallback
+            return self._create_basic_job_tree(job_id, str(uuid4()))
+    
+    def _get_job_from_pinecone(self, job_id: str) -> Optional[Dict[str, Any]]:
+        """Get job information from Pinecone."""
+        try:
+            if not self.index:
+                logger.error("Pinecone index not initialized")
+                return None
+                
+            # Fetch the job node directly by ID
+            fetch_result = self.index.fetch(ids=[job_id])
+            
+            if job_id in fetch_result.vectors:
+                job_vector = fetch_result.vectors[job_id]
+                return {
+                    "id": job_id,
+                    "metadata": job_vector.metadata,
+                    "vector": job_vector.values
+                }
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error fetching job from Pinecone: {str(e)}")
+            return None
+    
+    def _get_skills_for_job(self, job_id: str, top_k: int = 20) -> List[Dict[str, Any]]:
+        """Get skills related to a specific job using Pinecone similarity search."""
+        try:
+            if not self.index:
+                logger.error("Pinecone index not initialized")
+                return []
+            
+            # Get the job's embedding first
+            job_node = self._get_job_from_pinecone(job_id)
+            if not job_node:
+                return []
+            
+            job_vector = job_node["vector"]
+            
+            # Search for similar skills
+            results = self.index.query(
+                vector=job_vector,
+                top_k=top_k,
+                include_metadata=True,
+                filter={"type": {"$eq": "skill"}}  # Only get skills
+            )
+            
+            skills = []
+            for match in results.matches:
+                if match.score >= 0.6:  # Similarity threshold
+                    skills.append({
+                        "id": match.id,
+                        "score": match.score,
+                        "metadata": match.metadata,
+                        "vector": match.values if hasattr(match, 'values') else None
+                    })
+            
+            logger.info(f"Found {len(skills)} related skills for job {job_id}")
+            return skills
+            
+        except Exception as e:
+            logger.error(f"Error getting skills for job: {str(e)}")
+            return []
+    
+    def _build_job_skills_tree(self, job_node: Dict[str, Any], related_skills: List[Dict[str, Any]], 
+                             max_depth: int, max_nodes_per_level: int, graph_id: str) -> Dict[str, Any]:
+        """Build the job-centered skills tree structure."""
+        try:
+            nodes = {}
+            edges = []
+            
+            # Add the job node as the center
+            job_metadata = job_node.get("metadata", {})
+            nodes[job_node["id"]] = {
+                "id": job_node["id"],
+                "label": job_metadata.get("preferredLabel", "Job Position"),
+                "type": "occupation",
+                "level": 0,
+                "score": 1.0,
+                "metadata": job_metadata
+            }
+            
+            # Organize skills by similarity score (higher scores = closer to center)
+            sorted_skills = sorted(related_skills, key=lambda x: x["score"], reverse=True)
+            
+            # Add skills at different levels based on their scores
+            for level in range(1, max_depth + 1):
+                level_skills = []
+                
+                # Determine which skills go at this level
+                start_idx = (level - 1) * max_nodes_per_level
+                end_idx = min(level * max_nodes_per_level, len(sorted_skills))
+                
+                if start_idx >= len(sorted_skills):
+                    break
+                    
+                level_skills = sorted_skills[start_idx:end_idx]
+                
+                for skill in level_skills:
+                    skill_id = skill["id"]
+                    skill_metadata = skill.get("metadata", {})
+                    
+                    # Add skill node
+                    nodes[skill_id] = {
+                        "id": skill_id,
+                        "label": skill_metadata.get("preferredLabel", skill_id.split("::")[-1]),
+                        "type": "skill",
+                        "level": level,
+                        "score": skill["score"],
+                        "metadata": skill_metadata
+                    }
+                    
+                    # Add edge from job to skill
+                    edges.append({
+                        "source": job_node["id"],
+                        "target": skill_id,
+                        "type": "requires",
+                        "weight": skill["score"]
+                    })
+            
+            # Add some skill groups if we have enough skills
+            if len(nodes) > 5:
+                self._add_skill_groups(nodes, edges, job_node["id"])
+            
+            return {
+                "nodes": nodes,
+                "edges": edges,
+                "graph_id": graph_id,
+                "job_id": job_node["id"],
+                "visualizations": {
+                    "plotly": None,
+                    "matplotlib": None,
+                    "streamlit": None
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"Error building job skills tree: {str(e)}")
+            return {}
+    
+    def _add_skill_groups(self, nodes: Dict[str, Any], edges: List[Dict[str, Any]], job_id: str):
+        """Add skill groups to organize related skills."""
+        try:
+            # Group skills by common themes (simplified)
+            skill_groups = {
+                "technical": ["programming", "software", "development", "coding", "database"],
+                "communication": ["communication", "presentation", "writing", "speaking"],
+                "management": ["management", "leadership", "planning", "coordination"]
+            }
+            
+            for group_name, keywords in skill_groups.items():
+                group_skills = []
+                
+                # Find skills that match this group
+                for node_id, node_data in nodes.items():
+                    if node_data["type"] == "skill":
+                        label = node_data["label"].lower()
+                        if any(keyword in label for keyword in keywords):
+                            group_skills.append(node_id)
+                
+                # Only create group if we have skills for it
+                if len(group_skills) >= 2:
+                    group_id = f"skillsgroup::{group_name}"
+                    
+                    # Add skill group node
+                    nodes[group_id] = {
+                        "id": group_id,
+                        "label": group_name.capitalize(),
+                        "type": "skillsgroup",
+                        "level": 1,
+                        "score": 0.8,
+                        "metadata": {"preferredLabel": group_name.capitalize()}
+                    }
+                    
+                    # Add edge from job to skill group
+                    edges.append({
+                        "source": job_id,
+                        "target": group_id,
+                        "type": "relates_to",
+                        "weight": 0.8
+                    })
+                    
+                    # Add edges from skill group to skills
+                    for skill_id in group_skills:
+                        edges.append({
+                            "source": group_id,
+                            "target": skill_id,
+                            "type": "contains",
+                            "weight": 0.7
+                        })
+                        
+        except Exception as e:
+            logger.error(f"Error adding skill groups: {str(e)}")
+    
+    def _create_basic_job_tree(self, job_id: str, graph_id: str) -> Dict[str, Any]:
+        """Create a basic job tree when Pinecone data is not available."""
+        logger.info(f"Creating basic job tree for {job_id}")
+        
+        # Extract job title from job_id
+        job_title = job_id.replace("occupation::key_", "Software Developer ")
+        
+        nodes = {
+            job_id: {
+                "id": job_id,
+                "label": job_title,
+                "type": "occupation",
+                "level": 0,
+                "score": 1.0,
+                "metadata": {"preferredLabel": job_title}
+            }
+        }
+        
+        # Add some common skills for any job
+        basic_skills = [
+            ("skill::communication", "Communication"),
+            ("skill::problem_solving", "Problem Solving"),
+            ("skill::teamwork", "Teamwork"),
+            ("skill::time_management", "Time Management")
+        ]
+        
+        edges = []
+        for i, (skill_id, skill_label) in enumerate(basic_skills):
+            nodes[skill_id] = {
+                "id": skill_id,
+                "label": skill_label,
+                "type": "skill",
+                "level": 1,
+                "score": 0.8 - (i * 0.1),
+                "metadata": {"preferredLabel": skill_label}
+            }
+            
+            edges.append({
+                "source": job_id,
+                "target": skill_id,
+                "type": "requires",
+                "weight": 0.8 - (i * 0.1)
+            })
+        
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "graph_id": graph_id,
+            "job_id": job_id,
+            "visualizations": {
+                "plotly": None,
+                "matplotlib": None,
+                "streamlit": None
+            }
+        }
     
     def create_skill_tree_from_anchors(self, db: Session, user_id: int, anchor_skills: List[str], 
                                      max_depth: int = 3, max_nodes_per_level: int = 5, 

@@ -21,12 +21,7 @@ const AvatarPanel: React.FC<AvatarPanelProps> = ({ className = '' }) => {
   useEffect(() => {
     let isCancelled = false;
     
-    const loadAvatar = async () => {
-      // Prevent duplicate requests
-      if (avatarData !== null || isLoading) {
-        return;
-      }
-      
+    const loadAvatar = async () => {      
       try {
         setIsLoading(true);
         setError(null);
@@ -56,7 +51,7 @@ const AvatarPanel: React.FC<AvatarPanelProps> = ({ className = '' }) => {
     return () => {
       isCancelled = true;
     };
-  }, [avatarData, isLoading]); // Added state checks
+  }, []); // Load only once on mount
 
   const loadUserAvatar = async () => {
     try {

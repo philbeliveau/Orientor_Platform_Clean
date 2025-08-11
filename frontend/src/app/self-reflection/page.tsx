@@ -16,9 +16,9 @@ export default function SelfReflectionPage() {
             <div className="flex flex-wrap justify-between gap-3 p-4 md:p-6 lg:p-8 mb-2">
               <div className="flex items-center gap-4">
                 <Link 
-                  href="/"
+                  href="/insight"
                   className="premium-button-icon"
-                  title="Retour à l'accueil"
+                  title="Retour aux insights"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

@@ -95,27 +95,43 @@ const SkillShowcase: React.FC<SkillShowcaseProps> = ({ userId, className = '' })
     generateSkillDescription(skillName);
   };
 
-  // Fetch basic skills
-  const fetchBasicSkills = async () => {
+  // Fetch user skills from backend
+  const fetchUserSkills = async () => {
+    if (!userId) {
+      console.log('No userId provided, cannot fetch user skills');
+      return;
+    }
+
     const token = await getToken();
     if (!token) {
-      console.log('No auth token available for fetching skills');
+      console.log('No auth token available, redirecting to sign-in');
+      router.push('/sign-in');
       return;
     }
     
     try {
+      console.log('Fetching user skills from backend...');
       const userSkills = await getUserSkills(token);
+      console.log('User skills received:', userSkills);
       setBasicSkills(userSkills);
       
-      // Check if user has any non-null skill values
-      const hasSkillData = Object.values(userSkills).some(value => value !== null && value !== undefined);
+      // Check if user has any meaningful skill data
+      const hasSkillData = Object.values(userSkills).some(value => 
+        value !== null && value !== undefined && value > 0
+      );
       setShowBasicSkills(hasSkillData);
+      
+      if (!hasSkillData) {
+        console.log('No user skill data found, will show demo skills');
+      }
     } catch (err) {
-      console.error('Error fetching basic skills:', err);
+      console.error('Error fetching user skills:', err);
+      // On error, show demo skills as fallback
+      setShowBasicSkills(false);
     }
   };
 
-  // Check if user already has anchor skills
+  // Check if user already has anchor skills, otherwise fetch user skills
   useEffect(() => {
     const checkExistingSkills = async () => {
       if (!userId) {
@@ -127,11 +143,13 @@ const SkillShowcase: React.FC<SkillShowcaseProps> = ({ userId, className = '' })
       try {
         const token = await getToken();
         if (!token) {
-          console.log('No auth token available');
+          console.log('No auth token available, redirecting to sign-in');
+          router.push('/sign-in');
           setIsLoading(false);
           return;
         }
 
+        // First try to get anchor skills
         console.log(`Checking existing anchor skills for user ${userId}...`);
         const response = await fetch('/api/v1/competence-tree/anchor-skills', {
           headers: {
@@ -150,19 +168,18 @@ const SkillShowcase: React.FC<SkillShowcaseProps> = ({ userId, className = '' })
             setHasGenerated(true);
             console.log(`Found ${data.anchor_skills.length} existing anchor skills`);
           } else {
-            console.log('No anchor skills found in response');
-            // Fetch basic skills as fallback
-            await fetchBasicSkills();
+            console.log('No anchor skills found, fetching user skills instead');
+            await fetchUserSkills();
           }
         } else {
           console.log(`Failed to fetch anchor skills: ${response.status} ${response.statusText}`);
-          // Fetch basic skills as fallback
-          await fetchBasicSkills();
+          // Try to fetch user skills as fallback
+          await fetchUserSkills();
         }
       } catch (err) {
         console.error('Error checking for existing anchor skills:', err);
-        // Fetch basic skills as fallback
-        await fetchBasicSkills();
+        // Try to fetch user skills as fallback
+        await fetchUserSkills();
       } finally {
         setIsLoading(false);
       }
@@ -277,49 +294,143 @@ const SkillShowcase: React.FC<SkillShowcaseProps> = ({ userId, className = '' })
   
   console.log(`SkillShowcase: Rendering for userId ${userId}`);
 
-  // Always show basic skills with new card design
+  // Show user skills or demo skills
+  const renderSkills = () => {
+    // If we have user skills, show them
+    if (basicSkills && showBasicSkills) {
+      const skillsToShow = [
+        { key: 'creativity', name: 'Creativity', icon: '◇' },
+        { key: 'leadership', name: 'Leadership', icon: '◆' },
+        { key: 'critical_thinking', name: 'Critical Thinking', icon: '○' },
+        { key: 'problem_solving', name: 'Problem Solving', icon: '◎' },
+        { key: 'digital_literacy', name: 'Digital Literacy', icon: '□' }
+      ];
+
+      return skillsToShow.map((skill, index) => {
+        const value = basicSkills[skill.key as keyof UserSkills];
+        if (value === null || value === undefined) return null;
+        
+        return (
+          <BasicSkillCard
+            key={index}
+            skill={{
+              name: skill.name,
+              description: `Your skill level: ${value}/5`,
+              icon: skill.icon
+            }}
+            className="h-full"
+            onClick={handleSkillClick}
+          />
+        );
+      }).filter(Boolean);
+    }
+
+    // Fallback to demo skills
+    return [
+      { 
+        name: 'Creativity', 
+        description: 'Generate innovative ideas and original solutions',
+        icon: '◇'
+      },
+      { 
+        name: 'Leadership', 
+        description: 'Guide teams and inspire others toward goals',
+        icon: '◆'
+      },
+      { 
+        name: 'Critical Thinking', 
+        description: 'Analyze information and make logical decisions',
+        icon: '○'
+      },
+      { 
+        name: 'Problem Solving', 
+        description: 'Identify issues and develop effective solutions',
+        icon: '◎'
+      },
+      { 
+        name: 'Digital Literacy', 
+        description: 'Use technology effectively and adapt to new tools',
+        icon: '□'
+      }
+    ].map((skill, index) => (
+      <BasicSkillCard
+        key={index}
+        skill={{
+          name: skill.name,
+          description: skill.description,
+          icon: skill.icon
+        }}
+        className="h-full"
+        onClick={handleSkillClick}
+      />
+    ));
+  };
+
+  // Show loading state while fetching skills
+  if (isLoading) {
+    return (
+      <div className={`w-full ${className}`}>
+        <div className="flex items-center justify-center py-8">
+          <LoadingSpinner size="md" />
+          <p className="ml-3 text-sm" style={{ color: 'var(--text-color)' }}>
+            Loading your skills...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`w-full ${className}`}>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-6">
-          {[
-            { 
-              name: 'Creativity', 
-              description: 'Generate innovative ideas and original solutions',
-              icon: '◇'
-            },
-            { 
-              name: 'Leadership', 
-              description: 'Guide teams and inspire others toward goals',
-              icon: '◆'
-            },
-            { 
-              name: 'Critical Thinking', 
-              description: 'Analyze information and make logical decisions',
-              icon: '○'
-            },
-            { 
-              name: 'Problem Solving', 
-              description: 'Identify issues and develop effective solutions',
-              icon: '◎'
-            },
-            { 
-              name: 'Digital Literacy', 
-              description: 'Use technology effectively and adapt to new tools',
-              icon: '□'
-            }
-          ].map((skill, index) => (
-            <BasicSkillCard
-              key={index}
-              skill={{
-                name: skill.name,
-                description: skill.description,
-                icon: skill.icon
-              }}
-              className="h-full"
-              onClick={handleSkillClick}
-            />
-          ))}
+      {/* Header with dynamic messaging */}
+      <div className="mb-4">
+        {basicSkills && showBasicSkills ? (
+          <div>
+            <h3 className="text-lg font-semibold" style={{ color: 'var(--accent-color)' }}>
+              Your Skills Profile
+            </h3>
+            <p className="text-sm" style={{ color: 'var(--text-color)' }}>
+              Based on your assessments and profile
+            </p>
+          </div>
+        ) : (
+          <div>
+            <h3 className="text-lg font-semibold" style={{ color: 'var(--accent-color)' }}>
+              Core Skills Preview
+            </h3>
+            <p className="text-sm" style={{ color: 'var(--text-color)' }}>
+              Complete your profile to see personalized skill levels
+            </p>
+          </div>
+        )}
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 mb-6">
+        {renderSkills()}
+      </div>
+
+      {/* Call to action when no real user skills */}
+      {(!basicSkills || !showBasicSkills) && (
+        <div className="mt-6 p-4 rounded-lg" style={{ backgroundColor: 'var(--primary-color)', borderColor: 'var(--border-color)', borderWidth: '1px', borderStyle: 'solid' }}>
+          <div className="text-center">
+            <h4 className="font-medium mb-2" style={{ color: 'var(--accent-color)' }}>
+              Complete Your Profile to See Your Skills
+            </h4>
+            <p className="text-sm mb-4" style={{ color: 'var(--text-color)' }}>
+              Take assessments and complete your profile to get personalized skill insights and better career recommendations.
+            </p>
+            <div className="flex justify-center">
+              <button
+                onClick={() => router.push('/profile/complete')}
+                className="px-6 py-2 rounded-lg font-medium text-white transition-all duration-200 hover:opacity-90 hover:transform hover:scale-105"
+                style={{ backgroundColor: 'var(--accent-color)' }}
+              >
+                Complete Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal for displaying AI-generated skill descriptions */}
       {selectedSkill && (

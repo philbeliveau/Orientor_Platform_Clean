@@ -22,19 +22,26 @@ export const endpoint = (path: string): string => {
 };
 
 // Authentication helper for Clerk integration
-export const getAuthHeader = async (getToken?: () => Promise<string | null>): Promise<Record<string, string>> => {
+export const getAuthHeader = async (getToken: () => Promise<string | null>): Promise<Record<string, string>> => {
   // Always require getToken function from Clerk
   if (!getToken) {
     console.error('getToken function is required for authentication');
-    return {};
+    throw new Error('getToken function is required for authentication');
   }
   
   try {
     const token = await getToken();
-    return token ? { 'Authorization': `Bearer ${token}` } : {};
+    if (!token) {
+      console.error('No authentication token available');
+      throw new Error('No authentication token available');
+    }
+    return { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}` 
+    };
   } catch (error) {
     console.error('Failed to get Clerk token:', error);
-    return {};
+    throw error;
   }
 };
 

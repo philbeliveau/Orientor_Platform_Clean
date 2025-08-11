@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import reflectionService, { ReflectionQuestion, ReflectionResponse } from '@/services/reflectionService';
@@ -14,7 +15,8 @@ interface SelfReflectionSectionProps {
 }
 
 const SelfReflectionSection: React.FC<SelfReflectionSectionProps> = ({ className = '' }) => {
-  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const { getToken, isSignedIn, isLoaded } = useAuth();
+  const router = useRouter();
   const [questions, setQuestions] = useState<QuestionWithResponse[]>([]);
   const [responses, setResponses] = useState<{ [key: number]: string }>({});
   const [editingQuestions, setEditingQuestions] = useState<Set<number>>(new Set());
@@ -23,19 +25,24 @@ const SelfReflectionSection: React.FC<SelfReflectionSectionProps> = ({ className
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      loadQuestionsAndResponses();
-    } else if (isLoaded && !isSignedIn) {
-      // Redirect to sign-in if not authenticated
-      window.location.href = '/sign-in';
+    if (!isLoaded) return; // Wait for auth to load
+    
+    if (!isSignedIn) {
+      console.log('[SelfReflection] User not authenticated, redirecting to sign-in');
+      router.push('/sign-in');
+      return;
     }
-  }, [isLoaded, isSignedIn]);
+    
+    loadQuestionsAndResponses();
+  }, [isLoaded, isSignedIn, router]);
 
   const loadQuestionsAndResponses = async () => {
     try {
       setLoading(true);
       setError(null);
-      const questionsWithResponses = await reflectionService.getQuestionsWithResponses(getToken);
+      console.log('[SelfReflection] Loading questions and responses...');
+      const token = await getToken();
+      const questionsWithResponses = await reflectionService.getQuestionsWithResponses(() => Promise.resolve(token));
       setQuestions(questionsWithResponses);
       
       // Initialiser les réponses locales
@@ -66,10 +73,12 @@ const SelfReflectionSection: React.FC<SelfReflectionSectionProps> = ({ className
       setSaving(prev => new Set(prev).add(questionId));
       const response = responses[questionId] || '';
       
+      console.log('[SelfReflection] Saving response for question:', questionId);
+      const token = await getToken();
       await reflectionService.saveResponse({
         question_id: questionId,
         response: response.trim() || null
-      }, getToken);
+      }, () => Promise.resolve(token));
       
       // Recharger les données pour avoir les informations à jour
       await loadQuestionsAndResponses();
@@ -99,7 +108,9 @@ const SelfReflectionSection: React.FC<SelfReflectionSectionProps> = ({ className
         response: responses[q.id]?.trim() || null
       }));
       
-      await reflectionService.saveResponsesBatch({ responses: responsesToSave }, getToken);
+      console.log('[SelfReflection] Saving batch responses:', responsesToSave.length);
+      const token = await getToken();
+      await reflectionService.saveResponsesBatch({ responses: responsesToSave }, () => Promise.resolve(token));
       await loadQuestionsAndResponses();
       setEditingQuestions(new Set());
     } catch (err) {

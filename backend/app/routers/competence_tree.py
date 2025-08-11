@@ -342,6 +342,84 @@ def get_user_anchor_skills(
             detail=f"Error retrieving anchor skills: {str(e)}"
         )
 
+@router.post("/job/{job_id}/skills-tree", response_model=Dict[str, Any])
+def generate_job_skills_tree(
+    job_id: str,
+    max_depth: int = 2,
+    max_nodes_per_level: int = 6,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate a skills tree specific to a job/occupation.
+    
+    This endpoint creates a skills tree centered around a specific job/occupation,
+    showing the key skills, skill groups, and related competencies needed for that role.
+    
+    Args:
+        job_id: ESCO job/occupation ID (e.g., 'occupation::key_15224')
+        max_depth: Maximum depth of the tree (default: 2)
+        max_nodes_per_level: Maximum nodes per level (default: 6)
+        current_user: Current authenticated user
+        db: Database session
+        
+    Returns:
+        Dict with job-specific skills tree data
+    """
+    logger.info(f"Request to generate job skills tree for job_id: {job_id}, user: {current_user.id}")
+    
+    try:
+        # Get the competence tree service
+        tree_service = get_competence_tree_service()
+        
+        # Generate a job-specific skills tree
+        # This will create a tree focused on the specific job/occupation
+        logger.info(f"Creating job-specific skills tree for {job_id}")
+        
+        # Create a skills tree using the job as an anchor point
+        tree_data = tree_service.create_job_skills_tree(
+            db,
+            current_user.id,
+            job_id=job_id,
+            max_depth=max_depth,
+            max_nodes_per_level=max_nodes_per_level
+        )
+        
+        if not tree_data:
+            logger.error(f"create_job_skills_tree returned empty data for job {job_id}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to create job skills tree for {job_id}"
+            )
+        
+        # Log tree statistics
+        nodes_count = len(tree_data.get('nodes', {}))
+        edges_count = len(tree_data.get('edges', []))
+        
+        logger.info(f"Job skills tree generated successfully: nodes={nodes_count}, edges={edges_count}")
+        
+        # Return the tree data directly (don't save it as it's job-specific, not user-specific)
+        return {
+            "job_id": job_id,
+            "tree_data": tree_data,
+            "stats": {
+                "total_nodes": nodes_count,
+                "total_edges": edges_count
+            },
+            "message": f"Job skills tree generated successfully for {job_id}"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error generating job skills tree: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
 @router.get("/{graph_id}")
 def get_competence_tree(
     graph_id: str,

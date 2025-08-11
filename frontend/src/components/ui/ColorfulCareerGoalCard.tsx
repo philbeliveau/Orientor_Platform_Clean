@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Target, TrendingUp, Calendar, CheckCircle, Circle, Plus } from 'lucide-react';
 import { CareerGoal } from '@/services/careerGoalsService';
@@ -27,18 +27,18 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
   } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { careerGoals, isSignedIn, isLoaded } = useAuthenticatedServices();
+  const { isSignedIn, isLoaded, getAuthToken } = useAuthenticatedServices();
+  const isMounted = useRef(true);
 
   useEffect(() => {
-    let isMounted = true;
     const fetchActiveCareerGoal = async () => {
       if (!isLoaded || !isSignedIn) {
-        if (isMounted) setLoading(false);
+        if (isMounted.current) setLoading(false);
         return;
       }
 
       try {
-        if (isMounted) {
+        if (isMounted.current) {
           setLoading(true);
           setError(null);
           // Don't clear careerGoal immediately to prevent flashing
@@ -47,10 +47,12 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
         
         // Add small delay to prevent rapid successive calls
         await new Promise(resolve => setTimeout(resolve, 200));
-        if (!isMounted) return;
+        if (!isMounted.current) return;
         
-        const response = await careerGoals.getActiveCareerGoal();
-        if (!isMounted) return;
+        // Import service directly to avoid dependency issues
+        const { CareerGoalsService } = await import('@/services/careerGoalsService');
+        const response = await CareerGoalsService.getActiveCareerGoal(getAuthToken);
+        if (!isMounted.current) return;
         
         if (response.goal) {
           // Format the target date
@@ -122,7 +124,11 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
     };
 
     fetchActiveCareerGoal();
-  }, [isLoaded, isSignedIn, careerGoals]);
+    
+    return () => {
+      isMounted.current = false;
+    };
+  }, [isLoaded, isSignedIn, getAuthToken]);
 
   // Show loading overlay if we have no data yet
   if (loading && !careerGoal) {

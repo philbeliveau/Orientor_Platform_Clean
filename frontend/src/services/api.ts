@@ -126,6 +126,13 @@ class ClerkApiService {
     // Extract tree_data from the response
     return response.tree_data || response;
   }
+
+  async saveCareer(token: string, careerData: { id: number; title: string }) {
+    return this.request(`/api/v1/careers/save/${careerData.id}`, {
+      method: 'POST',
+      token,
+    });
+  }
 }
 
 // Create singleton instance
@@ -203,6 +210,8 @@ export const useClerkApi = () => {
       apiCall(clerkApiService.getCompatiblePeers.bind(clerkApiService)),
     getJobSkillsTree: (jobId: string) => 
       apiCall(clerkApiService.getJobSkillsTree.bind(clerkApiService), jobId),
+    saveCareer: (careerData: { id: number; title: string }) => 
+      apiCall(clerkApiService.saveCareer.bind(clerkApiService), careerData),
     // Generic method for custom API calls
     request: <T>(endpoint: string, options?: RequestInit) => 
       apiCall((token: string) => clerkApiService.request<T>(endpoint, { ...options, token }))

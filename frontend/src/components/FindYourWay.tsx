@@ -45,10 +45,18 @@ const FindYourWay: React.FC = () => {
     try {
       setLoading(true);
       const data = await api.getCareerRecommendations(); // Fetch recommendations
-      setCareers(data as CareerRecommendation[]);
+      
+      // Extract recommendations array from API response
+      const recommendations = data?.recommendations || [];
+      if (!Array.isArray(recommendations)) {
+        throw new Error('Invalid recommendations data structure');
+      }
+      
+      setCareers(recommendations as CareerRecommendation[]);
       setCurrentIndex(0);
       setError(null);
       console.log('Career recommendations:', data);
+      console.log('Processed recommendations array:', recommendations);
     } catch (err) {
       setError('Failed to load career recommendations. Please try again.');
       console.error(err);
@@ -134,7 +142,7 @@ const FindYourWay: React.FC = () => {
     const fields = ['skills', 'required_skills', 'competencies', 'technology_skills'];
     
     for (const field of fields) {
-      if (career.metadata[field]) {
+      if (career.metadata[field] && typeof career.metadata[field] === 'string') {
         const fieldSkills = career.metadata[field].split('|').map((s: string) => s.trim());
         skills.push(...fieldSkills);
       }

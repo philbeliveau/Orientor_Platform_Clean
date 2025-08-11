@@ -2,21 +2,27 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth, useUser } from '@clerk/nextjs';
 import MainLayout from '@/components/layout/MainLayout';
 import { getInsight, generateInsight, regenerateInsight, saveInsight, rewriteInsight, InsightData, mockInsightData } from '@/services/insightService';
 import PersonalityCard from '@/components/ui/PersonalityCard';
 import SkillShowcase from '@/components/ui/SkillShowcase';
 import AvatarPanel from '@/components/avatar/AvatarPanel';
 import hollandTestService, { ScoreResponse } from '@/services/hollandTestService';
+import { useClerkApi } from '@/services/api';
 import Link from 'next/link';
-import styles from './insight.module.css';
 import LoadingScreen from '@/components/ui/LoadingScreen';
+
+// Import our new components
+import CircularProgress from '@/components/ui/CircularProgress';
+import InsightCard from '@/components/ui/InsightCard';
+import CourseCard from '@/components/ui/CourseCard';
 
 const InsightPage: React.FC = () => {
   const router = useRouter();
   const { getToken, isLoaded, isSignedIn } = useAuth();
-  const [userId, setUserId] = useState<number | null>(null);
+  const { user } = useUser();
+  const api = useClerkApi();
   const [loading, setLoading] = useState<boolean>(true);
   const [insight, setInsight] = useState<InsightData | null>(null);
   const [feedback, setFeedback] = useState<string>('');
@@ -24,6 +30,10 @@ const InsightPage: React.FC = () => {
   const [saving, setSaving] = useState<boolean>(false);
   const [rewriting, setRewriting] = useState<boolean>(false);
   const [regenerating, setRegenerating] = useState<boolean>(false);
+  
+  // User profile state
+  const [currentUserId, setCurrentUserId] = useState<number | undefined>(undefined);
+  const [userProfile, setUserProfile] = useState<any>(null);
   
   // Personality-related state
   const [hollandResults, setHollandResults] = useState<ScoreResponse | null>(null);
@@ -52,62 +62,34 @@ const InsightPage: React.FC = () => {
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return;
     
-    // Récupérer l'ID de l'utilisateur depuis le localStorage
-    const fetchUserId = () => {
-      try {
-        // Récupérer l'ID de l'utilisateur depuis le localStorage
-        const userDataStr = localStorage.getItem('user_data');
-        if (userDataStr) {
-          try {
-            const userData = JSON.parse(userDataStr);
-            if (userData && userData.id) {
-              console.log("ID utilisateur récupéré:", userData.id);
-              setUserId(userData.id);
-              return userData.id;
-            }
-          } catch (parseError) {
-            console.warn('Failed to parse user_data from localStorage:', parseError);
-            localStorage.removeItem('user_data');
-          }
-        }
-        
-        // Fallback: utiliser l'ID 19 (celui qui est actuellement connecté selon les logs)
-        console.warn("Aucun ID utilisateur trouvé dans localStorage, utilisation de l'ID 19");
-        const fallbackId = 19;
-        setUserId(fallbackId);
-        return fallbackId;
-      } catch (error) {
-        console.error("Erreur lors de la récupération de l'ID utilisateur:", error);
-        // Fallback en cas d'erreur
-        const fallbackId = 19;
-        setUserId(fallbackId);
-        return fallbackId;
-      }
-    };
-
     const loadInsight = async () => {
       try {
         setLoading(true);
-        const id = fetchUserId();
         
-        // D'abord essayer de récupérer un insight existant
+        // Use Clerk authentication only
+        console.log("Loading insight for authenticated user...");
+        const token = await getToken();
+        if (!token) {
+          router.push('/sign-in');
+          return;
+        }
+        
+        // Try to get existing insight
         try {
-          console.log("Tentative de récupération d'un insight existant...");
-          const token = await getToken();
-          if (!token) {
-            router.push('/sign-in');
-            return;
-          }
           const existingData = await getInsight(token);
-          console.log("Insight existant trouvé:", existingData);
-          setInsight(existingData);
+          if (existingData) {
+            console.log("Existing insight found:", existingData);
+            setInsight(existingData);
+          } else {
+            console.log("No existing insight found - ready for generation");
+            setInsight(null);
+          }
         } catch (getError) {
-          // Si aucun insight n'existe, ne pas en générer automatiquement
-          console.log("Aucun insight existant trouvé");
+          console.error("Error retrieving insight:", getError);
           setInsight(null);
         }
       } catch (error) {
-        console.error('Erreur lors du chargement de l\'insight:', error);
+        console.error('Error loading insight:', error);
         setInsight(null);
       } finally {
         setLoading(false);
@@ -115,13 +97,21 @@ const InsightPage: React.FC = () => {
     };
 
     loadInsight();
-  }, []);
+  }, [isLoaded, isSignedIn, getToken, router]);
   
   // Fetch Holland test results
   useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+
     const fetchHollandResults = async () => {
       try {
-        const results = await hollandTestService.getUserLatestResults();
+        const token = await getToken();
+        if (!token) {
+          router.push('/sign-in');
+          return;
+        }
+        
+        const results = await hollandTestService.getUserLatestResults(token);
         setHollandResults(results);
       } catch (err) {
         console.error('Error fetching Holland results:', err);
@@ -132,7 +122,44 @@ const InsightPage: React.FC = () => {
     };
 
     fetchHollandResults();
-  }, []);
+  }, [isLoaded, isSignedIn, getToken, router]);
+  
+  // Fetch user profile to get database user ID
+  useEffect(() => {
+    let isCancelled = false;
+    
+    const fetchUserProfile = async () => {
+      try {
+        if (!isLoaded || !isSignedIn || !user?.id) {
+          return;
+        }
+
+        // Prevent duplicate requests
+        if (userProfile || currentUserId) {
+          return;
+        }
+
+        const profile = await api.getUserProfile();
+        if (!isCancelled) {
+          setUserProfile(profile);
+          
+          if (profile && (profile as any).id) {
+            setCurrentUserId((profile as any).id);
+          }
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          console.error('Error fetching user profile:', err);
+        }
+      }
+    };
+
+    fetchUserProfile();
+    
+    return () => {
+      isCancelled = true;
+    };
+  }, [isLoaded, isSignedIn, user?.id, userProfile, currentUserId]);
 
   const handleSaveInsight = async () => {
     if (!insight) return;
@@ -223,222 +250,300 @@ const InsightPage: React.FC = () => {
   if (loading) {
     return (
       <MainLayout showNav={true}>
-        <div className="premium-container relative flex w-full min-h-screen flex-col pb-12 overflow-x-hidden">
-          <div className="relative z-10 w-full flex h-full grow">
-            <div className="flex flex-col flex-1 w-full">
-              <div className="flex flex-wrap justify-between gap-3 p-4 md:p-6 lg:p-8 mb-2">
-                <div className="flex items-center gap-4">
-                  <Link
-                    href="/"
-                    className="premium-button-icon"
-                    title="Retour à l'accueil"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </Link>
-                  <h1 className="premium-title text-[32px] md:text-4xl font-bold leading-tight">
-                    Insight Philosophique
-                  </h1>
-                </div>
-              </div>
-              <div className="flex-1 w-full px-4 md:px-8 lg:px-12 xl:px-16 max-w-[2000px] mx-auto">
-                <LoadingScreen message="Generating your insight philosophique..." />
-              </div>
-            </div>
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-green-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-300 text-lg">Generating your insights...</p>
           </div>
         </div>
       </MainLayout>
     );
   }
 
+  // Mock data for demonstration
+  const progressData = [
+    { label: 'Reading', value: hollandResults?.r_score || 56, color: '#64748B', icon: '📚' },
+    { label: 'Analysis', value: hollandResults?.i_score || 94, color: '#10B981', icon: '🧠' },
+    { label: 'Creativity', value: hollandResults?.a_score || 32, color: '#F59E0B', icon: '🎨' }
+  ];
+
+  // Remove the popularCourses variable since we're now using inline CourseCard components
+
   return (
     <MainLayout showNav={true}>
-      <div className="premium-container relative flex w-full min-h-screen flex-col pb-12 overflow-x-hidden">
-        <div className="relative z-10 w-full flex h-full grow">
-          <div className="flex flex-col flex-1 w-full">
-            {/* Header */}
-            <div className="flex flex-wrap justify-between gap-3 p-4 md:p-6 lg:p-8 mb-2">
-              <div className="flex items-center gap-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
+        {/* Header */}
+        <div className="relative z-10 pt-6 pb-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
                 <Link
-                  href="/"
-                  className="premium-button-icon"
-                  title="Retour à l'accueil"
+                  href="/dashboard"
+                  className="p-2 rounded-full bg-gray-800/50 text-gray-300 hover:text-white hover:bg-gray-700/50 transition-all duration-200"
+                  title="Back to Dashboard"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
                 </Link>
-                <h1 className="premium-title text-[32px] md:text-4xl font-bold leading-tight">
-                  🧠 Personalité
+                <h1 className="text-2xl sm:text-3xl font-light text-white">
+                  Hi, {user?.firstName || 'User'} 👋
                 </h1>
               </div>
+              <div className="flex items-center space-x-4">
+                <button className="p-2 rounded-full bg-gray-800/50 text-gray-300 hover:text-white transition-colors duration-200">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </button>
+                <div className="relative">
+                  <button className="p-2 rounded-full bg-gray-800/50 text-gray-300 hover:text-white transition-colors duration-200">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4 19h11a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
+                </div>
+              </div>
             </div>
+          </div>
+        </div>
 
-            {/* Main Content Container */}
-            <div className="flex-1 w-full px-4 md:px-8 lg:px-12 xl:px-16 max-w-[2000px] mx-auto">
-              
-              {/* Profile Avatar Section */}
-              <div className="premium-card p-6 mb-8">
-                <h2 className="premium-section-title mb-6">Profile Avatar</h2>
-                <div className="flex items-center gap-6">
-                  <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
-                    <span className="text-gray-500">Avatar</span>
+        {/* Main Content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+          {/* Progress Cards Section */}
+          <div className="mb-8">
+            <div className="bg-gray-900/60 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-gray-700/50 shadow-2xl">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12">
+                {progressData.map((item, index) => (
+                  <div key={index} className="flex flex-col items-center text-center">
+                    <CircularProgress
+                      value={item.value}
+                      color={item.color}
+                      size={120}
+                      strokeWidth={8}
+                      className="mb-4"
+                    />
+                    <h3 className="text-lg font-medium text-gray-300 mt-2">
+                      {item.icon} {item.label}
+                    </h3>
                   </div>
-                  <div>
-                    <h3 className="text-xl font-bold">Your Profile</h3>
-                    <p className="text-gray-600">
-                      This avatar represents your unique personality traits and skills
-                    </p>
-                    <button className="mt-3 premium-button-primary px-4 py-2 text-sm">
-                      Customize Avatar
-                    </button>
-                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Access Cards Section */}
+          <div className="mb-8">
+            <h2 className="text-2xl sm:text-3xl font-light text-white mb-6">
+              Personal Insights
+            </h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <CourseCard
+                title="Philosophical Analysis"
+                description={insight ? 'View your generated philosophical insights' : 'Generate deep philosophical insights about your personality'}
+                progress={insight ? 100 : 0}
+                color="#F59E0B"
+                icon="💡"
+                onClick={() => {
+                  if (!insight) {
+                    handleGenerateFirstInsight();
+                  } else {
+                    document.getElementById('philosophical-insight')?.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+              />
+              <CourseCard
+                title="Personality Development"
+                description="Explore your RIASEC and HEXACO personality traits"
+                progress={hollandResults ? 75 : 25}
+                color="#10B981"
+                icon="🌱"
+                onClick={() => {
+                  document.getElementById('personality-section')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Profile Avatar Section */}
+          <div className="bg-gray-900/60 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-gray-700/50 shadow-2xl mb-8">
+            <h2 className="text-2xl font-light text-white mb-6">Profile Avatar</h2>
+            <div className="flex flex-col lg:flex-row items-center gap-6">
+              <div className="w-24 h-24 rounded-full bg-gray-700/50 flex items-center justify-center border border-gray-600/50">
+                <span className="text-gray-400 text-sm">Avatar</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-semibold text-white mb-2">Your Profile</h3>
+                <p className="text-gray-300 mb-4">
+                  This avatar represents your unique personality traits and skills
+                </p>
+                <button className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white px-6 py-2 rounded-xl transition-all duration-200 text-sm font-medium">
+                  Customize Avatar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Skills Section */}
+          {currentUserId && (
+            <div className="bg-gray-900/60 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-gray-700/50 shadow-2xl mb-8">
+              <h2 className="text-2xl font-light text-white mb-6">Your Skills</h2>
+              <SkillShowcase userId={currentUserId} />
+            </div>
+          )}
+
+          {/* Avatar Profile Generation Section */}
+          <div className="bg-gray-900/60 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-gray-700/50 shadow-2xl mb-8">
+            <h2 className="text-2xl font-light text-white mb-6">Your Avatar Profile</h2>
+            <p className="text-gray-300 mb-6 leading-relaxed">
+              Generate your personalized avatar based on your psychological profile and personality traits.
+            </p>
+            <AvatarPanel className="w-full" />
+          </div>
+
+          {/* Personality Tests Section */}
+          <div id="personality-section" className="bg-gray-900/60 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-gray-700/50 shadow-2xl mb-8">
+            <h2 className="text-2xl font-light text-white mb-6">Personality Tests</h2>
+            <PersonalityCard items={personalityItems} />
+            
+            {/* RIASEC Results */}
+            {hollandResults && (
+              <div className="mt-8">
+                <h3 className="text-xl font-medium text-white mb-6 text-center">
+                  RIASEC Personality Profile
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                  {[
+                    { label: 'R', name: 'Realistic', score: hollandResults.r_score, color: 'text-red-400' },
+                    { label: 'I', name: 'Investigative', score: hollandResults.i_score, color: 'text-blue-400' },
+                    { label: 'A', name: 'Artistic', score: hollandResults.a_score, color: 'text-yellow-400' },
+                    { label: 'S', name: 'Social', score: hollandResults.s_score, color: 'text-green-400' },
+                    { label: 'E', name: 'Enterprising', score: hollandResults.e_score, color: 'text-purple-400' },
+                    { label: 'C', name: 'Conventional', score: hollandResults.c_score, color: 'text-orange-400' }
+                  ].map((item, index) => (
+                    <div key={index} className="text-center p-4 bg-gray-800/50 rounded-2xl border border-gray-700/50 hover:bg-gray-800/70 transition-all duration-200">
+                      <div className={`font-bold text-2xl ${item.color} mb-2`}>{item.label}</div>
+                      <div className="text-sm text-gray-400 mb-2">{item.name}</div>
+                      <div className="text-lg font-bold text-white">{item.score?.toFixed(1)}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
-              
-              {/* Personality Content Section */}
-              <div className="space-y-8 mb-12">
-                
-                {/* Skills Section */}
-                <div className="premium-card p-6">
-                  <h2 className="premium-section-title mb-6">Your Skills</h2>
-                  <SkillShowcase userId={userId || undefined} />
-                </div>
-                
-                {/* Avatar Profile Section */}
-                <div className="premium-card p-6">
-                  <h2 className="premium-section-title mb-6">Your Avatar Profile</h2>
-                  <p className="premium-text-secondary mb-6">
-                    Generate your personalized avatar based on your psychological profile and personality traits.
+            )}
+            
+            {/* HEXACO Placeholder */}
+            <div className="mt-8 p-6 bg-blue-900/20 rounded-2xl border border-blue-700/30">
+              <h3 className="text-lg font-semibold mb-3 text-blue-300">HEXACO Results</h3>
+              <div className="text-sm text-blue-400">
+                Take the HEXACO test to see your comprehensive personality analysis here.
+              </div>
+            </div>
+          </div>
+
+          {/* Philosophical Insight Section - Full Original Functionality */}
+          <div id="philosophical-insight" className="bg-gray-900/60 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-gray-700/50 shadow-2xl mb-8">
+            <h2 className="text-2xl font-light text-white mb-6">Philosophical Insight</h2>
+            
+            {!insight && !loading && (
+              <div className="text-center py-12">
+                <div className="max-w-2xl mx-auto">
+                  <h3 className="text-xl font-medium text-white mb-4">No Philosophical Analysis Available</h3>
+                  <p className="text-gray-300 text-lg mb-8 leading-relaxed">
+                    Generate your first personalized analysis based on your profile, personality tests, and reflections.
                   </p>
-                  <AvatarPanel className="w-full" />
-                </div>
-                
-                {/* Personality Tests Section */}
-                <div className="premium-card p-6">
-                  <h2 className="premium-section-title mb-6">Personality Tests</h2>
-                  <PersonalityCard items={personalityItems} />
-                  
-                  {/* RIASEC Results */}
-                  {hollandResults && (
-                    <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <h3 className="text-lg font-semibold mb-4 text-gray-700 dark:text-gray-300">RIASEC Results</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="text-center p-3 bg-white dark:bg-gray-700 rounded-lg">
-                          <div className="font-bold text-lg text-red-600">R</div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Réaliste</div>
-                          <div className="font-semibold text-gray-800 dark:text-gray-200">{hollandResults.r_score?.toFixed(1)}</div>
-                        </div>
-                        <div className="text-center p-3 bg-white dark:bg-gray-700 rounded-lg">
-                          <div className="font-bold text-lg text-blue-600">I</div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Investigateur</div>
-                          <div className="font-semibold text-gray-800 dark:text-gray-200">{hollandResults.i_score?.toFixed(1)}</div>
-                        </div>
-                        <div className="text-center p-3 bg-white dark:bg-gray-700 rounded-lg">
-                          <div className="font-bold text-lg text-yellow-600">A</div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Artistique</div>
-                          <div className="font-semibold text-gray-800 dark:text-gray-200">{hollandResults.a_score?.toFixed(1)}</div>
-                        </div>
-                        <div className="text-center p-3 bg-white dark:bg-gray-700 rounded-lg">
-                          <div className="font-bold text-lg text-green-600">S</div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Social</div>
-                          <div className="font-semibold text-gray-800 dark:text-gray-200">{hollandResults.s_score?.toFixed(1)}</div>
-                        </div>
-                        <div className="text-center p-3 bg-white dark:bg-gray-700 rounded-lg">
-                          <div className="font-bold text-lg text-purple-600">E</div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Entreprenant</div>
-                          <div className="font-semibold text-gray-800 dark:text-gray-200">{hollandResults.e_score?.toFixed(1)}</div>
-                        </div>
-                        <div className="text-center p-3 bg-white dark:bg-gray-700 rounded-lg">
-                          <div className="font-bold text-lg text-orange-600">C</div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">Conventionnel</div>
-                          <div className="font-semibold text-gray-800 dark:text-gray-200">{hollandResults.c_score?.toFixed(1)}</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* HEXACO Placeholder */}
-                  <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <h3 className="text-lg font-semibold mb-3 text-blue-700 dark:text-blue-300">HEXACO Results</h3>
-                    <div className="text-sm text-blue-600 dark:text-blue-400">
-                      Take the HEXACO test to see your comprehensive personality analysis here.
-                    </div>
-                  </div>
+                  <button
+                    className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium px-8 py-3 text-lg rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                    onClick={handleGenerateFirstInsight}
+                  >
+                    Generate My Philosophical Analysis
+                  </button>
                 </div>
               </div>
-              
-              {/* Philosophical Insight Section */}
+            )}
+            
+            {insight && (
               <div className="space-y-8">
-                <div className="premium-card p-6">
-                  <h2 className="premium-section-title mb-6">Philosophical Insight</h2>
-              {!insight && !loading && (
-                <div className="text-center py-12">
-                  <div className="max-w-2xl mx-auto">
-                    <h2 className="premium-title text-2xl mb-4">Aucune analyse philosophique disponible</h2>
-                    <p className="premium-text-secondary text-lg mb-8">
-                      Générez votre première analyse personnalisée basée sur votre profil, vos tests de personnalité et vos réflexions.
-                    </p>
-                    <button
-                      className="premium-button-primary px-8 py-3 text-lg"
-                      onClick={handleGenerateFirstInsight}
-                    >
-                      Générer mon analyse philosophique
-                    </button>
+                {/* Accept Section */}
+                <div className="bg-gradient-to-r from-green-900/30 to-green-800/20 border border-green-700/50 rounded-2xl p-6">
+                  <h3 className="text-green-300 text-xl font-medium mb-4">If you accept this truth</h3>
+                  <p className="text-gray-200 text-lg leading-relaxed whitespace-pre-wrap">
+                    {insight.if_you_accept}
+                  </p>
+                </div>
+                
+                {/* Full Text Section */}
+                <div className="bg-gray-800/50 rounded-2xl p-6 border border-gray-700/30">
+                  <h3 className="text-green-300 text-xl font-medium mb-4">Complete Analysis</h3>
+                  <div className="text-gray-200 text-lg leading-relaxed whitespace-pre-wrap">
+                    {insight.full_text}
                   </div>
                 </div>
-              )}
-              
-              {insight && (
-                <div className="space-y-8">
-                  {/* Accept Section */}
-                  <div className={styles.acceptSection}>
-                    <h2>Si vous acceptez cette vérité</h2>
-                    <p className={styles.acceptText}>{insight.if_you_accept}</p>
-                  </div>
-                  
-                  {/* Full Text Section */}
-                  <div className={styles.fullTextSection}>
-                    <h2>Analyse complète</h2>
-                    <div className={styles.fullText}>
-                      {insight.full_text}
-                    </div>
-                  </div>
-                  
-                  {/* Actions Section */}
-                  <div className={styles.actionsSection}>
+                
+                {/* Actions Section */}
+                <div className="bg-gray-800/30 rounded-2xl p-6 border border-gray-700/30">
+                  <div className="flex flex-col sm:flex-row gap-4 mb-6">
                     <button
-                      className={`${styles.actionButton} ${styles.saveButton}`}
+                      className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2"
                       onClick={handleSaveInsight}
                       disabled={saving}
                     >
-                      {saving ? 'Sauvegarde...' : 'Sauvegarder cette analyse'}
+                      {saving ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Saving...</span>
+                        </>
+                      ) : (
+                        <span>Save This Analysis</span>
+                      )}
                     </button>
                     
-                    <div className={styles.rewriteSection}>
-                      <h3>Vous souhaitez une autre perspective ?</h3>
-                      <textarea
-                        className={styles.feedbackInput}
-                        value={feedback}
-                        onChange={(e) => setFeedback(e.target.value)}
-                        placeholder="Décrivez ce que vous souhaitez explorer différemment..."
-                        rows={4}
-                      />
-                      <button
-                        className={`${styles.actionButton} ${styles.rewriteButton}`}
-                        onClick={handleRewriteInsight}
-                        disabled={rewriting || !feedback}
-                      >
-                        {rewriting ? 'Réécriture...' : 'Demander une réécriture'}
-                      </button>
-                    </div>
+                    <button
+                      className="flex-1 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2"
+                      onClick={handleRegenerateInsight}
+                      disabled={regenerating}
+                    >
+                      {regenerating ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Regenerating...</span>
+                        </>
+                      ) : (
+                        <span>Regenerate Analysis</span>
+                      )}
+                    </button>
+                  </div>
+                  
+                  <div className="border-t border-gray-700/50 pt-6">
+                    <h4 className="text-green-300 text-lg font-medium mb-4">
+                      Want a different perspective?
+                    </h4>
+                    <textarea
+                      className="w-full bg-gray-700/50 border border-gray-600/50 rounded-xl px-4 py-3 text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-transparent resize-none mb-4"
+                      value={feedback}
+                      onChange={(e) => setFeedback(e.target.value)}
+                      placeholder="Describe what you'd like to explore differently..."
+                      rows={4}
+                    />
+                    <button
+                      className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-xl transition-all duration-200 flex items-center space-x-2"
+                      onClick={handleRewriteInsight}
+                      disabled={rewriting || !feedback}
+                    >
+                      {rewriting ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Rewriting...</span>
+                        </>
+                      ) : (
+                        <span>Request Rewrite</span>
+                      )}
+                    </button>
                   </div>
                 </div>
-              )}
-                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

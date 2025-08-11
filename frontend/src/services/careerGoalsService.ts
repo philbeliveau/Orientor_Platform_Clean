@@ -55,36 +55,65 @@ export class CareerGoalsService {
     description?: string;
     source?: string;
   }): Promise<{ goal: CareerGoal; timeline: any }> {
+    console.log('[CareerGoals] 🎯 Setting career goal from job:', job.title);
+    
     try {
       const token = await getToken();
-      if (!token) throw new Error('Authentication required');
+      if (!token) {
+        console.error('[CareerGoals] ❌ No authentication token for setting career goal');
+        throw new Error('Authentication required');
+      }
       
       const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       };
+      
+      const requestBody = {
+        esco_occupation_id: job.esco_id,
+        oasis_code: job.oasis_code,
+        title: job.title,
+        description: job.description,
+        source: job.source,
+        target_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+      };
+      
+      console.log('[CareerGoals] 📦 Request body:', requestBody);
 
       const response = await fetch(endpoint('/career-goals'), {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          esco_occupation_id: job.esco_id,
-          oasis_code: job.oasis_code,
-          title: job.title,
-          description: job.description,
-          source: job.source,
-          target_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-        })
+        body: JSON.stringify(requestBody)
+      });
+      
+      console.log('[CareerGoals] 📡 Set goal response:', {
+        status: response.status,
+        statusText: response.statusText
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text().catch(() => 'Unable to read error response');
+        console.error('[CareerGoals] ❌ Set goal error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorText
+        });
+        throw new Error(`Set career goal error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('[CareerGoals] ✅ Successfully set career goal:', data);
+      
+      // Clear cache since we just updated the goal
+      this.activeGoalCache = null;
+      
       return data;
     } catch (error) {
-      console.error('Error setting career goal:', error);
+      console.error('[CareerGoals] ❌ Error setting career goal:', {
+        message: error.message,
+        stack: error.stack,
+        job: job.title
+      });
       throw error;
     }
   }
@@ -108,35 +137,63 @@ export class CareerGoalsService {
     progression: any;
     milestones: any[];
   }> {
+    console.log('[CareerGoals] 🎯 Getting active career goal...');
+    
     // Return cached data if it's fresh (less than 5 seconds old)
     if (this.activeGoalCache && Date.now() - this.activeGoalCache.timestamp < 5000) {
+      console.log('[CareerGoals] 📦 Using cached data');
       return this.activeGoalCache.data;
     }
 
     // If there's already a pending request, return its promise
     if (this.pendingRequest) {
+      console.log('[CareerGoals] ⏳ Waiting for pending request');
       return this.pendingRequest;
     }
 
     try {
+      console.log('[CareerGoals] 🔐 Getting authentication token...');
       const token = await getToken();
-      if (!token) throw new Error('Authentication required');
+      if (!token) {
+        console.error('[CareerGoals] ❌ No authentication token available');
+        throw new Error('Authentication required');
+      }
+      console.log('[CareerGoals] ✅ Token obtained, making API request');
       
       const headers = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       };
+      
+      const apiEndpoint = endpoint('/career-goals/active');
+      console.log('[CareerGoals] 🌐 API endpoint:', apiEndpoint);
 
       // Create and store the pending request
-      this.pendingRequest = fetch(endpoint('/career-goals/active'), {
+      this.pendingRequest = fetch(apiEndpoint, {
         method: 'GET',
         headers,
       }).then(async (response) => {
+        console.log('[CareerGoals] 📡 API response:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url
+        });
+        
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const errorText = await response.text().catch(() => 'Unable to read error response');
+          console.error('[CareerGoals] ❌ API error:', {
+            status: response.status,
+            statusText: response.statusText,
+            errorText
+          });
+          throw new Error(`Career goals API error: ${response.status} ${response.statusText} - ${errorText}`);
         }
-        return response.json();
+        
+        const data = await response.json();
+        console.log('[CareerGoals] 📊 API response data:', data);
+        return data;
       }).then(data => {
+        console.log('[CareerGoals] ✅ Successfully fetched career goal data');
         // Update cache
         this.activeGoalCache = {
           data,
@@ -144,9 +201,16 @@ export class CareerGoalsService {
         };
         return data;
       }).catch(error => {
-        console.error('Error fetching active career goal:', error);
+        console.error('[CareerGoals] ❌ Error fetching active career goal:', {
+          message: error.message,
+          stack: error.stack,
+          cacheAvailable: !!this.activeGoalCache
+        });
+        
         // Return cached data if available, otherwise empty state
-        return this.activeGoalCache?.data || { goal: null, progression: null, milestones: [] };
+        const fallbackData = this.activeGoalCache?.data || { goal: null, progression: null, milestones: [] };
+        console.log('[CareerGoals] 🔄 Using fallback data:', fallbackData);
+        return fallbackData;
       }).finally(() => {
         // Clear the pending request
         this.pendingRequest = null;
@@ -154,9 +218,14 @@ export class CareerGoalsService {
 
       return await this.pendingRequest;
     } catch (error) {
-      console.error('Error in getActiveCareerGoal:', error);
+      console.error('[CareerGoals] ❌ Critical error in getActiveCareerGoal:', {
+        message: error.message,
+        stack: error.stack
+      });
       this.pendingRequest = null;
-      return this.activeGoalCache?.data || { goal: null, progression: null, milestones: [] };
+      const fallbackData = this.activeGoalCache?.data || { goal: null, progression: null, milestones: [] };
+      console.log('[CareerGoals] 🔄 Using final fallback data:', fallbackData);
+      return fallbackData;
     }
   }
 

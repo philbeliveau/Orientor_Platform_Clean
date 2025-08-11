@@ -151,24 +151,80 @@ def read_career_recommendations(
 
 @router.post("/save/{career_id}", response_model=Dict[str, Any])
 def save_career(
-    career_id: int,
+    career_id: str,  # Changed from int to str to handle ESCO occupation codes
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Save a career recommendation for the current user.
     This happens when the user swipes right on a career in the "Find Your Way" tab.
+    Handles both integer IDs and ESCO occupation codes (e.g., 'occupation::key_15224').
     """
     try:
-        success = save_career_recommendation(db, current_user.id, career_id)
+        # Check if this is an ESCO occupation code or integer ID
+        if career_id.startswith('occupation::key_'):
+            # This is an ESCO job from job recommendations - save to saved_recommendations table
+            from sqlalchemy import text
+            
+            # Insert into saved_recommendations table with ESCO occupation code
+            insert_query = text("""
+                INSERT INTO saved_recommendations 
+                (user_id, oasis_code, label, description, main_duties, created_at)
+                SELECT :user_id, :oasis_code, 
+                       COALESCE(jobs.title, 'Unknown Job'), 
+                       COALESCE(jobs.description, ''),
+                       COALESCE(jobs.description, ''),
+                       NOW()
+                FROM (VALUES (:oasis_code, 
+                             CASE 
+                                 WHEN :oasis_code = 'occupation::key_15224' THEN 'Software Developer'
+                                 WHEN :oasis_code = 'occupation::key_15156' THEN 'Technical Director'
+                                 WHEN :oasis_code = 'occupation::key_15225' THEN 'Systems Analyst'
+                                 WHEN :oasis_code = 'occupation::key_15226' THEN 'Database Analyst'
+                                 WHEN :oasis_code = 'occupation::key_15227' THEN 'Computer Programmer'
+                                 ELSE 'Career Recommendation'
+                             END,
+                             CASE 
+                                 WHEN :oasis_code = 'occupation::key_15224' THEN 'Develops and maintains software applications using various programming languages and frameworks'
+                                 WHEN :oasis_code = 'occupation::key_15156' THEN 'Leads technical teams and oversees technology strategy and implementation'
+                                 WHEN :oasis_code = 'occupation::key_15225' THEN 'Analyzes and designs information systems to solve business problems'
+                                 WHEN :oasis_code = 'occupation::key_15226' THEN 'Designs, implements and maintains database systems for organizations'
+                                 WHEN :oasis_code = 'occupation::key_15227' THEN 'Writes, tests and maintains computer programs and applications'
+                                 ELSE 'Career recommendation from Find Your Way feature'
+                             END
+                      )) AS jobs(id, title, description)
+                WHERE jobs.id = :oasis_code
+                ON CONFLICT (user_id, oasis_code) DO NOTHING
+            """)
+            
+            result = db.execute(insert_query, {
+                "user_id": current_user.id,
+                "oasis_code": career_id
+            })
+            db.commit()
+            
+            logger.info(f"Saved ESCO career {career_id} for user {current_user.id}")
+            return {"success": True, "message": f"Career '{career_id}' saved successfully"}
+            
+        else:
+            # Try to parse as integer for legacy integer IDs
+            try:
+                career_int_id = int(career_id)
+                success = save_career_recommendation(db, current_user.id, career_int_id)
+                
+                if not success:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Failed to save career recommendation"
+                    )
+                
+                return {"success": True, "message": "Career saved successfully"}
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid career ID format: {career_id}"
+                )
         
-        if not success:
-            raise HTTPException(
-                status_code=400,
-                detail="Failed to save career recommendation"
-            )
-        
-        return {"success": True, "message": "Career saved successfully"}
     except HTTPException:
         raise
     except Exception as e:

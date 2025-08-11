@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 from datetime import datetime
 from ..utils.database import get_db
 from ..services.Oasisembedding_service import generate_embedding
 from ..services.Swipe_career_recommendation_service import get_pinecone_career_recommendations
+from ..services.profile_completion_service import ProfileCompletionCalculator
 from ..models import User, UserRecommendation, SavedRecommendation
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..schemas.space import SavedRecommendationCreate
@@ -39,6 +40,14 @@ class CareerRecommendation(BaseModel):
 
 class RecommendationsResponse(BaseModel):
     recommendations: List[CareerRecommendation]
+    
+class LimitedRecommendationsResponse(BaseModel):
+    recommendations: List[CareerRecommendation]
+    is_limited: bool = True
+    completion_percentage: float
+    message: str
+    missing_categories: List[str]
+    completion_url: str = "/profile/complete"
 
 class SwipeRequest(BaseModel):
     oasis_code: str
@@ -141,14 +150,40 @@ def extract_fields_from_text(text: str) -> Dict[str, str]:
 
     return fields
 
-@router.get("", response_model=RecommendationsResponse)
+@router.get("", response_model=Union[RecommendationsResponse, LimitedRecommendationsResponse])
 def get_career_recommendations(
     limit: int = Query(30, gt=0, le=30),
+    force: bool = Query(False, description="Force recommendations even if profile incomplete"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get career recommendations for the current user based on their profile embedding."""
     try:
+        # Check profile completion unless forced
+        if not force:
+            completion_result = ProfileCompletionCalculator.calculate_completion(
+                db, current_user.clerk_user_id
+            )
+            
+            if not completion_result.recommendation_eligible:
+                # Return limited recommendations with completion message
+                logger.info(f"User {current_user.clerk_user_id} not eligible for full recommendations. Completion: {completion_result.overall_percentage:.1%}")
+                
+                # Generate a few generic recommendations to show potential
+                generic_recommendations = []
+                
+                # Create completion message
+                message = f"Complete your profile ({completion_result.overall_percentage:.0%}) to unlock personalized career recommendations!"
+                if completion_result.missing_critical_data:
+                    message += f" Missing: {', '.join(completion_result.missing_critical_data)}"
+                
+                return LimitedRecommendationsResponse(
+                    recommendations=generic_recommendations,
+                    completion_percentage=completion_result.overall_percentage,
+                    message=message,
+                    missing_categories=completion_result.missing_critical_data
+                )
+        
         # Get existing recommendations to exclude
         existing_recommendations = db.query(UserRecommendation.oasis_code).filter(
             UserRecommendation.user_id == current_user.id

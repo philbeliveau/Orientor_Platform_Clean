@@ -1,6 +1,5 @@
 import os
 import json
-import csv
 import logging
 from typing import Dict, List, Optional, Any
 from pathlib import Path
@@ -8,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from uuid import uuid4
 import uuid
+from ..models.reflection import HexacoQuestion
 
 # Configuration du logging
 logger = logging.getLogger(__name__)
@@ -15,12 +15,11 @@ logger = logging.getLogger(__name__)
 class HexacoService:
     """
     Service principal pour la gestion des tests HEXACO-PI-R.
-    Gère le chargement des données CSV, les métadonnées et l'orchestration des tests.
+    Gère le chargement des données depuis la base de données, les métadonnées et l'orchestration des tests.
     """
     
     def __init__(self):
         self.config_path = Path(__file__).parent.parent / "config" / "hexaco_facet_mapping.json"
-        self.data_path = Path(__file__).parent.parent.parent.parent / "data_n_notebook" / "data"
         self._config_cache = None
         self._questions_cache = {}
         
@@ -56,46 +55,49 @@ class HexacoService:
         versions = self.get_available_versions()
         return versions.get(version_id)
     
-    def _load_questions_from_csv(self, csv_filename: str) -> List[Dict[str, Any]]:
-        """Charge les questions depuis un fichier CSV."""
-        if csv_filename in self._questions_cache:
-            return self._questions_cache[csv_filename]
-        
-        csv_path = self.data_path / csv_filename
-        questions = []
+    def _load_questions_from_db(self, db: Session, version_id: str) -> List[Dict[str, Any]]:
+        """Load questions from database for a specific version."""
+        cache_key = f"db_{version_id}"
+        if cache_key in self._questions_cache:
+            return self._questions_cache[cache_key]
         
         try:
-            with open(csv_path, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    question = {
-                        "item_id": int(row["item_id"]),
-                        "item_text": row["item_text"],
-                        "response_min": int(row["response_min"]),
-                        "response_max": int(row["response_max"]),
-                        "version": row["version"],
-                        "language": row["language"],
-                        "reverse_keyed": row["reverse_keyed"].lower() == "true",
-                        "facet": row["facet"]
-                    }
-                    questions.append(question)
+            # Query questions from database
+            questions_orm = db.query(HexacoQuestion).filter(
+                HexacoQuestion.version == version_id
+            ).order_by(HexacoQuestion.item_id).all()
             
-            self._questions_cache[csv_filename] = questions
-            logger.info(f"Questions chargées depuis {csv_filename}: {len(questions)} items")
+            # Convert to the format expected by the service
+            questions = []
+            for q in questions_orm:
+                question = {
+                    "item_id": q.item_id,
+                    "item_text": q.item_text,
+                    "response_min": q.response_min,
+                    "response_max": q.response_max,
+                    "version": q.version,
+                    "language": q.language,
+                    "reverse_keyed": q.reverse_keyed,
+                    "facet": q.facet
+                }
+                questions.append(question)
+            
+            # Cache the results
+            self._questions_cache[cache_key] = questions
+            logger.info(f"Questions loaded from database for version {version_id}: {len(questions)} items")
             return questions
             
         except Exception as e:
-            logger.error(f"Erreur lors du chargement du fichier CSV {csv_filename}: {e}")
+            logger.error(f"Error loading questions from database for version {version_id}: {e}")
             raise
     
-    def get_questions_for_version(self, version_id: str) -> List[Dict[str, Any]]:
-        """Retourne les questions pour une version spécifique du test."""
+    def get_questions_for_version(self, version_id: str, db: Session) -> List[Dict[str, Any]]:
+        """Retourne les questions pour une version spécifique du test depuis la base de données."""
         version_metadata = self.get_version_metadata(version_id)
         if not version_metadata:
             raise ValueError(f"Version non trouvée: {version_id}")
         
-        csv_filename = version_metadata["csv_file"]
-        return self._load_questions_from_csv(csv_filename)
+        return self._load_questions_from_db(db, version_id)
     
     def create_assessment_session(self, db: Session, user_id: int, version_id: str) -> str:
         """Crée une nouvelle session d'évaluation HEXACO."""

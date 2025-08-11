@@ -62,15 +62,24 @@ async def create_course(
     """
     try:
         # Auto-categorize subject if not provided
-        if not course.subject_category and course.course_name:
-            course.subject_category = await CourseAnalysisService.categorize_course(
+        category = course.subject_category
+        if not category and course.course_name:
+            category = await CourseAnalysisService.categorize_course(
                 course.course_name, course.description
             )
         
         # Create course in database
+        course_data = course.model_dump()
+        course_data['subject_category'] = category
+        
+        # Ensure None values are properly handled
+        for key, value in course_data.items():
+            if value == 'null':
+                course_data[key] = None
+                
         db_course = Course(
             user_id=current_user.id,
-            **course.dict()
+            **course_data
         )
         db.add(db_course)
         db.commit()

@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { useRouter } from 'next/navigation';
 import { useUser, useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
 import UserCard from '@/components/ui/UserCard';
-import DailyQuestionCard from '@/components/ui/DailyQuestionCard';
-import ColorfulDailyQuestionCard from '@/components/ui/ColorfulDailyQuestionCard';
+import ProfileCompletionCard from '@/components/ui/ProfileCompletionCard';
 import ColorfulCareerGoalCard from '@/components/ui/ColorfulCareerGoalCard';
 import EnhancedClassesCard from '@/components/classes/EnhancedClassesCard';
 import Calendar from '@/components/ui/Calendar';
@@ -24,6 +23,7 @@ import { Job } from '@/components/jobs/JobCard';
 import { fetchAllUserNotes, Note } from '@/services/spaceService';
 import axios from 'axios';
 import SaveJobButton from '@/components/common/SaveJobButton';
+import { useOnboardingService } from '@/services/onboardingService';
 
 interface JobRecommendationsResponse {
   recommendations: Job[];
@@ -52,6 +52,7 @@ export default function Dashboard() {
   const { isLoaded, isSignedIn, user } = useUser();
   const { getToken } = useAuth();
   const api = useClerkApi();
+  const onboardingService = useOnboardingService();
   
   // Define API URL with fallback and trim any trailing spaces
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -61,6 +62,8 @@ export default function Dashboard() {
   const [hollandResults, setHollandResults] = useState<ScoreResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [onboardingStatus, setOnboardingStatus] = useState<{isComplete: boolean, hasStarted: boolean} | null>(null);
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const [jobRecommendations, setJobRecommendations] = useState<Job[]>([]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [jobsLoading, setJobsLoading] = useState(true);
@@ -92,6 +95,61 @@ export default function Dashboard() {
     { name: 'Holland Results', icon: 'Personality', path: '/profile/holland-results' },
     { name: 'HEXACO Results', icon: 'Brain', path: '/profile/hexaco-results' },
   ];
+
+  // Check onboarding status first - this is critical for new users
+  useEffect(() => {
+    let isCancelled = false;
+    
+    const checkOnboardingStatus = async () => {
+      try {
+        if (!isLoaded || !isSignedIn || !user?.id || isCancelled) {
+          return;
+        }
+
+        console.log('🔍 Dashboard: Checking onboarding status for user:', user.id);
+        
+        const status = await onboardingService.getStatus();
+        console.log('📊 Onboarding status:', status);
+        
+        if (!isCancelled) {
+          setOnboardingStatus(status);
+          
+          if (!status.isComplete) {
+            console.log('⚠️ User has not completed onboarding, redirecting...');
+            router.push('/onboarding');
+            return;
+          }
+        }
+      } catch (error: any) {
+        if (!isCancelled) {
+          console.error('❌ Error checking onboarding status:', error);
+          
+          if (error.message?.includes('Authentication service not available')) {
+            console.log('🔄 Authentication service initializing, will retry...');
+            // Don't redirect, let them try again
+          } else if (error.message?.includes('not authenticated')) {
+            console.log('🔑 Not authenticated, redirecting to sign-in');
+            router.push('/sign-in');
+            return;
+          } else {
+            console.log('⚠️ Cannot verify onboarding status, assuming incomplete for safety');
+            router.push('/onboarding');
+            return;
+          }
+        }
+      } finally {
+        if (!isCancelled) {
+          setCheckingOnboarding(false);
+        }
+      }
+    };
+
+    checkOnboardingStatus();
+    
+    return () => {
+      isCancelled = true;
+    };
+  }, [isLoaded, isSignedIn, user?.id, router]); // Removed onboardingService to prevent infinite loop
 
   // Fetch user data and Holland results
   useEffect(() => {
@@ -134,7 +192,7 @@ export default function Dashboard() {
     return () => {
       isCancelled = true;
     };
-  }, [isLoaded, isSignedIn, user?.id]); // Simplified dependencies
+  }, [isLoaded, isSignedIn, user?.id, getToken]); // Added getToken for stability
 
   // Fetch job recommendations
   useEffect(() => {
@@ -183,7 +241,7 @@ export default function Dashboard() {
     return () => {
       isCancelled = true;
     };
-  }, [isLoaded, isSignedIn, user?.id]); // Simplified dependencies
+  }, [isLoaded, isSignedIn, user?.id, getToken]); // Added getToken for stability
 
   // Fetch top peers
   useEffect(() => {
@@ -236,7 +294,7 @@ export default function Dashboard() {
     return () => {
       isCancelled = true;
     };
-  }, [isLoaded, isSignedIn, user?.id]); // Removed api from dependencies to prevent infinite loops
+  }, [isLoaded, isSignedIn, user?.id, getToken]); // Added getToken back for stability
 
   // Fetch user notes
   useEffect(() => {
@@ -282,7 +340,7 @@ export default function Dashboard() {
     return () => {
       isCancelled = true;
     };
-  }, [isLoaded, isSignedIn, user?.id]); // Simplified dependencies
+  }, [isLoaded, isSignedIn, user?.id, getToken]); // Added getToken for stability
 
   const handleSelectJob = (job: Job) => {
     setSelectedJob(job);
@@ -323,14 +381,16 @@ export default function Dashboard() {
     return () => {
       isCancelled = true;
     };
-  }, [isLoaded, isSignedIn, user?.id, userProfile, currentUserId]);
+  }, [isLoaded, isSignedIn, user?.id]); // Removed userProfile, currentUserId to prevent loops
 
   // Show loading while checking authentication or during SSR
-  if (typeof window === 'undefined' || !isLoaded) {
+  if (typeof window === 'undefined' || !isLoaded || checkingOnboarding) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <p className="ml-3 text-gray-600">Loading dashboard...</p>
+        <p className="ml-3 text-gray-600">
+          {checkingOnboarding ? 'Verifying onboarding status...' : 'Loading dashboard...'}
+        </p>
       </div>
     );
   }
@@ -387,13 +447,9 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Daily Question Card */}
+                  {/* Profile Completion Card */}
                   <div className="w-full">
-                    <h2 className="text-lg sm:text-xl font-semibold mb-4 px-2" style={{ color: '#000000' }}>Today's Focus</h2>
-                    <ColorfulDailyQuestionCard 
-                      userId={currentUserId}
-                      style={{ height: '220px' }}
-                    />
+                    <ProfileCompletionCard />
                   </div>
 
                   {/* Career Goal Card */}
