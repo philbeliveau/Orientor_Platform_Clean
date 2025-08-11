@@ -20,7 +20,7 @@ export default clerkMiddleware(async (auth, req) => {
 
   // Handle API routes with JWT
   if (req.nextUrl.pathname.startsWith('/api')) {
-    const session = auth();
+    const session = await auth();
     if (!session.userId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
@@ -36,7 +36,7 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   // Default protection for other routes
-  return auth().protect();
+  await auth.protect();
 });
 
 export const config = {

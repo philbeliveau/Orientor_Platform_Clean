@@ -258,7 +258,7 @@ export default function Dashboard() {
         setNotesLoading(true);
         setNotesError(null);
         
-        const notes = await fetchAllUserNotes(token);
+        const notes = await fetchAllUserNotes(getToken);
         if (!isCancelled) {
           // Get top 3 most recent notes for home page
           const notesArray = Array.isArray(notes) ? notes : [];

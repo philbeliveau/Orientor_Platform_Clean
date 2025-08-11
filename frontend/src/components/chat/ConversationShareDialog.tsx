@@ -24,15 +24,23 @@ export default function ConversationShareDialog({
   const [shareLink, setShareLink] = useState('');
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const { getToken } = useAuth();
 
   const handleCreateShare = async () => {
     setLoading(true);
     try {
+      const token = await getToken();
+      if (!token) {
+        console.error('No authentication token available');
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/share/conversations/${conversationId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           is_public: isPublic,

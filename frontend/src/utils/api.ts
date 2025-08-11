@@ -10,13 +10,15 @@ export const apiUrl = API_URL.trim();
 
 // Helper to build full endpoint URLs
 export const endpoint = (path: string): string => {
-  // Remove /api prefix if present since our backend doesn't use it
-  const cleanPath = path.replace('/api/', '/');
+  // Ensure all paths include the /api/v1 prefix for backend compatibility
+  let cleanPath = path;
   
-  // Make sure path starts with a slash
-  const formattedPath = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+  // Add /api/v1 prefix if not present
+  if (!cleanPath.startsWith('/api/v1/')) {
+    cleanPath = cleanPath.startsWith('/') ? `/api/v1${cleanPath}` : `/api/v1/${cleanPath}`;
+  }
   
-  return `${apiUrl}${formattedPath}`;
+  return `${apiUrl}${cleanPath}`;
 };
 
 // Authentication helper for Clerk integration

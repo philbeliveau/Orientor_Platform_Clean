@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import { 
   XMarkIcon, 
   DocumentTextIcon,
@@ -20,6 +21,7 @@ export default function ConversationExportDialog({
 }: ConversationExportDialogProps) {
   const [selectedFormat, setSelectedFormat] = useState<'json' | 'txt' | 'pdf'>('txt');
   const [exporting, setExporting] = useState(false);
+  const { getToken } = useAuth();
 
   const formatOptions = [
     {
@@ -45,11 +47,17 @@ export default function ConversationExportDialog({
   const handleExport = async () => {
     setExporting(true);
     try {
+      const token = await getToken();
+      if (!token) {
+        console.error('No authentication token available');
+        return;
+      }
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/chat/conversations/${conversationId}/export`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ format: selectedFormat })
       });

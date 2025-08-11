@@ -1,3 +1,5 @@
+## ALWAYS WORK IN THE ORIENTOR_PLATFORM_CLEAN REPO.
+
 # authentication-critical-reminders
 🔐 CLERK AUTHENTICATION ONLY - NO EXCEPTIONS
 ✅ Always use: const { getToken } = useAuth(); const token = await getToken();

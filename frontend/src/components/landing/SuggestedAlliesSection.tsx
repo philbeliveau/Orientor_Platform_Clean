@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import axios from 'axios';
 
 // Define API URL with fallback and trim any trailing spaces
@@ -26,6 +27,7 @@ const SuggestedAlliesSection: React.FC<SuggestedAlliesSectionProps> = ({ classNa
   const [peers, setPeers] = useState<HomepagePeer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { getToken } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -35,11 +37,11 @@ const SuggestedAlliesSection: React.FC<SuggestedAlliesSectionProps> = ({ classNa
   const fetchHomepagePeers = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('access_token');
+      const token = await getToken();
       
       if (!token) {
         setError('Authentication required');
-        router.push('/login');
+        router.push('/sign-in');
         return;
       }
 
@@ -54,7 +56,7 @@ const SuggestedAlliesSection: React.FC<SuggestedAlliesSectionProps> = ({ classNa
     } catch (err: any) {
       console.error('Error fetching homepage peers:', err);
       if (err.response?.status === 401) {
-        router.push('/login');
+        router.push('/sign-in');
         return;
       }
       setError('Failed to load peer suggestions');

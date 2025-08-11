@@ -90,7 +90,7 @@ class ClerkApiService {
   }
 
   async getUserProfile(token: string) {
-    return this.request('/user/profile', {
+    return this.request('/api/v1/profiles/me', {
       method: 'GET',
       token,
     });
@@ -105,6 +105,13 @@ class ClerkApiService {
 
   async getHollandResults(token: string) {
     return this.request('/api/v1/tests/holland/user-results', {
+      method: 'GET',
+      token,
+    });
+  }
+
+  async getCompatiblePeers(token: string) {
+    return this.request('/api/v1/peers/compatible', {
       method: 'GET',
       token,
     });
@@ -178,6 +185,8 @@ export const useClerkApi = () => {
       apiCall(clerkApiService.getUserNotes.bind(clerkApiService)),
     getHollandResults: () => 
       apiCall(clerkApiService.getHollandResults.bind(clerkApiService)),
+    getCompatiblePeers: () => 
+      apiCall(clerkApiService.getCompatiblePeers.bind(clerkApiService)),
     // Generic method for custom API calls
     request: <T>(endpoint: string, options?: RequestInit) => 
       apiCall((token: string) => clerkApiService.request<T>(endpoint, { ...options, token }))
