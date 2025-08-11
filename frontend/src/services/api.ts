@@ -2,7 +2,7 @@ import axios from 'axios'
 import { useClerkAuth } from '../contexts/ClerkAuthContext'
 
 // Create basic axios client with proper base URL
-const apiClient = axios.create({
+export const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
   headers: {
     'Content-Type': 'application/json',
@@ -116,6 +116,16 @@ class ClerkApiService {
       token,
     });
   }
+
+  async getJobSkillsTree(token: string, jobId: string) {
+    const response = await this.request(`/api/v1/competence-tree/job/${jobId}/skills-tree`, {
+      method: 'POST',
+      token,
+    });
+    
+    // Extract tree_data from the response
+    return response.tree_data || response;
+  }
 }
 
 // Create singleton instance
@@ -179,6 +189,10 @@ export const useClerkApi = () => {
   return {
     getJobRecommendations: (topK?: number) => 
       apiCall(clerkApiService.getJobRecommendations.bind(clerkApiService), topK),
+    getAllJobRecommendations: (topK?: number) => 
+      apiCall(clerkApiService.getJobRecommendations.bind(clerkApiService), topK),
+    getCareerRecommendations: (topK?: number) => 
+      apiCall(clerkApiService.getJobRecommendations.bind(clerkApiService), topK),
     getUserProfile: () => 
       apiCall(clerkApiService.getUserProfile.bind(clerkApiService)),
     getUserNotes: () => 
@@ -187,6 +201,8 @@ export const useClerkApi = () => {
       apiCall(clerkApiService.getHollandResults.bind(clerkApiService)),
     getCompatiblePeers: () => 
       apiCall(clerkApiService.getCompatiblePeers.bind(clerkApiService)),
+    getJobSkillsTree: (jobId: string) => 
+      apiCall(clerkApiService.getJobSkillsTree.bind(clerkApiService), jobId),
     // Generic method for custom API calls
     request: <T>(endpoint: string, options?: RequestInit) => 
       apiCall((token: string) => clerkApiService.request<T>(endpoint, { ...options, token }))

@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Question, AnswerRequest } from '@/services/hollandTestService';
 import hollandTestService from '@/services/hollandTestService';
 import { useSwipeable } from 'react-swipeable';
+import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 
 interface TestinterfaceProps {
   questions: Question[];
@@ -19,6 +21,8 @@ const Testinterface: React.FC<TestinterfaceProps> = ({
   onTestComplete,
   onError,
 }) => {
+  const { getToken } = useAuth();
+  const router = useRouter();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [direction, setDirection] = useState(0); // -1: gauche, 1: droite
   const [isAnimating, setIsAnimating] = useState(false);
@@ -40,6 +44,13 @@ const Testinterface: React.FC<TestinterfaceProps> = ({
     setDirection(-1); // Animation vers la gauche
 
     try {
+      // Get Clerk authentication token
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        return;
+      }
+
       // Créer l'objet de réponse
       const answerData: AnswerRequest = {
         attempt_id: attemptId,
@@ -47,8 +58,8 @@ const Testinterface: React.FC<TestinterfaceProps> = ({
         choice_id: choiceId,
       };
 
-      // Enregistrer la réponse via l'API
-      await hollandTestService.saveAnswer(answerData);
+      // Enregistrer la réponse via l'API avec le token Clerk
+      await hollandTestService.saveAnswer(token, answerData);
 
       // Attendre un court délai pour l'animation
       setTimeout(() => {

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import api from './api';  // Importer l'instance axios configurée
+import { clerkApiService } from './api';  // Import Clerk-authenticated API service
 
 // Types basés sur les modèles backend
 export interface TestMetadata {
@@ -55,13 +55,15 @@ export interface ScoreResponse {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const HOLLAND_TEST_API = `${API_BASE_URL}/api/v1/tests/holland`;
 
-// Service pour le test Holland
+// Service pour le test Holland with Clerk authentication
 const hollandTestService = {
   // Récupérer les métadonnées du test
-  getTestMetadata: async (): Promise<TestMetadata> => {
+  getTestMetadata: async (token: string): Promise<TestMetadata> => {
     try {
-      const response = await api.get<TestMetadata>(`/api/v1/tests/holland`);
-      return response.data;
+      return await clerkApiService.request<TestMetadata>(`/api/v1/tests/holland`, {
+        method: 'GET',
+        token
+      });
     } catch (error) {
       console.error('Erreur lors de la récupération des métadonnées du test:', error);
       throw error;
@@ -69,10 +71,12 @@ const hollandTestService = {
   },
 
   // Récupérer toutes les questions du test
-  getQuestions: async (): Promise<Question[]> => {
+  getQuestions: async (token: string): Promise<Question[]> => {
     try {
-      const response = await api.get<Question[]>(`/api/v1/tests/holland/questions`);
-      return response.data;
+      return await clerkApiService.request<Question[]>(`/api/v1/tests/holland/questions`, {
+        method: 'GET',
+        token
+      });
     } catch (error) {
       console.error('Erreur lors de la récupération des questions:', error);
       throw error;
@@ -80,10 +84,13 @@ const hollandTestService = {
   },
 
   // Enregistrer une réponse
-  saveAnswer: async (answerData: AnswerRequest): Promise<{ message: string; id: string }> => {
+  saveAnswer: async (token: string, answerData: AnswerRequest): Promise<{ message: string; id: string }> => {
     try {
-      const response = await api.post<{ message: string; id: string }>(`${HOLLAND_TEST_API}/answer`, answerData);
-      return response.data;
+      return await clerkApiService.request<{ message: string; id: string }>(`/api/v1/tests/holland/answer`, {
+        method: 'POST',
+        token,
+        body: JSON.stringify(answerData)
+      });
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement de la réponse:', error);
       throw error;
@@ -91,12 +98,15 @@ const hollandTestService = {
   },
 
   // Récupérer le score du test
-  getScore: async (attemptId: string, includeDescription: boolean = true): Promise<ScoreResponse> => {
+  getScore: async (token: string, attemptId: string, includeDescription: boolean = true): Promise<ScoreResponse> => {
     try {
-      const response = await api.get<ScoreResponse>(
-        `${HOLLAND_TEST_API}/score/${attemptId}?include_description=${includeDescription}`
+      return await clerkApiService.request<ScoreResponse>(
+        `/api/v1/tests/holland/score/${attemptId}?include_description=${includeDescription}`,
+        {
+          method: 'GET',
+          token
+        }
       );
-      return response.data;
     } catch (error) {
       console.error('Erreur lors de la récupération du score:', error);
       throw error;
@@ -104,10 +114,12 @@ const hollandTestService = {
   },
 
   // Récupérer les derniers résultats du test Holland pour l'utilisateur connecté
-  getUserLatestResults: async (): Promise<ScoreResponse> => {
+  getUserLatestResults: async (token: string): Promise<ScoreResponse> => {
     try {
-      const response = await api.get<ScoreResponse>(`${HOLLAND_TEST_API}/user-results`);
-      return response.data;
+      return await clerkApiService.request<ScoreResponse>(`/api/v1/tests/holland/user-results`, {
+        method: 'GET',
+        token
+      });
     } catch (error) {
       console.error('Erreur lors de la récupération des résultats du test:', error);
       throw error;
@@ -115,12 +127,16 @@ const hollandTestService = {
   },
 
   // Récupérer la description personnalisée du profil basée sur les résultats RIASEC
-  getProfileDescription: async (regenerate: boolean = false): Promise<string> => {
+  getProfileDescription: async (token: string, regenerate: boolean = false): Promise<string> => {
     try {
-      const response = await api.get<{ description: string }>(
-        `${HOLLAND_TEST_API}/profile-description?regenerate=${regenerate}`
+      const response = await clerkApiService.request<{ description: string }>(
+        `/api/v1/tests/holland/profile-description?regenerate=${regenerate}`,
+        {
+          method: 'GET',
+          token
+        }
       );
-      return response.data.description;
+      return response.description;
     } catch (error) {
       console.error('Erreur lors de la récupération de la description du profil:', error);
       throw error;
@@ -128,12 +144,16 @@ const hollandTestService = {
   },
   
   // Récupérer la description personnalisée pour un utilisateur spécifique
-  getUserProfileDescription: async (userId: string, regenerate: boolean = false): Promise<string> => {
+  getUserProfileDescription: async (token: string, userId: string, regenerate: boolean = false): Promise<string> => {
     try {
-      const response = await api.get<{ description: string }>(
-        `${HOLLAND_TEST_API}/profile-description/${userId}?regenerate=${regenerate}`
+      const response = await clerkApiService.request<{ description: string }>(
+        `/api/v1/tests/holland/profile-description/${userId}?regenerate=${regenerate}`,
+        {
+          method: 'GET',
+          token
+        }
       );
-      return response.data.description;
+      return response.description;
     } catch (error) {
       console.error('Erreur lors de la récupération de la description du profil:', error);
       throw error;
