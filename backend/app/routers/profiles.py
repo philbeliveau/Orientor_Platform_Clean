@@ -444,44 +444,7 @@ async def update_profile(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-
-@router.get("/{user_id}", response_model=ProfileResponse)
-def get_user_profile(
-    user_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get profile information for a specific user."""
-    try:
-        logger.info(f"Attempting to get profile for user ID: {user_id}")
-        profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
-        
-        if not profile:
-            logger.info(f"No profile found for user ID: {user_id}, creating a new one")
-            # Create a new profile if it doesn't exist
-            profile = UserProfile(user_id=user_id)
-            db.add(profile)
-            db.commit()
-            db.refresh(profile)
-        
-        # Get user skills
-        skills = db.query(UserSkill).filter(UserSkill.user_id == user_id).first()
-        response = ProfileResponse.model_validate(profile)
-        
-        # Add skills to response if they exist
-        if skills:
-            response.creativity = skills.creativity
-            response.leadership = skills.leadership
-            response.digital_literacy = skills.digital_literacy
-            response.critical_thinking = skills.critical_thinking
-            response.problem_solving = skills.problem_solving
-        
-        return response
-    except Exception as e:
-        logger.error(f"Error retrieving profile: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error retrieving profile: {str(e)}")
-
-# Profile Completion Endpoints
+# Profile Completion Endpoints - MUST come BEFORE parameterized routes
 @router.get("/completion", response_model=ProfileCompletionResponse)
 def get_profile_completion(
     current_user: User = Depends(get_current_user),
@@ -557,6 +520,52 @@ def get_completion_recommendations(
     except Exception as e:
         logger.error(f"Error getting completion recommendations: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error getting completion recommendations: {str(e)}")
+
+
+# Parameterized routes MUST come LAST to avoid conflicts with specific routes
+@router.get("/{user_id}", response_model=ProfileResponse)
+def get_user_profile(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get profile information for a specific user."""
+    try:
+        logger.info(f"Attempting to get profile for user ID: {user_id}")
+        profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+        
+        if not profile:
+            logger.info(f"No profile found for user ID: {user_id}, creating a new one")
+            # Create a new profile if it doesn't exist
+            profile = UserProfile(user_id=user_id)
+            db.add(profile)
+            db.commit()
+            db.refresh(profile)
+        
+        # Get user skills
+        skills = db.query(UserSkill).filter(UserSkill.user_id == user_id).first()
+        response = ProfileResponse.model_validate(profile)
+        
+        # Add skills to response if they exist
+        if skills:
+            response.creativity = skills.creativity
+            response.leadership = skills.leadership
+            response.digital_literacy = skills.digital_literacy
+            response.critical_thinking = skills.critical_thinking
+            response.problem_solving = skills.problem_solving
+            response.analytical_thinking = skills.analytical_thinking
+            response.attention_to_detail = skills.attention_to_detail
+            response.collaboration = skills.collaboration
+            response.adaptability = skills.adaptability
+            response.independence = skills.independence
+            response.evaluation = skills.evaluation
+            response.decision_making = skills.decision_making
+            response.stress_tolerance = skills.stress_tolerance
+        
+        return response
+    except Exception as e:
+        logger.error(f"Error retrieving profile: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving profile: {str(e)}")
 
 
 # Add module-level debug message after routes are defined
