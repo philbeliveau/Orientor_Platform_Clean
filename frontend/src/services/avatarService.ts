@@ -1,4 +1,4 @@
-import { endpoint } from './api';
+import { endpoint } from '../utils/api';
 import { useClerkAuth } from '@/contexts/ClerkAuthContext';
 
 export interface AvatarData {

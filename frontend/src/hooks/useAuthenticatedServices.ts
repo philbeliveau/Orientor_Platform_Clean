@@ -13,26 +13,22 @@ export const useAuthenticatedServices = () => {
   // Avatar Services
   const avatarServices = {
     getUserAvatar: async (): Promise<AvatarData> => {
-      const token = await getAuthToken();
-      return AvatarService.getUserAvatar(token);
+      return AvatarService.getUserAvatar(getAuthToken);
     },
 
     generateAvatar: async (): Promise<GenerateAvatarResponse> => {
-      const token = await getAuthToken();
-      return AvatarService.generateAvatar(token);
+      return AvatarService.generateAvatar(getAuthToken);
     },
 
     hasAvatar: async (): Promise<boolean> => {
-      const token = await getAuthToken();
-      return AvatarService.hasAvatar(token);
+      return AvatarService.hasAvatar(getAuthToken);
     }
   };
 
   // Career Goals Services
   const careerGoalsServices = {
     getActiveCareerGoal: async () => {
-      const token = await getAuthToken();
-      return CareerGoalsService.getActiveCareerGoal(token);
+      return CareerGoalsService.getActiveCareerGoal(getAuthToken);
     },
 
     setCareerGoalFromJob: async (job: {
@@ -42,13 +38,11 @@ export const useAuthenticatedServices = () => {
       description?: string;
       source?: string;
     }) => {
-      const token = await getAuthToken();
-      return CareerGoalsService.setCareerGoalFromJob(token, job);
+      return CareerGoalsService.setCareerGoalFromJob(getAuthToken, job);
     },
 
     getCareerProgression: async () => {
-      const token = await getAuthToken();
-      return CareerGoalsService.getCareerProgression(token);
+      return CareerGoalsService.getCareerProgression(getAuthToken);
     },
 
     updateCareerGoal: async (goalId: number, updates: {
@@ -57,18 +51,15 @@ export const useAuthenticatedServices = () => {
       target_date?: string;
       is_active?: boolean;
     }) => {
-      const token = await getAuthToken();
-      return CareerGoalsService.updateCareerGoal(token, goalId, updates);
+      return CareerGoalsService.updateCareerGoal(getAuthToken, goalId, updates);
     },
 
     getAllCareerGoals: async (includeInactive = false) => {
-      const token = await getAuthToken();
-      return CareerGoalsService.getAllCareerGoals(token, includeInactive);
+      return CareerGoalsService.getAllCareerGoals(getAuthToken, includeInactive);
     },
 
     completeMilestone: async (goalId: number, milestoneId: number) => {
-      const token = await getAuthToken();
-      return CareerGoalsService.completeMilestone(token, goalId, milestoneId);
+      return CareerGoalsService.completeMilestone(getAuthToken, goalId, milestoneId);
     }
   };
 

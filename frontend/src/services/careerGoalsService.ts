@@ -1,5 +1,5 @@
 import { SkillNode, TimelineTier } from '@/components/career/TimelineVisualization';
-import { endpoint } from './api';
+import { endpoint } from '../utils/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
