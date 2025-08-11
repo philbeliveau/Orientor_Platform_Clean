@@ -14,6 +14,8 @@ import { Radar } from 'react-chartjs-2';
 import { ScoreResponse } from '@/services/hollandTestService';
 import hollandTestService from '@/services/hollandTestService';
 import { motion } from 'framer-motion';
+import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 
 // Enregistrer les composants nécessaires pour le graphique radar
 ChartJS.register(
@@ -74,13 +76,29 @@ const HollandResultsView: React.FC<HollandResultsViewProps> = ({ userId }) => {
   const [personalizedDescription, setPersonalizedDescription] = useState<string | null>(null);
   const [loadingDescription, setLoadingDescription] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const { getToken, isSignedIn } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchLatestResults = async () => {
       try {
         setLoading(true);
+        
+        // Check if user is signed in
+        if (!isSignedIn) {
+          router.push('/sign-in');
+          return;
+        }
+        
+        // Get Clerk authentication token
+        const token = await getToken();
+        if (!token) {
+          router.push('/sign-in');
+          return;
+        }
+        
         // Récupérer le dernier résultat de test Holland de l'utilisateur
-        const latestResults = await hollandTestService.getUserLatestResults();
+        const latestResults = await hollandTestService.getUserLatestResults(token);
         setScore(latestResults);
         setLoading(false);
       } catch (err) {
@@ -91,7 +109,7 @@ const HollandResultsView: React.FC<HollandResultsViewProps> = ({ userId }) => {
     };
 
     fetchLatestResults();
-  }, []);
+  }, [isSignedIn, getToken, router]);
 
   useEffect(() => {
     // Récupérer la description personnalisée si nous avons les scores
@@ -99,7 +117,15 @@ const HollandResultsView: React.FC<HollandResultsViewProps> = ({ userId }) => {
       const fetchPersonalizedDescription = async (regenerate: boolean = false) => {
         try {
           setLoadingDescription(true);
-          const description = await hollandTestService.getProfileDescription(regenerate);
+          
+          // Get Clerk authentication token
+          const token = await getToken();
+          if (!token) {
+            router.push('/sign-in');
+            return;
+          }
+          
+          const description = await hollandTestService.getProfileDescription(token, regenerate);
           setPersonalizedDescription(description);
           setLoadingDescription(false);
         } catch (err) {
@@ -110,7 +136,7 @@ const HollandResultsView: React.FC<HollandResultsViewProps> = ({ userId }) => {
 
       fetchPersonalizedDescription();
     }
-  }, [score, personalizedDescription, loadingDescription]);
+  }, [score, personalizedDescription, loadingDescription, getToken, router]);
 
   if (loading) {
     return (
@@ -247,7 +273,15 @@ const HollandResultsView: React.FC<HollandResultsViewProps> = ({ userId }) => {
                 setRegenerating(true);
                 try {
                   setLoadingDescription(true);
-                  const description = await hollandTestService.getProfileDescription(true);
+                  
+                  // Get Clerk authentication token
+                  const token = await getToken();
+                  if (!token) {
+                    router.push('/sign-in');
+                    return;
+                  }
+                  
+                  const description = await hollandTestService.getProfileDescription(token, true);
                   setPersonalizedDescription(description);
                 } catch (err) {
                   console.error('Erreur lors de la régénération de la description:', err);

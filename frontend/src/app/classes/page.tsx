@@ -5,6 +5,7 @@ import { BookOpen, Plus, Search, Filter, Brain, TrendingUp } from 'lucide-react'
 import Link from 'next/link';
 import { courseAnalysisService, Course } from '@/services/courseAnalysisService';
 import { useAuth } from '@clerk/nextjs';
+import MainLayout from '@/components/layout/MainLayout';
 
 export default function ClassesPage() {
   const { getToken } = useAuth();
@@ -74,23 +75,26 @@ export default function ClassesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-300 rounded w-1/4 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="h-48 bg-gray-300 rounded-lg"></div>
-              ))}
+      <MainLayout>
+        <div className="min-h-screen bg-gray-50 p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-300 rounded w-1/4 mb-6"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className="h-48 bg-gray-300 rounded-lg"></div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <MainLayout>
+      <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -311,6 +315,7 @@ export default function ClassesPage() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </MainLayout>
   );
 }

@@ -2,13 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import hollandTestService, { Question, ScoreResponse, TestMetadata } from '@/services/hollandTestService';
 import TestInterface from '@/components/holland-test/TestInterface';
 import ResultScreen from '@/components/holland-test/ResultScreen';
 import { motion } from 'framer-motion';
+import MainLayout from '@/components/layout/MainLayout';
 
 export default function HollandTestPage() {
   const router = useRouter();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   
   // États pour gérer le flux du test
   const [testMetadata, setTestMetadata] = useState<TestMetadata | null>(null);
@@ -18,16 +21,35 @@ export default function HollandTestPage() {
   const [testState, setTestState] = useState<'loading' | 'intro' | 'testing' | 'results'>('loading');
   const [error, setError] = useState<string | null>(null);
 
+  // Check authentication status
+  useEffect(() => {
+    if (!isLoaded) return;
+    
+    if (!isSignedIn) {
+      router.push('/sign-in');
+      return;
+    }
+  }, [isLoaded, isSignedIn, router]);
+
   // Charger les métadonnées et les questions du test au chargement de la page
   useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+
     const loadTestData = async () => {
       try {
+        // Get Clerk authentication token
+        const token = await getToken();
+        if (!token) {
+          router.push('/sign-in');
+          return;
+        }
+
         // Charger les métadonnées du test
-        const metadata = await hollandTestService.getTestMetadata();
+        const metadata = await hollandTestService.getTestMetadata(token);
         setTestMetadata(metadata);
         
         // Charger les questions du test
-        const testQuestions = await hollandTestService.getQuestions();
+        const testQuestions = await hollandTestService.getQuestions(token);
         setQuestions(testQuestions);
         
         // Générer un ID de tentative unique
@@ -44,7 +66,7 @@ export default function HollandTestPage() {
     };
 
     loadTestData();
-  }, []);
+  }, [isLoaded, isSignedIn, getToken, router]);
 
   // Démarrer le test
   const handleStartTest = () => {
@@ -54,8 +76,15 @@ export default function HollandTestPage() {
   // Gérer la fin du test
   const handleTestComplete = async (completedAttemptId: string) => {
     try {
+      // Get Clerk authentication token
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        return;
+      }
+
       // Récupérer les scores du test
-      const score = await hollandTestService.getScore(completedAttemptId, true);
+      const score = await hollandTestService.getScore(token, completedAttemptId, true);
       setTestScore(score);
       setTestState('results');
     } catch (err) {
@@ -82,37 +111,42 @@ export default function HollandTestPage() {
   // Afficher un écran de chargement
   if (testState === 'loading') {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-xl">Chargement du test Holland Code...</p>
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-4 text-xl">Chargement du test Holland Code...</p>
+          </div>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   // Afficher un message d'erreur si nécessaire
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg max-w-md w-full">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Erreur</h2>
-          <p className="text-gray-700 dark:text-gray-300 mb-6">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-          >
-            Réessayer
-          </button>
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-lg max-w-md w-full">
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Erreur</h2>
+            <p className="text-gray-700 dark:text-gray-300 mb-6">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Réessayer
+            </button>
+          </div>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   // Afficher l'écran d'introduction
   if (testState === 'intro' && testMetadata) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+      <MainLayout>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
         <motion.div 
           className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
@@ -164,37 +198,44 @@ export default function HollandTestPage() {
             </div>
           </div>
         </motion.div>
-      </div>
+        </div>
+      </MainLayout>
     );
   }
 
   // Afficher l'interface de test
   if (testState === 'testing' && questions.length > 0) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <TestInterface
-          questions={questions}
-          attemptId={attemptId}
-          onTestComplete={handleTestComplete}
-          onError={handleTestError}
-        />
-      </div>
+      <MainLayout>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+          <TestInterface
+            questions={questions}
+            attemptId={attemptId}
+            onTestComplete={handleTestComplete}
+            onError={handleTestError}
+          />
+        </div>
+      </MainLayout>
     );
   }
 
   // Afficher les résultats
   if (testState === 'results' && testScore) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4">
-        <ResultScreen score={testScore} onRetakeTest={handleRetakeTest} />
-      </div>
+      <MainLayout>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4">
+          <ResultScreen score={testScore} onRetakeTest={handleRetakeTest} />
+        </div>
+      </MainLayout>
     );
   }
 
   // Fallback
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-      <p className="text-xl">Chargement...</p>
-    </div>
+    <MainLayout>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <p className="text-xl">Chargement...</p>
+      </div>
+    </MainLayout>
   );
 }
