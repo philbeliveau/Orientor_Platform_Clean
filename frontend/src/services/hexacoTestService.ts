@@ -1,5 +1,5 @@
 import axios from 'axios';
-import api from './api';  // Importer l'instance axios configurée
+import { apiClient as api, clerkApiService } from './api';  // Importer l'instance axios configurée
 
 // Types basés sur les modèles backend HEXACO
 export interface HexacoMetadata {
@@ -102,12 +102,23 @@ const hexacoTestService = {
   },
 
   // Démarrer une nouvelle session de test
-  startTest: async (versionId: string): Promise<SessionResponse> => {
+  startTest: async (versionId: string, token?: string): Promise<SessionResponse> => {
     try {
-      const response = await api.post<SessionResponse>(`${HEXACO_TEST_API}/start`, {
-        version_id: versionId
-      });
-      return response.data;
+      if (token) {
+        // Use Clerk-authenticated API service
+        const response = await clerkApiService.request<SessionResponse>(`/api/v1/tests/hexaco/start`, {
+          method: 'POST',
+          token,
+          body: JSON.stringify({ version_id: versionId })
+        });
+        return response;
+      } else {
+        // Fallback to basic API (for backward compatibility)
+        const response = await api.post<SessionResponse>(`${HEXACO_TEST_API}/start`, {
+          version_id: versionId
+        });
+        return response.data;
+      }
     } catch (error) {
       console.error('Erreur lors du démarrage du test HEXACO:', error);
       throw error;
@@ -115,12 +126,22 @@ const hexacoTestService = {
   },
 
   // Récupérer les questions pour une version spécifique
-  getQuestions: async (versionId: string): Promise<HexacoQuestion[]> => {
+  getQuestions: async (versionId: string, token?: string): Promise<HexacoQuestion[]> => {
     try {
-      const response = await api.get<HexacoQuestion[]>(`${HEXACO_TEST_API}/questions`, {
-        params: { version_id: versionId }
-      });
-      return response.data;
+      if (token) {
+        // Use Clerk-authenticated API service
+        const response = await clerkApiService.request<HexacoQuestion[]>(`/api/v1/tests/hexaco/questions?version_id=${versionId}`, {
+          method: 'GET',
+          token
+        });
+        return response;
+      } else {
+        // Fallback to basic API (for backward compatibility)
+        const response = await api.get<HexacoQuestion[]>(`${HEXACO_TEST_API}/questions`, {
+          params: { version_id: versionId }
+        });
+        return response.data;
+      }
     } catch (error) {
       console.error('Erreur lors de la récupération des questions HEXACO:', error);
       throw error;
@@ -128,10 +149,21 @@ const hexacoTestService = {
   },
 
   // Enregistrer une réponse
-  saveAnswer: async (answerData: HexacoAnswerRequest): Promise<{ message: string }> => {
+  saveAnswer: async (answerData: HexacoAnswerRequest, token?: string): Promise<{ message: string }> => {
     try {
-      const response = await api.post<{ message: string }>(`${HEXACO_TEST_API}/answer`, answerData);
-      return response.data;
+      if (token) {
+        // Use Clerk-authenticated API service
+        const response = await clerkApiService.request<{ message: string }>(`/api/v1/tests/hexaco/answer`, {
+          method: 'POST',
+          token,
+          body: JSON.stringify(answerData)
+        });
+        return response;
+      } else {
+        // Fallback to basic API (for backward compatibility)
+        const response = await api.post<{ message: string }>(`${HEXACO_TEST_API}/answer`, answerData);
+        return response.data;
+      }
     } catch (error) {
       console.error('Erreur lors de l\'enregistrement de la réponse HEXACO:', error);
       throw error;
@@ -150,12 +182,22 @@ const hexacoTestService = {
   },
 
   // Récupérer le score du test
-  getScore: async (sessionId: string, includeDescription: boolean = true): Promise<HexacoScoreResponse> => {
+  getScore: async (sessionId: string, includeDescription: boolean = true, token?: string): Promise<HexacoScoreResponse> => {
     try {
-      const response = await api.get<HexacoScoreResponse>(
-        `${HEXACO_TEST_API}/score/${sessionId}?include_description=${includeDescription}`
-      );
-      return response.data;
+      if (token) {
+        // Use Clerk-authenticated API service
+        const response = await clerkApiService.request<HexacoScoreResponse>(`/api/v1/tests/hexaco/score/${sessionId}?include_description=${includeDescription}`, {
+          method: 'GET',
+          token
+        });
+        return response;
+      } else {
+        // Fallback to basic API (for backward compatibility)
+        const response = await api.get<HexacoScoreResponse>(
+          `${HEXACO_TEST_API}/score/${sessionId}?include_description=${includeDescription}`
+        );
+        return response.data;
+      }
     } catch (error) {
       console.error('Erreur lors de la récupération du score HEXACO:', error);
       throw error;

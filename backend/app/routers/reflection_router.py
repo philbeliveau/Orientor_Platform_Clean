@@ -19,6 +19,45 @@ from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_us
 
 router = APIRouter(prefix="/reflection", tags=["reflection"])
 
+def ensure_sequence_exists(db: Session):
+    """Ensure the auto-increment sequence exists for the reflection table"""
+    try:
+        from sqlalchemy import text
+        # Check if sequence exists
+        result = db.execute(text("SELECT 1 FROM pg_sequences WHERE schemaname='public' AND sequencename='strengths_reflection_responses_id_seq'"))
+        if not result.fetchone():
+            # Sequence doesn't exist, create it
+            max_result = db.execute(text("SELECT COALESCE(MAX(id), 0) FROM strengths_reflection_responses"))
+            max_id = max_result.scalar()
+            start_val = max_id + 1
+            
+            # Create sequence
+            db.execute(text(f"""
+                CREATE SEQUENCE strengths_reflection_responses_id_seq
+                START WITH {start_val}
+                INCREMENT BY 1
+                NO MINVALUE
+                NO MAXVALUE
+                CACHE 1
+            """))
+            
+            # Set column default
+            db.execute(text("""
+                ALTER TABLE strengths_reflection_responses 
+                ALTER COLUMN id SET DEFAULT nextval('strengths_reflection_responses_id_seq')
+            """))
+            
+            # Set ownership
+            db.execute(text("""
+                ALTER SEQUENCE strengths_reflection_responses_id_seq 
+                OWNED BY strengths_reflection_responses.id
+            """))
+            
+            db.commit()
+    except Exception as e:
+        # If we can't create the sequence, we'll handle it in the insert logic
+        pass
+
 def load_questions_from_csv() -> List[ReflectionQuestionBase]:
     """Charge les questions depuis le fichier CSV."""
 # ============================================================================
@@ -111,6 +150,9 @@ async def save_response(
     current_user: User = Depends(get_current_user)
 ):
     """Sauvegarde ou met à jour une réponse de réflexion."""
+    # Ensure sequence exists before attempting any operations
+    ensure_sequence_exists(db)
+    
     # Charger les questions pour obtenir le texte et la catégorie
     questions = load_questions_from_csv()
     question = next((q for q in questions if q.id == response_data.question_id), None)
@@ -179,6 +221,9 @@ async def save_responses_batch(
     current_user: User = Depends(get_current_user)
 ):
     """Sauvegarde plusieurs réponses en lot."""
+    # Ensure sequence exists before attempting any operations
+    ensure_sequence_exists(db)
+    
     questions = load_questions_from_csv()
     questions_dict = {q.id: q for q in questions}
     

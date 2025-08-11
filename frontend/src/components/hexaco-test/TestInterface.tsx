@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@clerk/nextjs';
 import { HexacoQuestion, HexacoAnswerRequest } from '@/services/hexacoTestService';
 import hexacoTestService from '@/services/hexacoTestService';
 
@@ -18,6 +19,7 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
   onTestComplete,
   onError,
 }) => {
+  const { getToken } = useAuth();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [direction, setDirection] = useState(0); // -1: gauche, 1: droite
   const [isAnimating, setIsAnimating] = useState(false);
@@ -56,8 +58,14 @@ const TestInterface: React.FC<TestInterfaceProps> = ({
         response_time_ms: responseTime,
       };
 
-      // Enregistrer la réponse via l'API
-      await hexacoTestService.saveAnswer(answerData);
+      // Get authentication token
+      const token = await getToken();
+      if (!token) {
+        throw new Error('No authentication token available');
+      }
+
+      // Enregistrer la réponse via l'API avec le token d'authentification
+      await hexacoTestService.saveAnswer(answerData, token);
 
       // Attendre un court délai pour l'animation
       setTimeout(() => {

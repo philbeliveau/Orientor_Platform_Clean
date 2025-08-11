@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@clerk/nextjs';
 import hexacoTestService, { HexacoQuestion, HexacoScoreResponse, HexacoVersion } from '@/services/hexacoTestService';
 import TestInterface from '@/components/hexaco-test/TestInterface';
 import ResultScreen from '@/components/hexaco-test/ResultScreen';
@@ -10,6 +11,7 @@ import { motion } from 'framer-motion';
 export default function HexacoTestPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const versionId = searchParams?.get('version');
   
   // États pour gérer le flux du test
@@ -28,7 +30,25 @@ export default function HexacoTestPage() {
         return;
       }
 
+      // Wait for Clerk authentication to load
+      if (!isLoaded) {
+        return;
+      }
+
+      // Check if user is signed in
+      if (!isSignedIn) {
+        router.push('/sign-in');
+        return;
+      }
+
       try {
+        // Get authentication token
+        const token = await getToken();
+        if (!token) {
+          router.push('/sign-in');
+          return;
+        }
+
         // Charger les versions disponibles pour obtenir les métadonnées
         const versions = await hexacoTestService.getAvailableVersions();
         const version = versions[versionId];
@@ -40,8 +60,8 @@ export default function HexacoTestPage() {
         
         setVersionMetadata(version);
         
-        // Charger les questions du test
-        const testQuestions = await hexacoTestService.getQuestions(versionId);
+        // Charger les questions du test avec le token d'authentification
+        const testQuestions = await hexacoTestService.getQuestions(versionId, token);
         setQuestions(testQuestions);
         
         // Passer à l'écran d'introduction
@@ -54,15 +74,22 @@ export default function HexacoTestPage() {
     };
 
     loadTestData();
-  }, [versionId, router]);
+  }, [versionId, router, isLoaded, isSignedIn, getToken]);
 
   // Démarrer le test
   const handleStartTest = async () => {
     if (!versionId) return;
     
     try {
-      // Créer une nouvelle session de test
-      const session = await hexacoTestService.startTest(versionId);
+      // Get authentication token
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        return;
+      }
+
+      // Créer une nouvelle session de test avec le token d'authentification
+      const session = await hexacoTestService.startTest(versionId, token);
       setSessionId(session.session_id);
       setTestState('testing');
     } catch (err) {
@@ -74,8 +101,15 @@ export default function HexacoTestPage() {
   // Gérer la fin du test
   const handleTestComplete = async (completedSessionId: string) => {
     try {
-      // Récupérer les scores du test
-      const score = await hexacoTestService.getScore(completedSessionId, true);
+      // Get authentication token
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        return;
+      }
+
+      // Récupérer les scores du test avec le token d'authentification
+      const score = await hexacoTestService.getScore(completedSessionId, true, token);
       setTestScore(score);
       setTestState('results');
     } catch (err) {

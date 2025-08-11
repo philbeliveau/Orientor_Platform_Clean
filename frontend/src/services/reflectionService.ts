@@ -1,17 +1,17 @@
-import { useAuth } from '@clerk/nextjs';
+import { clerkApiService } from './api';
 
-// Helper function to make authenticated requests
+// Helper function to make authenticated requests using consistent Clerk API service
 async function makeAuthenticatedRequest<T>(
   endpoint: string, 
   options?: RequestInit,
   getToken?: () => Promise<string | null>
 ): Promise<T> {
   try {
-    let token: string | null = null;
-    
-    if (getToken) {
-      token = await getToken();
+    if (!getToken) {
+      throw new Error('No token function provided');
     }
+
+    const token = await getToken();
     
     if (!token) {
       // Redirect to sign-in if no token
@@ -21,32 +21,38 @@ async function makeAuthenticatedRequest<T>(
       throw new Error('No authentication token available');
     }
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-    const url = `${apiUrl}${endpoint}`;
-
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        ...options?.headers,
-      },
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        // Redirect to sign-in on authentication failure
-        if (typeof window !== 'undefined') {
-          window.location.href = '/sign-in';
-        }
-      }
-      const errorText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    // Validate token format - ensure it's a proper JWT
+    if (token.startsWith('sess_')) {
+      console.error('[ReflectionService] ❌ Got session token instead of JWT:', token.substring(0, 20));
+      throw new Error('Invalid token type - please refresh and try again');
+    }
+    
+    if (!token.startsWith('eyJ')) {
+      console.error('[ReflectionService] ❌ Invalid JWT format:', token.substring(0, 20));
+      throw new Error('Invalid JWT token format - please refresh and try again');
     }
 
-    return response.json();
-  } catch (error) {
-    console.error('API request failed:', error);
+    console.log('[ReflectionService] ✅ Using JWT token:', token.substring(0, 30) + '...');
+
+    // Use the consistent clerkApiService for requests
+    return await clerkApiService.request<T>(endpoint, {
+      ...options,
+      token,
+    });
+
+  } catch (error: any) {
+    console.error('[ReflectionService] API request failed:', error);
+    
+    // Provide user-friendly error messages for common issues
+    if (error?.message?.includes('500') && error?.message?.includes('Database')) {
+      throw new Error('Unable to save your response due to a technical issue. Please try again in a moment.');
+    } else if (error?.message?.includes('401')) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/sign-in';
+      }
+      throw new Error('Authentication required - redirecting to sign-in');
+    }
+    
     throw error;
   }
 }
