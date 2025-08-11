@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@clerk/nextjs';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import NewSidebar from '@/components/layout/NewSidebar';
 
 interface ProfileCompletionData {
   overall_percentage: number;
@@ -28,6 +29,19 @@ const ProfileCompletionHub: React.FC = () => {
   const [completionData, setCompletionData] = useState<ProfileCompletionData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Navigation items for the sidebar
+  const navItems = [
+    { name: 'Dashboard', icon: 'Dashboard', path: '/dashboard' },
+    { name: 'Education', icon: 'Education', path: '/education' },
+    { name: 'Chat', icon: 'Chat', path: '/chat' },
+    { name: 'Swipe', icon: 'Swipe', path: '/find-your-way' },
+    { name: 'Saved', icon: 'Bookmark', path: '/space' },
+    { name: 'Challenges', icon: 'Trophy', path: '/challenges' },
+    { name: 'Notes', icon: 'Note', path: '/notes' },
+    { name: 'Case Study', icon: 'Case Study', path: '/case-study-journey' },
+    { name: 'Competence Tree', icon: 'Tree', path: '/competence-tree' },
+  ];
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -109,10 +123,20 @@ const ProfileCompletionHub: React.FC = () => {
 
   if (!isLoaded || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <LoadingSpinner size="lg" />
-          <p className="mt-4 text-gray-600">Chargement de votre profil...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex">
+        {/* Sidebar Navigation */}
+        <div className="hidden md:block fixed left-0 top-0 h-full z-40">
+          <div className="h-full w-20 bg-white border-r border-gray-200 shadow-lg">
+            <NewSidebar navItems={navItems} />
+          </div>
+        </div>
+        
+        {/* Loading Content */}
+        <div className="flex-1 md:ml-20 flex items-center justify-center">
+          <div className="text-center">
+            <LoadingSpinner size="lg" />
+            <p className="mt-4 text-gray-600">Chargement de votre profil...</p>
+          </div>
         </div>
       </div>
     );
@@ -120,19 +144,29 @@ const ProfileCompletionHub: React.FC = () => {
 
   if (error || !completionData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8 text-center">
-          <div className="text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Erreur de Chargement</h2>
-          <p className="text-gray-600 mb-6">
-            Impossible de charger les données de votre profil.
-          </p>
-          <button
-            onClick={() => fetchCompletionData()}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors"
-          >
-            Réessayer
-          </button>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex">
+        {/* Sidebar Navigation */}
+        <div className="hidden md:block fixed left-0 top-0 h-full z-40">
+          <div className="h-full w-20 bg-white border-r border-gray-200 shadow-lg">
+            <NewSidebar navItems={navItems} />
+          </div>
+        </div>
+        
+        {/* Error Content */}
+        <div className="flex-1 md:ml-20 flex items-center justify-center">
+          <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8 text-center">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Erreur de Chargement</h2>
+            <p className="text-gray-600 mb-6">
+              Impossible de charger les données de votre profil.
+            </p>
+            <button
+              onClick={() => fetchCompletionData()}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors"
+            >
+              Réessayer
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -142,30 +176,39 @@ const ProfileCompletionHub: React.FC = () => {
   const progressColor = getProgressColor(overall_percentage);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Completion du Profil
-              </h1>
-              <p className="mt-2 text-gray-600">
-                Complétez votre profil pour débloquer des recommandations personnalisées
-              </p>
-            </div>
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              ← Retour au Dashboard
-            </button>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex">
+      {/* Sidebar Navigation */}
+      <div className="hidden md:block fixed left-0 top-0 h-full z-40">
+        <div className="h-full w-20 bg-white border-r border-gray-200 shadow-lg">
+          <NewSidebar navItems={navItems} />
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content */}
+      <div className="flex-1 md:ml-20">
+        {/* Header */}
+        <div className="bg-white shadow-sm border-b">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Completion du Profil
+                </h1>
+                <p className="mt-2 text-gray-600">
+                  Complétez votre profil pour débloquer des recommandations personnalisées
+                </p>
+              </div>
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                ← Retour au Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Overall Progress */}
         <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
           <div className="flex items-center justify-between mb-6">
@@ -352,6 +395,7 @@ const ProfileCompletionHub: React.FC = () => {
               <div className="font-medium">Réflexion</div>
             </button>
           </div>
+        </div>
         </div>
       </div>
     </div>

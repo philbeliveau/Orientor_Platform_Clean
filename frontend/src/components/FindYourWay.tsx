@@ -9,7 +9,7 @@ import { useClerkApi } from '@/services/api';
 import SetCareerGoalButton from '@/components/common/SetCareerGoalButton';
 
 interface CareerRecommendation {
-  id: number;
+  id: string;  // Changed from number to string to handle ESCO occupation codes
   title: string;
   description: string;
   score: number;
@@ -142,9 +142,16 @@ const FindYourWay: React.FC = () => {
     const fields = ['skills', 'required_skills', 'competencies', 'technology_skills'];
     
     for (const field of fields) {
-      if (career.metadata[field] && typeof career.metadata[field] === 'string') {
-        const fieldSkills = career.metadata[field].split('|').map((s: string) => s.trim());
-        skills.push(...fieldSkills);
+      const fieldValue = career.metadata[field];
+      if (fieldValue) {
+        if (Array.isArray(fieldValue)) {
+          // Handle skills as array
+          skills.push(...fieldValue);
+        } else if (typeof fieldValue === 'string') {
+          // Handle skills as pipe-separated string
+          const fieldSkills = fieldValue.split('|').map((s: string) => s.trim());
+          skills.push(...fieldSkills);
+        }
       }
     }
     
@@ -331,7 +338,7 @@ const FindYourWay: React.FC = () => {
                   <Box sx={{ mt: 'auto', mb: 2 }}>
                     <SetCareerGoalButton 
                       job={{
-                        id: currentCareer.id.toString(),
+                        id: currentCareer.id,
                         oasis_code: currentCareer.oasis_code,
                         title: currentCareer.title,
                         description: currentCareer.description
