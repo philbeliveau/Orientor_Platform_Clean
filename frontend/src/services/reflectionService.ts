@@ -1,33 +1,54 @@
-import api from './api';
+import { useAuth } from '@clerk/nextjs';
 
-export interface ReflectionQuestion {
-  id: number;
-  question: string;
-  category: string;
-}
+// Helper function to make authenticated requests
+async function makeAuthenticatedRequest<T>(
+  endpoint: string, 
+  options?: RequestInit,
+  getToken?: () => Promise<string | null>
+): Promise<T> {
+  try {
+    let token: string | null = null;
+    
+    if (getToken) {
+      token = await getToken();
+    }
+    
+    if (!token) {
+      // Redirect to sign-in if no token
+      if (typeof window !== 'undefined') {
+        window.location.href = '/sign-in';
+      }
+      throw new Error('No authentication token available');
+    }
 
-export interface ReflectionResponse {
-  id: number;
-  user_id: number;
-  question_id: number;
-  prompt_text: string;
-  response: string | null;
-  response_time_ms: number | null;
-  created_at: string;
-  updated_at: string;
-}
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const url = `${apiUrl}${endpoint}`;
 
-export interface ReflectionResponseCreate {
-  question_id: number;
-  response: string | null;
-}
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+        ...options?.headers,
+      },
+    });
 
-export interface ReflectionResponseUpdate {
-  response: string | null;
-}
+    if (!response.ok) {
+      if (response.status === 401) {
+        // Redirect to sign-in on authentication failure
+        if (typeof window !== 'undefined') {
+          window.location.href = '/sign-in';
+        }
+      }
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText}`);
+    }
 
-export interface ReflectionResponseBatch {
-  responses: ReflectionResponseCreate[];
+    return response.json();
+  } catch (error) {
+    console.error('API request failed:', error);
+    throw error;
+  }
 }
 
 class ReflectionService {
@@ -36,10 +57,9 @@ class ReflectionService {
   /**
    * Récupère toutes les questions de réflexion
    */
-  async getQuestions(): Promise<ReflectionQuestion[]> {
+  async getQuestions(getToken?: () => Promise<string | null>): Promise<ReflectionQuestion[]> {
     try {
-      const response = await api.get<ReflectionQuestion[]>(`${this.baseUrl}/questions`);
-      return response.data;
+      return makeAuthenticatedRequest<ReflectionQuestion[]>(`${this.baseUrl}/questions`, undefined, getToken);
     } catch (error) {
       console.error('Erreur lors de la récupération des questions:', error);
       throw error;
@@ -49,10 +69,9 @@ class ReflectionService {
   /**
    * Récupère les réponses de l'utilisateur actuel
    */
-  async getCurrentUserResponses(): Promise<ReflectionResponse[]> {
+  async getCurrentUserResponses(getToken?: () => Promise<string | null>): Promise<ReflectionResponse[]> {
     try {
-      const response = await api.get<ReflectionResponse[]>(`${this.baseUrl}/responses`);
-      return response.data;
+      return makeAuthenticatedRequest<ReflectionResponse[]>(`${this.baseUrl}/responses`, undefined, getToken);
     } catch (error) {
       console.error('Erreur lors de la récupération des réponses:', error);
       throw error;
@@ -62,10 +81,9 @@ class ReflectionService {
   /**
    * Récupère les réponses d'un utilisateur spécifique
    */
-  async getUserResponses(userId: number): Promise<ReflectionResponse[]> {
+  async getUserResponses(userId: number, getToken?: () => Promise<string | null>): Promise<ReflectionResponse[]> {
     try {
-      const response = await api.get<ReflectionResponse[]>(`${this.baseUrl}/responses/${userId}`);
-      return response.data;
+      return makeAuthenticatedRequest<ReflectionResponse[]>(`${this.baseUrl}/responses/${userId}`, undefined, getToken);
     } catch (error) {
       console.error('Erreur lors de la récupération des réponses utilisateur:', error);
       throw error;
@@ -75,10 +93,12 @@ class ReflectionService {
   /**
    * Sauvegarde ou met à jour une réponse
    */
-  async saveResponse(responseData: ReflectionResponseCreate): Promise<ReflectionResponse> {
+  async saveResponse(responseData: ReflectionResponseCreate, getToken?: () => Promise<string | null>): Promise<ReflectionResponse> {
     try {
-      const response = await api.post<ReflectionResponse>(`${this.baseUrl}/responses`, responseData);
-      return response.data;
+      return makeAuthenticatedRequest<ReflectionResponse>(`${this.baseUrl}/responses`, {
+        method: 'POST',
+        body: JSON.stringify(responseData),
+      }, getToken);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde de la réponse:', error);
       throw error;
@@ -88,10 +108,12 @@ class ReflectionService {
   /**
    * Met à jour une réponse existante
    */
-  async updateResponse(responseId: number, responseData: ReflectionResponseUpdate): Promise<ReflectionResponse> {
+  async updateResponse(responseId: number, responseData: ReflectionResponseUpdate, getToken?: () => Promise<string | null>): Promise<ReflectionResponse> {
     try {
-      const response = await api.put<ReflectionResponse>(`${this.baseUrl}/responses/${responseId}`, responseData);
-      return response.data;
+      return makeAuthenticatedRequest<ReflectionResponse>(`${this.baseUrl}/responses/${responseId}`, {
+        method: 'PUT',
+        body: JSON.stringify(responseData),
+      }, getToken);
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la réponse:', error);
       throw error;
@@ -101,10 +123,12 @@ class ReflectionService {
   /**
    * Sauvegarde plusieurs réponses en lot
    */
-  async saveResponsesBatch(batchData: ReflectionResponseBatch): Promise<ReflectionResponse[]> {
+  async saveResponsesBatch(batchData: ReflectionResponseBatch, getToken?: () => Promise<string | null>): Promise<ReflectionResponse[]> {
     try {
-      const response = await api.post<ReflectionResponse[]>(`${this.baseUrl}/responses/batch`, batchData);
-      return response.data;
+      return makeAuthenticatedRequest<ReflectionResponse[]>(`${this.baseUrl}/responses/batch`, {
+        method: 'POST',
+        body: JSON.stringify(batchData),
+      }, getToken);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde en lot:', error);
       throw error;
@@ -114,9 +138,11 @@ class ReflectionService {
   /**
    * Supprime une réponse
    */
-  async deleteResponse(responseId: number): Promise<void> {
+  async deleteResponse(responseId: number, getToken?: () => Promise<string | null>): Promise<void> {
     try {
-      await api.delete(`${this.baseUrl}/responses/${responseId}`);
+      await makeAuthenticatedRequest<void>(`${this.baseUrl}/responses/${responseId}`, {
+        method: 'DELETE',
+      }, getToken);
     } catch (error) {
       console.error('Erreur lors de la suppression de la réponse:', error);
       throw error;
@@ -126,11 +152,11 @@ class ReflectionService {
   /**
    * Combine les questions avec les réponses existantes
    */
-  async getQuestionsWithResponses(): Promise<(ReflectionQuestion & { response?: ReflectionResponse })[]> {
+  async getQuestionsWithResponses(getToken?: () => Promise<string | null>): Promise<(ReflectionQuestion & { response?: ReflectionResponse })[]> {
     try {
       const [questions, responses] = await Promise.all([
-        this.getQuestions(),
-        this.getCurrentUserResponses()
+        this.getQuestions(getToken),
+        this.getCurrentUserResponses(getToken)
       ]);
 
       // Créer un map des réponses par question_id

@@ -595,7 +595,7 @@ const JobSkillsTree: React.FC<JobSkillsTreeProps> = ({ jobId, className = '', he
       <div className="mt-4">
         <Disclosure>
           {({ open }) => (
-            <>
+            <div>
               <DisclosureButton 
                 className="w-full flex justify-between items-center px-4 py-2 rounded-lg" 
                 style={{ 
@@ -769,7 +769,7 @@ const JobSkillsTree: React.FC<JobSkillsTreeProps> = ({ jobId, className = '', he
                   </div>
                 </div>
               </DisclosurePanel>
-            </>
+            </div>
           )}
         </Disclosure>
       </div>

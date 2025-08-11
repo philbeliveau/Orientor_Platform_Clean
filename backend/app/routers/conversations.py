@@ -99,7 +99,7 @@ Brief and punchy - maximum impact, minimum words.
 logger = logging.getLogger(__name__)
 
 router = APIRouter(
-    prefix="/chat/conversations",
+    prefix="/conversations",
     tags=["conversations"]
 )
 

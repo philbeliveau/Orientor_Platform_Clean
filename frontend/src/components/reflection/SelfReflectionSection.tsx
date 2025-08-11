@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@clerk/nextjs';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import reflectionService, { ReflectionQuestion, ReflectionResponse } from '@/services/reflectionService';
 
@@ -13,6 +14,7 @@ interface SelfReflectionSectionProps {
 }
 
 const SelfReflectionSection: React.FC<SelfReflectionSectionProps> = ({ className = '' }) => {
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const [questions, setQuestions] = useState<QuestionWithResponse[]>([]);
   const [responses, setResponses] = useState<{ [key: number]: string }>({});
   const [editingQuestions, setEditingQuestions] = useState<Set<number>>(new Set());
@@ -21,14 +23,19 @@ const SelfReflectionSection: React.FC<SelfReflectionSectionProps> = ({ className
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadQuestionsAndResponses();
-  }, []);
+    if (isLoaded && isSignedIn) {
+      loadQuestionsAndResponses();
+    } else if (isLoaded && !isSignedIn) {
+      // Redirect to sign-in if not authenticated
+      window.location.href = '/sign-in';
+    }
+  }, [isLoaded, isSignedIn]);
 
   const loadQuestionsAndResponses = async () => {
     try {
       setLoading(true);
       setError(null);
-      const questionsWithResponses = await reflectionService.getQuestionsWithResponses();
+      const questionsWithResponses = await reflectionService.getQuestionsWithResponses(getToken);
       setQuestions(questionsWithResponses);
       
       // Initialiser les réponses locales
@@ -62,7 +69,7 @@ const SelfReflectionSection: React.FC<SelfReflectionSectionProps> = ({ className
       await reflectionService.saveResponse({
         question_id: questionId,
         response: response.trim() || null
-      });
+      }, getToken);
       
       // Recharger les données pour avoir les informations à jour
       await loadQuestionsAndResponses();
@@ -92,7 +99,7 @@ const SelfReflectionSection: React.FC<SelfReflectionSectionProps> = ({ className
         response: responses[q.id]?.trim() || null
       }));
       
-      await reflectionService.saveResponsesBatch({ responses: responsesToSave });
+      await reflectionService.saveResponsesBatch({ responses: responsesToSave }, getToken);
       await loadQuestionsAndResponses();
       setEditingQuestions(new Set());
     } catch (err) {
