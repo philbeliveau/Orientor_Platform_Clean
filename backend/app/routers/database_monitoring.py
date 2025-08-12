@@ -43,7 +43,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from fastapi.security import HTTPAuthorizationCredentials
+# Removed HTTPAuthorizationCredentials - not needed for standard endpoints
 from sqlalchemy.orm import Session
 
 from ..utils.database import get_db, get_connection_pool_stats, optimize_database_for_caching
@@ -53,7 +53,6 @@ from ..utils.optimized_clerk_auth import (
     authentication_health_check,
     invalidate_user_session_cache,
     refresh_user_session_cache,
-    get_current_user_optimized,
     preload_user_sessions
 )
 from ..utils.auth_cache import CacheMetrics, get_request_cache

@@ -11,9 +11,9 @@ It integrates with the performance monitoring system and provides administrative
 # This router has been migrated to use the unified secure authentication system
 # with integrated caching, security optimizations, and rollback support.
 # 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_secure_integrated
-# Current system: secure_auth_integration.get_current_user_secure_integrated
+# Authentication Standardization: 2025-08-12
+# Status: Compliant with standard Clerk authentication patterns
+# Using: app.utils.clerk_auth.get_current_user_with_db_sync
 # 
 # Benefits:
 # - AES-256 encryption for sensitive cache data
