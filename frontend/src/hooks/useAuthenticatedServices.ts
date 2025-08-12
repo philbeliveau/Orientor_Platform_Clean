@@ -31,8 +31,7 @@ export const useAuthenticatedServices = () => {
   // Career Goals Services
   const careerGoalsServices = {
     getActiveCareerGoal: async () => {
-      const token = await getAuthToken();
-      return CareerGoalsService.getActiveCareerGoal(token);
+      return CareerGoalsService.getActiveCareerGoal(getAuthToken);
     },
 
     setCareerGoalFromJob: async (job: {
@@ -42,8 +41,7 @@ export const useAuthenticatedServices = () => {
       description?: string;
       source?: string;
     }) => {
-      const token = await getAuthToken();
-      return CareerGoalsService.setCareerGoalFromJob(token, job);
+      return CareerGoalsService.setCareerGoalFromJob(getAuthToken, job);
     },
 
     getCareerProgression: async () => {

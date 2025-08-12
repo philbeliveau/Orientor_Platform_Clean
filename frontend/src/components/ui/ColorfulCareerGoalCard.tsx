@@ -43,7 +43,7 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
     if (err.message?.includes('Clerk not loaded') || err.message?.includes('User not signed in')) {
       return {
         type: 'auth' as const,
-        message: 'Authentication issue - please sign in',
+        message: 'Please sign in to view career goals',
         canRetry: false
       };
     }
@@ -51,7 +51,7 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
     if (err.message?.includes('Authentication required') || err.message?.includes('No authentication token')) {
       return {
         type: 'auth' as const,
-        message: 'Token unavailable - refreshing session',
+        message: 'Authentication refreshing...',
         canRetry: true
       };
     }
@@ -67,7 +67,7 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
     if (err.message?.includes('Career goals API error: 404')) {
       return {
         type: 'api' as const,
-        message: 'Career goals feature not available',
+        message: 'Career goals service unavailable',
         canRetry: false
       };
     }
@@ -75,30 +75,31 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
     if (err.message?.includes('Career goals API error: 500')) {
       return {
         type: 'api' as const,
-        message: 'Server error - trying again',
+        message: 'Service temporarily unavailable',
         canRetry: true
       };
     }
     
-    if (err.message?.includes('NetworkError') || err.message?.includes('fetch')) {
+    if (err.message?.includes('NetworkError') || err.message?.includes('fetch') || err.message?.includes('Failed to fetch')) {
       return {
         type: 'network' as const,
-        message: 'Connection issue - retrying',
+        message: 'Network connection issue',
         canRetry: true
       };
     }
     
     return {
       type: 'unknown' as const,
-      message: err.message || 'Something went wrong',
+      message: 'Unable to load career goals',
       canRetry: true
     };
   };
 
   const fetchActiveCareerGoal = async (isRetry = false) => {
-    console.log('[CareerGoalCard] 🚀 Fetching career goal...', { isRetry, retryCount });
+    console.log('[CareerGoalCard] 🚀 Fetching career goal...', { isRetry, retryCount, isLoaded, isSignedIn });
     
     if (!isLoaded || !isSignedIn) {
+      console.log('[CareerGoalCard] ⏳ Waiting for authentication...', { isLoaded, isSignedIn });
       if (isMounted.current) {
         setLoading(false);
         setError(null);
@@ -122,7 +123,8 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
       
       // Import service directly to avoid dependency issues
       const { CareerGoalsService } = await import('@/services/careerGoalsService');
-      const response = await CareerGoalsService.getActiveCareerGoal(getAuthToken);
+      console.log('[CareerGoalCard] 🔐 Calling CareerGoalsService.getActiveCareerGoal...');
+      const response = await CareerGoalsService.getActiveCareerGoal(() => getAuthToken());
       if (!isMounted.current) return;
       
       console.log('[CareerGoalCard] ✅ Career goal data received:', response);
@@ -257,7 +259,7 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
       >
         <div className="flex items-center justify-center h-full">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-          <p className="ml-3 text-white text-sm">Loading career goal...</p>
+          <p className="ml-3 text-white text-sm">Loading your career goals...</p>
         </div>
       </div>
     );

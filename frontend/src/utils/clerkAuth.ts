@@ -28,16 +28,23 @@ export const useClerkToken = () => {
       throw new Error('User not signed in');
     }
 
-    console.log('[Auth] 🎫 Attempting to get JWT token with orientor-jwt template...');
+    console.log('[Auth] 🎫 Attempting to get JWT token...');
     
-    // Get JWT token with the orientor-jwt template, fallback to default
-    const token = await getToken({ template: 'orientor-jwt' }).catch(async (error) => {
-      console.warn('[Auth] ⚠️ orientor-jwt template not found, using default token');
-      console.warn('[Auth] Template error:', error.message);
-      const fallbackToken = await getToken();
-      console.log('[Auth] ✅ Fallback token obtained');
-      return fallbackToken;
-    });
+    // Get JWT token - try orientor-jwt template first, fallback to default
+    let token;
+    try {
+      token = await getToken({ template: 'orientor-jwt' });
+      console.log('[Auth] ✅ Token obtained with orientor-jwt template');
+    } catch (templateError) {
+      console.warn('[Auth] ⚠️ orientor-jwt template not available, using default token');
+      try {
+        token = await getToken();
+        console.log('[Auth] ✅ Token obtained with default template');
+      } catch (defaultError) {
+        console.error('[Auth] ❌ Failed to get token with both template and default:', defaultError.message);
+        throw new Error('Failed to obtain authentication token');
+      }
+    }
     
     if (!token) {
       console.error('[Auth] ❌ No authentication token available');
