@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { useClerkAuth } from '../contexts/ClerkAuthContext'
+import { useAuth } from '@clerk/nextjs'
 
 // Create basic axios client with proper base URL
 export const apiClient = axios.create({
@@ -133,56 +133,41 @@ class ClerkApiService {
       token,
     });
   }
+
+  async getOnboardingStatus(token: string) {
+    return this.request('/user/onboarding-status', {
+      method: 'GET',
+      token,
+    });
+  }
 }
 
 // Create singleton instance
 export const clerkApiService = new ClerkApiService();
 
-// React hook for using the API service with Clerk authentication
+// React hook for using the API service with Clerk authentication - SIMPLIFIED per CLAUDE.md
 export const useClerkApi = () => {
-  const { getAuthToken, isAuthenticated, isLoading } = useClerkAuth();
+  const { getToken, isSignedIn, isLoaded } = useAuth();
 
   const apiCall = async <T>(
     apiMethod: (token: string, ...args: any[]) => Promise<T>,
     ...args: any[]
   ): Promise<T> => {
     try {
-      // Check if user is authenticated first
-      if (!isAuthenticated) {
-        console.error('[Auth] User not authenticated');
+      // Simple authentication check as required by CLAUDE.md
+      if (!isLoaded) {
+        throw new Error('Authentication still loading');
+      }
+
+      if (!isSignedIn) {
         throw new Error('User not authenticated - please sign in');
       }
 
-      if (isLoading) {
-        console.log('[Auth] Authentication still loading, waiting...');
-        // Wait a bit for auth to load
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      // CRITICAL: Request JWT token with the template we created
-      console.log('[Auth] Requesting JWT token with orientor-jwt template...');
-      
-      if (!getAuthToken) {
-        console.error('[Auth] getAuthToken function is undefined');
-        throw new Error('Authentication service not properly initialized');
-      }
-
-      const token = await getAuthToken();
+      // ✅ CORRECT - Use Clerk hooks as per CLAUDE.md: const { getToken } = useAuth(); const token = await getToken();
+      const token = await getToken();
       
       if (!token) {
-        console.error('[Auth] No token returned from Clerk');
         throw new Error('No authentication token available');
-      }
-      
-      // Validate token format - reject session tokens
-      if (token.startsWith('sess_')) {
-        console.error('[Auth] ❌ Got session token instead of JWT:', token.substring(0, 20));
-        throw new Error('Invalid token type - got session token instead of JWT');
-      }
-      
-      if (!token.startsWith('eyJ')) {
-        console.error('[Auth] ❌ Invalid JWT format:', token.substring(0, 20));
-        throw new Error('Invalid JWT token format');
       }
       
       console.log('[Auth] ✅ JWT token obtained:', token.substring(0, 30) + '...');
@@ -212,6 +197,8 @@ export const useClerkApi = () => {
       apiCall(clerkApiService.getJobSkillsTree.bind(clerkApiService), jobId),
     saveCareer: (careerData: { id: number; title: string }) => 
       apiCall(clerkApiService.saveCareer.bind(clerkApiService), careerData),
+    getOnboardingStatus: () => 
+      apiCall(clerkApiService.getOnboardingStatus.bind(clerkApiService)),
     // Generic method for custom API calls
     request: <T>(endpoint: string, options?: RequestInit) => 
       apiCall((token: string) => clerkApiService.request<T>(endpoint, { ...options, token }))

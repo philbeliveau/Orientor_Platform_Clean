@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@clerk/nextjs';
-import { getCachedToken } from '@/utils/tokenCache';
+import { useOptimizedAuth } from '@/hooks/useOptimizedAuth';
 import axios from 'axios';
 import ChatMessage from './ChatMessage';
 import ConversationList from './ConversationList';
@@ -178,10 +177,7 @@ export default function ChatInterface({ currentUserId, enableOrientator = false 
   
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { getToken: clerkGetToken, isLoaded, isSignedIn } = useAuth();
-  
-  // Simple cached token wrapper - solves 8 getToken() calls problem  
-  const getToken = () => getCachedToken(clerkGetToken);
+  const { getToken, isLoaded, isSignedIn } = useOptimizedAuth();
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Persist chat mode changes to localStorage

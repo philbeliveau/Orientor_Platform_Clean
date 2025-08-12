@@ -99,6 +99,7 @@ export default function Dashboard() {
   // Check onboarding status first - this is critical for new users
   useEffect(() => {
     let isCancelled = false;
+    let timeoutId: NodeJS.Timeout;
     
     const checkOnboardingStatus = async () => {
       try {
@@ -108,7 +109,24 @@ export default function Dashboard() {
 
         console.log('🔍 Dashboard: Checking onboarding status for user:', user.id);
         
-        const status = await onboardingService.getStatus();
+        // Create a timeout promise to prevent hanging
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            reject(new Error('Onboarding status check timeout'));
+          }, 10000); // 10 second timeout
+        });
+        
+        // Race between API call and timeout
+        const status = await Promise.race([
+          onboardingService.getStatus(),
+          timeoutPromise
+        ]) as any;
+        
+        // Clear timeout if request completed
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        
         console.log('📊 Onboarding status:', status);
         
         if (!isCancelled) {
@@ -121,13 +139,22 @@ export default function Dashboard() {
           }
         }
       } catch (error: any) {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        
         if (!isCancelled) {
           console.error('❌ Error checking onboarding status:', error);
           
-          if (error.message?.includes('Authentication service not available')) {
+          if (error.message?.includes('timeout')) {
+            console.log('⏰ Onboarding check timed out, will show loading screen');
+            // Don't redirect on timeout, let user try refreshing
+            setCheckingOnboarding(false);
+            return;
+          } else if (error.message?.includes('Authentication service not available')) {
             console.log('🔄 Authentication service initializing, will retry...');
             // Don't redirect, let them try again
-          } else if (error.message?.includes('not authenticated')) {
+          } else if (error.message?.includes('not authenticated') || error.message?.includes('401')) {
             console.log('🔑 Not authenticated, redirecting to sign-in');
             router.push('/sign-in');
             return;
@@ -148,6 +175,9 @@ export default function Dashboard() {
     
     return () => {
       isCancelled = true;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
   }, [isLoaded, isSignedIn, user?.id, router]); // Removed onboardingService to prevent infinite loop
 
@@ -386,11 +416,24 @@ export default function Dashboard() {
   // Show loading while checking authentication or during SSR
   if (typeof window === 'undefined' || !isLoaded || checkingOnboarding) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex flex-col items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <p className="ml-3 text-gray-600">
+        <p className="ml-3 text-gray-600 mt-4 text-center">
           {checkingOnboarding ? 'Verifying onboarding status...' : 'Loading dashboard...'}
         </p>
+        {checkingOnboarding && (
+          <div className="mt-4 text-center max-w-md">
+            <p className="text-sm text-gray-500">
+              If this takes longer than expected, please try refreshing the page.
+            </p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-2 text-blue-600 hover:text-blue-800 text-sm underline"
+            >
+              Refresh Page
+            </button>
+          </div>
+        )}
       </div>
     );
   }
