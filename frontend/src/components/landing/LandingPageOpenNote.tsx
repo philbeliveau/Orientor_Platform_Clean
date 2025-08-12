@@ -34,7 +34,7 @@ export default function LandingPageOpenNote() {
             <Link href="/features" className="text-gray-600 hover:text-gray-900 transition-colors">Features</Link>
             <Link href="/templates" className="text-gray-600 hover:text-gray-900 transition-colors">Templates</Link>
             <Link href="/pricing" className="text-gray-600 hover:text-gray-900 transition-colors">Pricing</Link>
-            <Link href="/login" className="bg-gradient-to-r from-indigo-500 to-sky-400 text-white px-4 py-2 rounded-lg hover:from-indigo-600 hover:to-sky-500 transition-all ink-button">
+            <Link href="/sign-in" className="bg-gradient-to-r from-indigo-500 to-sky-400 text-white px-4 py-2 rounded-lg hover:from-indigo-600 hover:to-sky-500 transition-all ink-button">
               Get Started
             </Link>
           </nav>

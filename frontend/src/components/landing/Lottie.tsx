@@ -26,7 +26,7 @@ export default function LandingPage() {
               Discover who you are, and who you could become. Navigo helps you reflect, explore, and track your growth with personalized, intelligent guidance.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link href="/login" className="btn btn-primary">Log In</Link>
+              <Link href="/sign-in" className="btn btn-primary">Log In</Link>
               <Link href="/register" className="btn btn-outline">Sign Up</Link>
             </div>
           </motion.div>
@@ -121,7 +121,7 @@ export default function LandingPage() {
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-4">
                 <Link href="/register" className="btn btn-primary">Create Account</Link>
-                <Link href="/login" className="btn btn-outline">Log In</Link>
+                <Link href="/sign-in" className="btn btn-outline">Log In</Link>
               </div>
             </div>
           </div>

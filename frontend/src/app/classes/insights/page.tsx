@@ -24,7 +24,7 @@ export default function OverallInsightsPage() {
             </h3>
             <p className="text-yellow-800">Please log in to view your career insights.</p>
             <Link
-              href="/login"
+              href="/sign-in"
               className="inline-block mt-4 text-blue-600 hover:text-blue-700"
             >
               Go to Login →

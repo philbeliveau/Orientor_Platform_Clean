@@ -41,7 +41,8 @@ export const useClerkToken = () => {
         token = await getToken();
         console.log('[Auth] ✅ Token obtained with default template');
       } catch (defaultError) {
-        console.error('[Auth] ❌ Failed to get token with both template and default:', defaultError.message);
+        const errorMessage = defaultError instanceof Error ? defaultError.message : 'Unknown error';
+        console.error('[Auth] ❌ Failed to get token with both template and default:', errorMessage);
         throw new Error('Failed to obtain authentication token');
       }
     }

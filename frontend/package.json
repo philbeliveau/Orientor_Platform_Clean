@@ -10,7 +10,8 @@
     "lint": "next lint",
     "vercel-build": "next build",
     "vercel-install": "npm install",
-    "postbuild": "cp public/404.html .next/404.html && cp public/index.html .next/index.html"
+    "postbuild": "cp public/404.html .next/404.html && cp public/index.html .next/index.html",
+    "generate-api-types": "curl http://localhost:8000/openapi.json | npx swagger-typescript-api -p - -o src/types/api-generated.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.28.1",
@@ -64,6 +65,7 @@
     "eslint": "^9.32.0",
     "eslint-config-next": "^15.4.6",
     "playwright": "^1.54.2",
+    "swagger-typescript-api": "^13.2.8",
     "typescript": "5.1.6",
     "webpack-bundle-analyzer": "^4.10.1"
   },

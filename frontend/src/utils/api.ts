@@ -51,5 +51,5 @@ export const logApiDetails = () => {
   console.log('Environment:', process.env.NODE_ENV);
   console.log('Is production:', process.env.NODE_ENV === 'production');
   console.log('API URL from env:', process.env.NEXT_PUBLIC_API_URL);
-  console.log('Example login endpoint:', endpoint('/users/login'));
+  console.log('Example auth endpoint:', endpoint('/users/auth'));
 }; 

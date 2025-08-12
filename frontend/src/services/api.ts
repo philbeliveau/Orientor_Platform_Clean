@@ -1,5 +1,38 @@
 import axios from 'axios'
 import { useAuth } from '@clerk/nextjs'
+import {
+  ApiResponse,
+  ApiError,
+  ApiRequestOptions,
+  CareerGoal,
+  CreateCareerGoalRequest,
+  UpdateCareerGoalRequest,
+  AvatarData,
+  UpdateAvatarRequest,
+  UserProfile,
+  JobRecommendation,
+  HollandResults,
+  SkillsTreeData,
+  UserNote,
+  CompatiblePeer,
+  SaveCareerRequest,
+  SaveCareerResponse,
+  OnboardingStatus
+} from '../types/api'
+import {
+  validateApiResponseFormat,
+  extractResponseData,
+  validateCareerGoal,
+  validateAvatarData,
+  validateUserProfile,
+  validateJobRecommendation,
+  validateHollandResults,
+  validateSkillsTreeData,
+  validateUserNote,
+  validateCompatiblePeer,
+  validateOnboardingStatus,
+  validateArrayResponse
+} from '../utils/validation'
 
 // Create basic axios client with proper base URL
 export const apiClient = axios.create({
@@ -57,7 +90,10 @@ class ClerkApiService {
     };
   }
 
-  async request<T>(endpoint: string, options?: RequestInit & { token?: string }): Promise<T> {
+  async request<T>(
+    endpoint: string, 
+    options?: ApiRequestOptions
+  ): Promise<ApiResponse<T>> {
     const { token, ...fetchOptions } = options || {};
     const headers = await this.getHeaders(token);
     
@@ -67,78 +103,210 @@ class ClerkApiService {
     
     console.log(`[API] Making request to: ${url}`); // Debug logging
     
-    const response = await fetch(url, {
-      ...fetchOptions,
-      headers: { ...headers, ...fetchOptions?.headers },
-    });
+    try {
+      const response = await fetch(url, {
+        ...fetchOptions,
+        headers: { ...headers, ...fetchOptions?.headers },
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[API] Error ${response.status}: ${errorText}`);
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[API] Error ${response.status}: ${errorText}`);
+        
+        const apiError: ApiError = {
+          status: response.status,
+          message: errorText || `HTTP ${response.status}`,
+          details: `Failed to fetch ${endpoint}`
+        };
+        
+        throw apiError;
+      }
+
+      const rawData = await response.json();
+      return validateApiResponseFormat<T>(rawData);
+    } catch (error) {
+      // Re-throw API errors as-is
+      if (error && typeof error === 'object' && 'status' in error) {
+        throw error;
+      }
+      
+      // Wrap other errors in API error format
+      const apiError: ApiError = {
+        status: 500,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        details: `Request to ${endpoint} failed`
+      };
+      
+      throw apiError;
     }
-
-    return response.json();
   }
 
-  // Specific API methods
-  async getJobRecommendations(token: string, topK: number = 3) {
-    return this.request(`/api/v1/jobs/recommendations/me?top_k=${topK}`, {
+  // Type-safe API methods
+
+  // Career Goals API
+  async getCareerGoals(token: string): Promise<ApiResponse<CareerGoal[]>> {
+    const response = await this.request<CareerGoal[]>('/api/v1/career-goals', {
       method: 'GET',
+      token
+    });
+    
+    // Validate each career goal in the response
+    const data = extractResponseData(response);
+    const validatedData = validateArrayResponse(data, validateCareerGoal);
+    
+    return { ...response, data: validatedData };
+  }
+
+  async createCareerGoal(token: string, goalData: CreateCareerGoalRequest): Promise<ApiResponse<CareerGoal>> {
+    const response = await this.request<CareerGoal>('/api/v1/career-goals', {
+      method: 'POST',
       token,
+      body: JSON.stringify(goalData)
+    });
+    
+    const data = extractResponseData(response);
+    const validatedData = validateCareerGoal(data);
+    
+    return { ...response, data: validatedData };
+  }
+
+  async updateCareerGoal(token: string, goalId: number, goalData: UpdateCareerGoalRequest): Promise<ApiResponse<CareerGoal>> {
+    const response = await this.request<CareerGoal>(`/api/v1/career-goals/${goalId}`, {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(goalData)
+    });
+    
+    const data = extractResponseData(response);
+    const validatedData = validateCareerGoal(data);
+    
+    return { ...response, data: validatedData };
+  }
+
+  async deleteCareerGoal(token: string, goalId: number): Promise<ApiResponse<{ success: boolean }>> {
+    return this.request<{ success: boolean }>(`/api/v1/career-goals/${goalId}`, {
+      method: 'DELETE',
+      token
     });
   }
 
-  async getUserProfile(token: string) {
-    return this.request('/api/v1/profiles/me', {
+  // Avatar API
+  async getAvatarData(token: string): Promise<ApiResponse<AvatarData>> {
+    const response = await this.request<AvatarData>('/api/v1/avatar/me', {
+      method: 'GET',
+      token
+    });
+    
+    const data = extractResponseData(response);
+    const validatedData = validateAvatarData(data);
+    
+    return { ...response, data: validatedData };
+  }
+
+  async updateAvatarData(token: string, avatarData: UpdateAvatarRequest): Promise<ApiResponse<AvatarData>> {
+    const response = await this.request<AvatarData>('/api/v1/avatar/me', {
+      method: 'PUT',
+      token,
+      body: JSON.stringify(avatarData)
+    });
+    
+    const data = extractResponseData(response);
+    const validatedData = validateAvatarData(data);
+    
+    return { ...response, data: validatedData };
+  }
+
+  // Enhanced existing methods with proper typing
+  async getJobRecommendations(token: string, topK: number = 3): Promise<ApiResponse<JobRecommendation[]>> {
+    const response = await this.request<JobRecommendation[]>(`/api/v1/jobs/recommendations/me?top_k=${topK}`, {
       method: 'GET',
       token,
     });
+    
+    const data = extractResponseData(response);
+    const validatedData = validateArrayResponse(data, validateJobRecommendation);
+    
+    return { ...response, data: validatedData };
   }
 
-  async getUserNotes(token: string) {
-    return this.request('/api/v1/space/notes', {
+  async getUserProfile(token: string): Promise<ApiResponse<UserProfile>> {
+    const response = await this.request<UserProfile>('/api/v1/profiles/me', {
       method: 'GET',
       token,
     });
+    
+    const data = extractResponseData(response);
+    const validatedData = validateUserProfile(data);
+    
+    return { ...response, data: validatedData };
   }
 
-  async getHollandResults(token: string) {
-    return this.request('/api/v1/tests/holland/user-results', {
+  async getUserNotes(token: string): Promise<ApiResponse<UserNote[]>> {
+    const response = await this.request<UserNote[]>('/api/v1/space/notes', {
       method: 'GET',
       token,
     });
+    
+    const data = extractResponseData(response);
+    const validatedData = validateArrayResponse(data, validateUserNote);
+    
+    return { ...response, data: validatedData };
   }
 
-  async getCompatiblePeers(token: string) {
-    return this.request('/api/v1/peers/compatible', {
+  async getHollandResults(token: string): Promise<ApiResponse<HollandResults>> {
+    const response = await this.request<HollandResults>('/api/v1/tests/holland/user-results', {
       method: 'GET',
       token,
     });
+    
+    const data = extractResponseData(response);
+    const validatedData = validateHollandResults(data);
+    
+    return { ...response, data: validatedData };
   }
 
-  async getJobSkillsTree(token: string, jobId: string) {
-    const response = await this.request(`/api/v1/competence-tree/job/${jobId}/skills-tree`, {
+  async getCompatiblePeers(token: string): Promise<ApiResponse<CompatiblePeer[]>> {
+    const response = await this.request<CompatiblePeer[]>('/api/v1/peers/compatible', {
+      method: 'GET',
+      token,
+    });
+    
+    const data = extractResponseData(response);
+    const validatedData = validateArrayResponse(data, validateCompatiblePeer);
+    
+    return { ...response, data: validatedData };
+  }
+
+  async getJobSkillsTree(token: string, jobId: string): Promise<ApiResponse<SkillsTreeData>> {
+    const response = await this.request<SkillsTreeData>(`/api/v1/competence-tree/job/${jobId}/skills-tree`, {
       method: 'POST',
       token,
     });
     
-    // Extract tree_data from the response
-    return response.tree_data || response;
+    const data = extractResponseData(response);
+    const validatedData = validateSkillsTreeData(data);
+    
+    return { ...response, data: validatedData };
   }
 
-  async saveCareer(token: string, careerData: { id: number; title: string }) {
-    return this.request(`/api/v1/careers/save/${careerData.id}`, {
+  async saveCareer(token: string, careerData: SaveCareerRequest): Promise<ApiResponse<SaveCareerResponse>> {
+    return this.request<SaveCareerResponse>(`/api/v1/careers/save/${careerData.id}`, {
       method: 'POST',
       token,
+      body: JSON.stringify(careerData)
     });
   }
 
-  async getOnboardingStatus(token: string) {
-    return this.request('/user/onboarding-status', {
+  async getOnboardingStatus(token: string): Promise<ApiResponse<OnboardingStatus>> {
+    const response = await this.request<OnboardingStatus>('/user/onboarding-status', {
       method: 'GET',
       token,
     });
+    
+    const data = extractResponseData(response);
+    const validatedData = validateOnboardingStatus(data);
+    
+    return { ...response, data: validatedData };
   }
 }
 
@@ -150,9 +318,9 @@ export const useClerkApi = () => {
   const { getToken, isSignedIn, isLoaded } = useAuth();
 
   const apiCall = async <T>(
-    apiMethod: (token: string, ...args: any[]) => Promise<T>,
+    apiMethod: (token: string, ...args: any[]) => Promise<ApiResponse<T>>,
     ...args: any[]
-  ): Promise<T> => {
+  ): Promise<ApiResponse<T>> => {
     try {
       // Simple authentication check as required by CLAUDE.md
       if (!isLoaded) {
@@ -179,6 +347,23 @@ export const useClerkApi = () => {
   };
 
   return {
+    // Career Goals API
+    getCareerGoals: (): Promise<ApiResponse<CareerGoal[]>> => 
+      apiCall(clerkApiService.getCareerGoals.bind(clerkApiService)),
+    createCareerGoal: (goalData: CreateCareerGoalRequest): Promise<ApiResponse<CareerGoal>> => 
+      apiCall(clerkApiService.createCareerGoal.bind(clerkApiService), goalData),
+    updateCareerGoal: (goalId: number, goalData: UpdateCareerGoalRequest): Promise<ApiResponse<CareerGoal>> => 
+      apiCall(clerkApiService.updateCareerGoal.bind(clerkApiService), goalId, goalData),
+    deleteCareerGoal: (goalId: number): Promise<ApiResponse<{ success: boolean }>> => 
+      apiCall(clerkApiService.deleteCareerGoal.bind(clerkApiService), goalId),
+    
+    // Avatar API
+    getAvatarData: (): Promise<ApiResponse<AvatarData>> => 
+      apiCall(clerkApiService.getAvatarData.bind(clerkApiService)),
+    updateAvatarData: (avatarData: UpdateAvatarRequest): Promise<ApiResponse<AvatarData>> => 
+      apiCall(clerkApiService.updateAvatarData.bind(clerkApiService), avatarData),
+    
+    // Enhanced existing methods
     getJobRecommendations: (topK?: number) => 
       apiCall(clerkApiService.getJobRecommendations.bind(clerkApiService), topK),
     getAllJobRecommendations: (topK?: number) => 
@@ -195,10 +380,11 @@ export const useClerkApi = () => {
       apiCall(clerkApiService.getCompatiblePeers.bind(clerkApiService)),
     getJobSkillsTree: (jobId: string) => 
       apiCall(clerkApiService.getJobSkillsTree.bind(clerkApiService), jobId),
-    saveCareer: (careerData: { id: number; title: string }) => 
+    saveCareer: (careerData: SaveCareerRequest) => 
       apiCall(clerkApiService.saveCareer.bind(clerkApiService), careerData),
     getOnboardingStatus: () => 
       apiCall(clerkApiService.getOnboardingStatus.bind(clerkApiService)),
+    
     // Generic method for custom API calls
     request: <T>(endpoint: string, options?: RequestInit) => 
       apiCall((token: string) => clerkApiService.request<T>(endpoint, { ...options, token }))
