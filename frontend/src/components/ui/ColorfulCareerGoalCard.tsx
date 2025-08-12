@@ -122,9 +122,9 @@ export default function ColorfulCareerGoalCard({ style, className = '' }: Colorf
       if (!isMounted.current) return;
       
       // Import service directly to avoid dependency issues
-      const { CareerGoalsService } = await import('@/services/careerGoalsService');
-      console.log('[CareerGoalCard] 🔐 Calling CareerGoalsService.getActiveCareerGoal...');
-      const response = await CareerGoalsService.getActiveCareerGoal(() => getAuthToken());
+      const { LegacyCareerGoalsService } = await import('@/services/careerGoalsService');
+      console.log('[CareerGoalCard] 🔐 Calling LegacyCareerGoalsService.getActiveCareerGoal...');
+      const response = await LegacyCareerGoalsService.getActiveCareerGoal(getAuthToken);
       if (!isMounted.current) return;
       
       console.log('[CareerGoalCard] ✅ Career goal data received:', response);

@@ -1,5 +1,5 @@
-import { endpoint } from '../utils/api';
-import { useClerkAuth } from '@/contexts/ClerkAuthContext';
+import { useClerkApi, ClerkApiService } from './clerkApi';
+import { useAuth } from '@clerk/nextjs';
 
 export interface AvatarData {
   success: boolean;
@@ -21,14 +21,14 @@ export interface GenerateAvatarResponse {
 
 class AvatarService {
   /**
-   * Get existing avatar for authenticated user
+   * Get existing avatar for authenticated user using ClerkApiService
    */
   private static avatarCache: {
     data: AvatarData | null;
     timestamp: number;
   } = { data: null, timestamp: 0 };
 
-  static async getUserAvatar(token: string): Promise<AvatarData> {
+  static async getUserAvatar(apiService: ClerkApiService): Promise<AvatarData> {
     try {
       // Return cached data if it's fresh (5 seconds)
       const now = Date.now();
@@ -37,24 +37,8 @@ class AvatarService {
       }
 
       console.log('🔍 Fetching avatar for authenticated user');
-      if (!token) {
-        throw new Error('User not authenticated');
-      }
       
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      };
-      const response = await fetch(endpoint('/avatar/me'), {
-        method: 'GET',
-        headers
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
+      const data = await apiService.get<AvatarData>('/avatar/me');
 
       // Update cache
       this.avatarCache = {
@@ -76,44 +60,31 @@ class AvatarService {
   }
 
   /**
-   * Generate new avatar for authenticated user
+   * Generate new avatar for authenticated user using ClerkApiService
    */
-  static async generateAvatar(token: string): Promise<GenerateAvatarResponse> {
+  static async generateAvatar(apiService: ClerkApiService): Promise<GenerateAvatarResponse> {
     try {
       console.log('🎨 Generating avatar for authenticated user');
-      if (!token) {
-        throw new Error('User not authenticated');
-      }
       
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      };
-      const response = await fetch(endpoint('/avatar/generate-avatar/me'), {
-        method: 'POST',
-        headers
-      });
+      const data = await apiService.post<GenerateAvatarResponse>('/avatar/generate-avatar/me');
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      // Clear cache since we just generated a new avatar
+      this.avatarCache = { data: null, timestamp: 0 };
       
-      const data = await response.json();
       console.log('✅ Avatar generated successfully:', data);
       return data;
     } catch (error: any) {
       console.error('❌ Error generating avatar:', error);
-      console.error('API error details:', error);
       throw error;
     }
   }
 
   /**
-   * Check if authenticated user has an existing avatar
+   * Check if authenticated user has an existing avatar using ClerkApiService
    */
-  static async hasAvatar(token: string): Promise<boolean> {
+  static async hasAvatar(apiService: ClerkApiService): Promise<boolean> {
     try {
-      const avatarData = await this.getUserAvatar(token);
+      const avatarData = await this.getUserAvatar(apiService);
       return avatarData.success && !!avatarData.avatar_name;
     } catch (error) {
       console.log('No avatar found for this user');
@@ -154,5 +125,39 @@ class AvatarService {
     }
   }
 }
+
+// Convenience hooks for React components using ClerkApiService
+export const useAvatarService = () => {
+  const apiService = useClerkApi();
+  
+  return {
+    getUserAvatar: () => AvatarService.getUserAvatar(apiService),
+    generateAvatar: () => AvatarService.generateAvatar(apiService),
+    hasAvatar: () => AvatarService.hasAvatar(apiService),
+    getAvatarImageUrl: AvatarService.getAvatarImageUrl,
+    handleAvatarError: AvatarService.handleAvatarError,
+  };
+};
+
+// Legacy support - wrapper functions that maintain backward compatibility
+export const LegacyAvatarService = {
+  async getUserAvatar(getToken: () => Promise<string | null>): Promise<AvatarData> {
+    const apiService = new ClerkApiService(getToken);
+    return AvatarService.getUserAvatar(apiService);
+  },
+  
+  async generateAvatar(getToken: () => Promise<string | null>): Promise<GenerateAvatarResponse> {
+    const apiService = new ClerkApiService(getToken);
+    return AvatarService.generateAvatar(apiService);
+  },
+  
+  async hasAvatar(getToken: () => Promise<string | null>): Promise<boolean> {
+    const apiService = new ClerkApiService(getToken);
+    return AvatarService.hasAvatar(apiService);
+  },
+  
+  getAvatarImageUrl: AvatarService.getAvatarImageUrl,
+  handleAvatarError: AvatarService.handleAvatarError,
+};
 
 export default AvatarService;

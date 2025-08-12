@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import UserCard from '@/components/ui/UserCard';
 import hollandTestService, { ScoreResponse } from '@/services/hollandTestService';
-import { getJobRecommendations } from '@/services/api';
 import JobRecommendationList from '@/components/jobs/JobRecommendationList';
 import JobSkillsTree from '@/components/jobs/JobSkillsTree';
 import { Job } from '@/components/jobs/JobCard';

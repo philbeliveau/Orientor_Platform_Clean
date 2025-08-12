@@ -1,5 +1,6 @@
 import { SkillNode, TimelineTier } from '@/components/career/TimelineVisualization';
-import { endpoint } from '../utils/api';
+import { useClerkApi, ClerkApiService } from './clerkApi';
+import { useAuth } from '@clerk/nextjs';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -46,9 +47,9 @@ interface CareerProgressionResponse {
 // Career Goals Service
 export class CareerGoalsService {
   /**
-   * Set a career goal from any job card
+   * Set a career goal from any job card using ClerkApiService
    */
-  static async setCareerGoalFromJob(getToken: () => Promise<string>, job: {
+  static async setCareerGoalFromJob(apiService: ClerkApiService, job: {
     esco_id?: string;
     oasis_code?: string;
     title: string;
@@ -58,17 +59,6 @@ export class CareerGoalsService {
     console.log('[CareerGoals] 🎯 Setting career goal from job:', job.title);
     
     try {
-      const token = await getToken();
-      if (!token) {
-        console.error('[CareerGoals] ❌ No authentication token for setting career goal');
-        throw new Error('Authentication required');
-      }
-      
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      };
-      
       const requestBody = {
         esco_occupation_id: job.esco_id,
         oasis_code: job.oasis_code,
@@ -80,28 +70,8 @@ export class CareerGoalsService {
       
       console.log('[CareerGoals] 📦 Request body:', requestBody);
 
-      const response = await fetch(endpoint('/career-goals'), {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(requestBody)
-      });
+      const data = await apiService.post<{ goal: CareerGoal; timeline: any }>('/career-goals', requestBody);
       
-      console.log('[CareerGoals] 📡 Set goal response:', {
-        status: response.status,
-        statusText: response.statusText
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Unable to read error response');
-        console.error('[CareerGoals] ❌ Set goal error:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorText
-        });
-        throw new Error(`Set career goal error: ${response.status} ${response.statusText} - ${errorText}`);
-      }
-
-      const data = await response.json();
       console.log('[CareerGoals] ✅ Successfully set career goal:', data);
       
       // Clear cache since we just updated the goal
@@ -111,7 +81,6 @@ export class CareerGoalsService {
     } catch (error) {
       console.error('[CareerGoals] ❌ Error setting career goal:', {
         message: error.message,
-        stack: error.stack,
         job: job.title
       });
       throw error;
@@ -132,7 +101,7 @@ export class CareerGoalsService {
 
   private static pendingRequest: Promise<any> | null = null;
 
-  static async getActiveCareerGoal(getToken: () => Promise<string>): Promise<{
+  static async getActiveCareerGoal(apiService: ClerkApiService): Promise<{
     goal: CareerGoal | null;
     progression: any;
     milestones: any[];
@@ -152,47 +121,14 @@ export class CareerGoalsService {
     }
 
     try {
-      console.log('[CareerGoals] 🔐 Getting authentication token...');
-      const token = await getToken();
-      if (!token) {
-        console.error('[CareerGoals] ❌ No authentication token available');
-        throw new Error('Authentication required');
-      }
-      console.log('[CareerGoals] ✅ Token obtained, making API request');
-      
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      };
-      
-      const apiEndpoint = endpoint('/career-goals/active');
-      console.log('[CareerGoals] 🌐 API endpoint:', apiEndpoint);
+      console.log('[CareerGoals] 🌐 Making API request...');
 
       // Create and store the pending request
-      this.pendingRequest = fetch(apiEndpoint, {
-        method: 'GET',
-        headers,
-      }).then(async (response) => {
-        console.log('[CareerGoals] 📡 API response:', {
-          status: response.status,
-          statusText: response.statusText,
-          url: response.url
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text().catch(() => 'Unable to read error response');
-          console.error('[CareerGoals] ❌ API error:', {
-            status: response.status,
-            statusText: response.statusText,
-            errorText
-          });
-          throw new Error(`Career goals API error: ${response.status} ${response.statusText} - ${errorText}`);
-        }
-        
-        const data = await response.json();
-        console.log('[CareerGoals] 📊 API response data:', data);
-        return data;
-      }).then(data => {
+      this.pendingRequest = apiService.get<{
+        goal: CareerGoal | null;
+        progression: any;
+        milestones: any[];
+      }>('/career-goals/active').then(data => {
         console.log('[CareerGoals] ✅ Successfully fetched career goal data');
         // Update cache
         this.activeGoalCache = {
@@ -203,7 +139,6 @@ export class CareerGoalsService {
       }).catch(error => {
         console.error('[CareerGoals] ❌ Error fetching active career goal:', {
           message: error.message,
-          stack: error.stack,
           cacheAvailable: !!this.activeGoalCache
         });
         
@@ -219,8 +154,7 @@ export class CareerGoalsService {
       return await this.pendingRequest;
     } catch (error) {
       console.error('[CareerGoals] ❌ Critical error in getActiveCareerGoal:', {
-        message: error.message,
-        stack: error.stack
+        message: error.message
       });
       this.pendingRequest = null;
       const fallbackData = this.activeGoalCache?.data || { goal: null, progression: null, milestones: [] };
@@ -232,31 +166,17 @@ export class CareerGoalsService {
   /**
    * Fetch user's career progression with GraphSage scores
    */
-  static async getCareerProgression(token: string): Promise<CareerProgressionResponse> {
+  static async getCareerProgression(apiService: ClerkApiService): Promise<CareerProgressionResponse> {
     try {
       // First try to get active goal's progression
-      const { goal, progression } = await this.getActiveCareerGoal(() => Promise.resolve(token));
+      const { goal, progression } = await this.getActiveCareerGoal(apiService);
       
       if (goal && progression) {
         return progression;
       }
       
       // Fallback to generic progression endpoint if available
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      };
-        
-      const response = await fetch(endpoint('/api/v1/career/progression'), {
-        method: 'GET',
-        headers,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const data = await apiService.get<CareerProgressionResponse>('/api/v1/career/progression');
       return data;
     } catch (error) {
       console.error('Error fetching career progression:', error);
@@ -268,6 +188,7 @@ export class CareerGoalsService {
 
   /**
    * Update GraphSage confidence scores for skills
+   * TODO: Phase 2 - Convert remaining methods to use ClerkApiService
    */
   static async updateGraphSageScores(token: string, skillIds: string[]): Promise<GraphSageScore[]> {
     try {
@@ -576,6 +497,50 @@ export class CareerGoalsService {
     };
   }
 }
+
+// Convenience hook for React components using ClerkApiService
+export const useCareerGoalsService = () => {
+  const apiService = useClerkApi();
+  
+  return {
+    setCareerGoalFromJob: (job: {
+      esco_id?: string;
+      oasis_code?: string;
+      title: string;
+      description?: string;
+      source?: string;
+    }) => CareerGoalsService.setCareerGoalFromJob(apiService, job),
+    getActiveCareerGoal: () => CareerGoalsService.getActiveCareerGoal(apiService),
+    getCareerProgression: () => CareerGoalsService.getCareerProgression(apiService),
+    // Note: Other methods would need similar refactoring to use apiService
+    // For now, they maintain their original token-based interface
+  };
+};
+
+// Legacy support - wrapper functions that maintain backward compatibility
+export const LegacyCareerGoalsService = {
+  async setCareerGoalFromJob(getToken: () => Promise<string>, job: {
+    esco_id?: string;
+    oasis_code?: string;
+    title: string;
+    description?: string;
+    source?: string;
+  }): Promise<{ goal: CareerGoal; timeline: any }> {
+    const token = await getToken();
+    const apiService = new ClerkApiService(() => Promise.resolve(token));
+    return CareerGoalsService.setCareerGoalFromJob(apiService, job);
+  },
+  
+  async getActiveCareerGoal(getToken: () => Promise<string>): Promise<{
+    goal: CareerGoal | null;
+    progression: any;
+    milestones: any[];
+  }> {
+    const token = await getToken();
+    const apiService = new ClerkApiService(() => Promise.resolve(token));
+    return CareerGoalsService.getActiveCareerGoal(apiService);
+  },
+};
 
 // Export types for use in components
 export type { GraphSageScore, CareerProgressionResponse };

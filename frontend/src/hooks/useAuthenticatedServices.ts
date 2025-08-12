@@ -31,7 +31,8 @@ export const useAuthenticatedServices = () => {
   // Career Goals Services
   const careerGoalsServices = {
     getActiveCareerGoal: async () => {
-      return CareerGoalsService.getActiveCareerGoal(getAuthToken);
+      const { LegacyCareerGoalsService } = await import('@/services/careerGoalsService');
+      return LegacyCareerGoalsService.getActiveCareerGoal(getAuthToken);
     },
 
     setCareerGoalFromJob: async (job: {
@@ -41,7 +42,8 @@ export const useAuthenticatedServices = () => {
       description?: string;
       source?: string;
     }) => {
-      return CareerGoalsService.setCareerGoalFromJob(getAuthToken, job);
+      const { LegacyCareerGoalsService } = await import('@/services/careerGoalsService');
+      return LegacyCareerGoalsService.setCareerGoalFromJob(getAuthToken, job);
     },
 
     getCareerProgression: async () => {
