@@ -10,17 +10,14 @@ generator python {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_PUBLIC_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model alembic_version {
-  version_num String @id @db.VarChar(32)
+  version_num String @id(map: "pk_alembic_version") @db.VarChar(32)
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model behavioral_signals {
   id               Int      @id
   user_id          Int
@@ -30,10 +27,8 @@ model behavioral_signals {
   context_metadata Json?    @default("{}")
   detected_at      DateTime @default(now()) @db.Timestamptz(6)
   created_at       DateTime @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model career_fit_analyses {
   id                           Int       @id
   user_id                      Int?
@@ -61,10 +56,8 @@ model career_fit_analyses {
   analysis_version             String?   @default("1.0") @db.VarChar(20)
   created_at                   DateTime? @default(now()) @db.Timestamptz(6)
   updated_at                   DateTime? @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model career_goals {
   id                  Int       @id @default(autoincrement())
   user_id             Int
@@ -80,10 +73,8 @@ model career_goals {
   achieved_at         DateTime? @db.Timestamp(6)
   source              String?   @db.VarChar(255)
   source_metadata     String?
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model career_milestones {
   id               Int       @id
   goal_id          Int
@@ -96,10 +87,8 @@ model career_milestones {
   completed_at     DateTime? @db.Timestamp(6)
   xp_value         Int?
   xp_awarded       Boolean?
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model career_profile_aggregates {
   id                       Int       @id
   user_id                  Int
@@ -114,10 +103,8 @@ model career_profile_aggregates {
   confidence_metrics       Json?     @db.Json
   last_updated             DateTime? @default(now()) @db.Timestamptz(6)
   created_at               DateTime? @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model career_signals {
   id                 Int       @id
   user_id            Int
@@ -130,10 +117,8 @@ model career_signals {
   trend_analysis     Json?     @db.Json
   created_at         DateTime? @default(now()) @db.Timestamptz(6)
   updated_at         DateTime? @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model chat_messages {
   id               Int       @id @default(autoincrement())
   conversation_id  Int
@@ -145,10 +130,8 @@ model chat_messages {
   updated_at       DateTime? @default(now()) @db.Timestamptz(6)
   model_used       String?   @db.VarChar(50)
   response_time_ms Int?
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model conversation_categories {
   id          Int       @id
   user_id     Int
@@ -157,10 +140,8 @@ model conversation_categories {
   color       String?   @db.VarChar(7)
   created_at  DateTime? @default(now()) @db.Timestamptz(6)
   updated_at  DateTime? @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model conversation_logs {
   id                  Int       @id
   user_id             Int
@@ -174,10 +155,8 @@ model conversation_logs {
   career_implications Json?     @db.Json
   llm_metadata        Json?     @db.Json
   created_at          DateTime? @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model conversation_shares {
   id               Int       @id
   conversation_id  Int
@@ -188,10 +167,8 @@ model conversation_shares {
   view_count       Int?
   created_at       DateTime? @default(now()) @db.Timestamptz(6)
   last_accessed_at DateTime? @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model conversations {
   id                   Int       @id @default(autoincrement())
   user_id              Int
@@ -205,10 +182,8 @@ model conversations {
   last_message_at      DateTime? @db.Timestamptz(6)
   message_count        Int?
   total_tokens_used    Int?
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model courses {
   id                Int       @id @default(autoincrement())
   user_id           Int
@@ -224,10 +199,8 @@ model courses {
   learning_outcomes Json?     @db.Json
   created_at        DateTime? @default(now()) @db.Timestamptz(6)
   updated_at        DateTime? @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model developmental_milestones {
   id                    Int      @id
   user_id               Int
@@ -238,10 +211,8 @@ model developmental_milestones {
   supporting_evidence   Json?
   created_at            DateTime @default(now()) @db.Timestamptz(6)
   updated_at            DateTime @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model esco_job_requirements {
   id                       Int       @id
   oasis_code               String    @db.VarChar(255)
@@ -272,10 +243,8 @@ model esco_job_requirements {
   salary_growth_curve      Json?
   created_at               DateTime? @default(now()) @db.Timestamptz(6)
   updated_at               DateTime? @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model gca_choices {
   id          Int     @id
   title       String  @db.VarChar(250)
@@ -288,27 +257,22 @@ model gca_choices {
   s           Decimal @db.Decimal
   e           Decimal @db.Decimal
   c           Decimal @db.Decimal
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model gca_holland_questions {
   id               Int    @id
   question         String
   personality_code String @db.Char(1)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model gca_personalities {
-  id          String @id @db.VarChar(1)
+  id          String @id(map: "pk_gca_personalities") @db.VarChar(1)
   initial     String @db.VarChar(1)
   title       String @db.VarChar(100)
   alias       String @db.VarChar(100)
   description String
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model gca_questions {
   id             Int    @id
   title          String @db.VarChar(250)
@@ -316,10 +280,8 @@ model gca_questions {
   chapter_number Int
   sort_idx       Int
   active         Int
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model gca_results {
   id         String    @id @db.Uuid
   attempt_id String    @db.Uuid
@@ -333,10 +295,8 @@ model gca_results {
   top_3_code String    @db.Char(3)
   created_at DateTime? @db.Timestamptz(6)
   user_id    Int?
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model gca_tests {
   id             Int    @id
   title          String @db.VarChar(250)
@@ -347,10 +307,8 @@ model gca_tests {
   chapter_count  Int
   question_count Int
   active         Int
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model gca_users_answers {
   id          String   @id @db.VarChar(36)
   attempt_id  String   @db.VarChar(36)
@@ -359,7 +317,6 @@ model gca_users_answers {
   question_id Int
   choice_id   Int
   created_at  DateTime @default(dbgenerated("(CURRENT_TIMESTAMP AT TIME ZONE 'America/Montreal'::text)")) @db.Timestamptz(6)
-
 }
 
 model hexaco_questions {
@@ -380,7 +337,6 @@ model hexaco_questions {
   @@index([id], map: "ix_hexaco_questions_id")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model institutions {
   id          Int       @id
   name        String    @db.VarChar(255)
@@ -390,10 +346,8 @@ model institutions {
   description String?
   created_at  DateTime? @db.Timestamp(6)
   updated_at  DateTime? @db.Timestamp(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model llm_descriptions {
   id              Int       @id
   node_id         String    @db.VarChar(255)
@@ -404,10 +358,8 @@ model llm_descriptions {
   model_version   String?   @db.VarChar(50)
   created_at      DateTime? @default(now()) @db.Timestamptz(6)
   expires_at      DateTime? @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model message_components {
   id                 Int       @id
   message_id         Int?
@@ -418,10 +370,8 @@ model message_components {
   actions            Json?
   saved              Boolean?  @default(false)
   component_metadata Json?
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model messages {
   message_id   Int
   sender_id    Int
@@ -436,10 +386,8 @@ model messages {
   updated_at   DateTime @default(now()) @db.Timestamp(6)
   inserted_at  DateTime @default(now()) @db.Timestamp(6)
   id           String   @id @db.Uuid
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model node_notes {
   id           String    @id @db.VarChar(255)
   user_id      Int?
@@ -448,10 +396,8 @@ model node_notes {
   note_text    String?
   created_at   DateTime? @default(now()) @db.Timestamp(6)
   updated_at   DateTime? @default(now()) @db.Timestamp(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model personality_assessments {
   id                 Int       @id @default(autoincrement())
   user_id            Int
@@ -467,10 +413,8 @@ model personality_assessments {
   metadata           Json?     @default("{}")
   created_at         DateTime  @default(now()) @db.Timestamptz(6)
   updated_at         DateTime  @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model personality_profiles {
   id                    Int       @id @default(autoincrement())
   user_id               Int
@@ -487,10 +431,8 @@ model personality_profiles {
   expires_at            DateTime? @db.Timestamptz(6)
   created_at            DateTime  @default(now()) @db.Timestamptz(6)
   updated_at            DateTime  @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model personality_responses {
   id                  Int      @id @default(autoincrement())
   assessment_id       Int
@@ -503,10 +445,8 @@ model personality_responses {
   behavioral_metadata Json?    @default("{}")
   created_at          DateTime @default(now()) @db.Timestamptz(6)
   updated_at          DateTime @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model personality_trends {
   id                Int      @id
   user_id           Int
@@ -518,10 +458,8 @@ model personality_trends {
   time_window_end   DateTime @db.Timestamptz(6)
   computed_at       DateTime @default(now()) @db.Timestamptz(6)
   created_at        DateTime @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model program_recommendations {
   id                     Int       @id
   goal_id                Int
@@ -536,10 +474,8 @@ model program_recommendations {
   location               Json?
   intake_dates           Json?
   created_at             DateTime? @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model programs {
   id              Int       @id
   institution_id  Int?
@@ -552,10 +488,8 @@ model programs {
   outcomes        String?
   created_at      DateTime? @db.Timestamp(6)
   updated_at      DateTime? @db.Timestamp(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model psychological_insights {
   id               Int       @id
   user_id          Int
@@ -568,16 +502,13 @@ model psychological_insights {
   extracted_at     DateTime? @default(now()) @db.Timestamptz(6)
   created_at       DateTime? @default(now()) @db.Timestamptz(6)
   updated_at       DateTime? @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model public_feed {
   id         Int       @id
   event_type String    @db.VarChar(255)
   domain     String?   @db.VarChar(255)
   timestamp  DateTime? @default(now()) @db.Timestamp(6)
-
 }
 
 model reflection_questions {
@@ -590,7 +521,6 @@ model reflection_questions {
   @@index([id], map: "ix_reflection_questions_id")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model saved_jobs {
   id               Int       @id
   user_id          Int
@@ -602,7 +532,6 @@ model saved_jobs {
   relevance_score  Decimal?  @db.Decimal
   saved_at         DateTime? @default(now()) @db.Timestamptz(6)
   metadata         Json?     @default("{}")
-
 }
 
 model saved_recommendations {
@@ -645,17 +574,14 @@ model saved_recommendations {
   @@unique([user_id, oasis_code], map: "uq_user_oasis_code")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model skills_to_domains {
   skill_id String  @db.VarChar(255)
-  domain   String  @db.VarChar(255)
-  
-  @@id([skill_id, domain])
+  domain   String? @db.VarChar(255)
+  id       Int     @id @default(autoincrement())
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model strengths_reflection_responses {
-  id               Int      @id @default(autoincrement())
+  id               Int      @id(map: "pk_strengths_reflection_responses") @default(autoincrement())
   user_id          Int
   question_id      Int
   prompt_text      String
@@ -665,18 +591,16 @@ model strengths_reflection_responses {
   updated_at       DateTime @default(now()) @db.Timestamptz(6)
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model suggested_peers {
   user_id      Int
   suggested_id Int
   similarity   Float?
   created_at   DateTime? @default(now()) @db.Timestamptz(6)
   updated_at   DateTime? @db.Timestamptz(6)
-  
-  @@id([user_id, suggested_id])
+
+  @@id([user_id, suggested_id], map: "pk_suggested_peers")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model tool_invocations {
   id                Int       @id
   conversation_id   Int?
@@ -689,10 +613,8 @@ model tool_invocations {
   relevance_score   Float?
   user_id           Int?
   created_at        DateTime? @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model tree_generations {
   id                 String    @id @db.Uuid
   user_id            Int
@@ -703,10 +625,8 @@ model tree_generations {
   expires_at         DateTime? @db.Timestamptz(6)
   access_count       Int?
   last_accessed_at   DateTime? @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model tree_paths {
   id         String    @id @db.Uuid
   user_id    Int?
@@ -714,10 +634,8 @@ model tree_paths {
   tree_json  Json?     @db.Json
   name       String?   @db.VarChar(255)
   created_at DateTime? @default(now()) @db.Timestamp(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model user_chat_analytics {
   id                    Int       @id
   user_id               Int
@@ -728,10 +646,8 @@ model user_chat_analytics {
   avg_response_time_ms  Int?
   most_used_category_id Int?
   created_at            DateTime? @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model user_journey_milestones {
   id                  Int       @id
   user_id             Int?
@@ -750,10 +666,8 @@ model user_journey_milestones {
   updated_at          DateTime? @default(now()) @db.Timestamptz(6)
   ai_insights         Json?
   next_steps          Json?
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model user_notes {
   id                      Int      @id
   user_id                 Int
@@ -761,7 +675,6 @@ model user_notes {
   content                 String
   created_at              DateTime @default(now()) @db.Timestamptz(6)
   updated_at              DateTime @default(now()) @db.Timestamptz(6)
-
 }
 
 model user_profiles {
@@ -798,7 +711,6 @@ model user_profiles {
   @@index([user_id], map: "idx_user_profiles_user_id")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model user_program_preferences {
   id             Int       @id
   user_id        Int?
@@ -807,10 +719,8 @@ model user_program_preferences {
   notes          String?
   created_at     DateTime? @db.Timestamp(6)
   updated_at     DateTime? @db.Timestamp(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model user_progress {
   id                  String    @id @db.VarChar(255)
   user_id             Int?
@@ -819,10 +729,8 @@ model user_progress {
   last_completed_node String?   @db.VarChar(255)
   completed_actions   Json?     @db.Json
   last_updated        DateTime? @default(now()) @db.Timestamp(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model user_recommendations {
   id           Int       @id
   user_id      Int?
@@ -830,10 +738,8 @@ model user_recommendations {
   label        String    @db.VarChar(255)
   swiped_right Boolean?  @default(false)
   created_at   DateTime? @default(now()) @db.Timestamptz(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model user_representation {
   id                 Int      @id
   user_id            Int
@@ -846,20 +752,16 @@ model user_representation {
   avatar_description String?
   avatar_image_url   String?
   avatar_name        String?
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model user_skill_graphs {
   id            String    @id @db.Uuid
   user_id       Int?
   root_skill_id String    @db.VarChar(255)
   graph_name    String?
   created_at    DateTime? @default(now()) @db.Timestamp(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model user_skill_nodes {
   id          Int       @id
   graph_id    String?   @db.Uuid
@@ -872,20 +774,16 @@ model user_skill_nodes {
   state       String?   @default("locked") @db.VarChar(255)
   notes       String?
   unlocked_at DateTime? @db.Timestamp(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model user_skill_trees {
   id         Int       @id
   user_id    Int?
   graph_id   String    @db.Uuid
   tree_data  Json
   created_at DateTime? @default(now()) @db.Timestamp(6)
-
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
 model user_skills {
   id                  Int       @id @default(autoincrement())
   user_id             Int?
@@ -903,7 +801,6 @@ model user_skills {
   evaluation          Float?
   decision_making     Float?
   stress_tolerance    Float?
-
 }
 
 model users {

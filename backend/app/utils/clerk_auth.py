@@ -223,8 +223,8 @@ async def create_clerk_user_in_db(
                 }
             )
             
-            # Ensure user profile exists
-            ensure_user_profile_exists(existing_user, db)
+            # Ensure user profile exists (AWAIT the coroutine)
+            await ensure_user_profile_exists(existing_user, db)
             
             return {
                 "id": existing_user.id,

@@ -50,96 +50,46 @@ async def get_onboarding_status(
     db: Prisma = Depends(get_prisma_client)
 ):
     """
-    Check if the user has completed the onboarding process.
-    Uses both the database field and personality profile as fallback.
+    STANDARDIZED onboarding status check - matches onboarding router format
     """
-    logger.info(f"🔍 ONBOARDING STATUS CHECK for user ID: {current_user.id}")
-    logger.info(f"🔍 Clerk User ID: {getattr(current_user, 'clerk_user_id', 'NOT_FOUND')}")
-    logger.info(f"🔍 User Email: {getattr(current_user, 'email', 'NOT_FOUND')}")
+    logger.info(f"🔍 User router: Getting onboarding status for user ID: {current_user.id}")
     
-    # DEBUG: Log current user onboarding status from multiple perspectives
-    onboarding_completed_value = getattr(current_user, 'onboarding_completed', 'FIELD_NOT_FOUND')
-    logger.info(f"🔍 current_user.onboarding_completed = {onboarding_completed_value} (type: {type(onboarding_completed_value)})")
-    logger.info(f"🔍 User object type: {type(current_user)}")
-    logger.info(f"🔍 User object ID: {id(current_user)}")
-    
-    # Prisma objects are not cached in the same way as SQLAlchemy
-    logger.info(f"🔍 Using Prisma ORM - no cache inspection needed")
-    
-    # Check if onboarding_completed field exists and is True
-    if hasattr(current_user, 'onboarding_completed'):
-        field_value = current_user.onboarding_completed
-        logger.info(f"🔍 Onboarding field exists, value: {field_value} (type: {type(field_value)})")
-        
-        if field_value:
-            logger.info(f"✅ User {current_user.id} onboarding completed via database field")
-            return {"onboarding_completed": True}
-        else:
-            logger.info(f"🔴 User {current_user.id} onboarding NOT completed according to database field")
-    else:
-        logger.error(f"❌ CRITICAL: User {current_user.id} missing onboarding_completed field!")
-        # Let's check all user attributes to debug
-        all_attrs = [attr for attr in dir(current_user) if not attr.startswith('_')]
-        logger.info(f"🔍 All user attributes: {all_attrs}")
-    
-    # Fallback: Check if user has a personality profile
     try:
-        from ..models.personality_profiles import PersonalityProfile
-        personality_profile = await db.personalityprofile.find_first(
-            where={"user_id": current_user.id}
-        )
+        # SIMPLIFIED: Single source of truth - database field
+        onboarding_completed = getattr(current_user, 'onboarding_completed', False)
+        logger.info(f"📊 User {current_user.id} onboarding_completed: {onboarding_completed}")
         
-        has_profile = personality_profile is not None
-        logger.info(f"🔍 DEBUG: User {current_user.id} has personality profile: {has_profile}")
-        
-        # If they have a profile but onboarding_completed is False, update it
-        if has_profile and hasattr(current_user, 'onboarding_completed') and not current_user.onboarding_completed:
-            logger.info(f"🔄 Updating onboarding_completed for user {current_user.id} based on personality profile")
-            await db.user.update(
-                where={"id": current_user.id},
-                data={"onboarding_completed": True}
+        # FALLBACK FIX: If database field is False, check personality profile and fix if needed
+        if not onboarding_completed:
+            personality_profile = await db.personalityprofile.find_first(
+                where={'user_id': current_user.id}
             )
-            # Update the current user object in memory
-            current_user.onboarding_completed = True
-            logger.info(f"✅ Updated onboarding_completed for user {current_user.id}")
+            
+            if personality_profile:
+                logger.info(f"🔧 Fixing onboarding_completed for user {current_user.id} - has profile but field is False")
+                await db.user.update(
+                    where={'id': current_user.id},
+                    data={'onboarding_completed': True}
+                )
+                onboarding_completed = True
         
-        # Additional verification: Query database directly with Prisma
-        try:
-            direct_query_result = await db.execute_raw(
-                "SELECT onboarding_completed FROM users WHERE id = $1",
-                current_user.id
-            )
-            if direct_query_result and len(direct_query_result) > 0:
-                db_onboarding_value = direct_query_result[0]["onboarding_completed"]
-                logger.info(f"🔍 DIRECT DATABASE QUERY: user {current_user.id} onboarding_completed = {db_onboarding_value}")
-                
-                # If database says True but we're returning False, there's a data mismatch
-                if db_onboarding_value and not has_profile:
-                    logger.warning(f"⚠️ DATA MISMATCH: Database shows True, but personality profile check shows False")
-                    # Trust the database value
-                    has_profile = True
-            else:
-                logger.error(f"❌ Could not find user {current_user.id} in direct database query!")
-        except Exception as direct_query_error:
-            logger.error(f"⚠️ Direct database query failed: {direct_query_error}")
-        
-        result = {"onboarding_completed": has_profile}
-        logger.info(f"📤 FINAL RESULT for user {current_user.id}: {result}")
-        logger.info(f"📋 STATUS CHECK SUMMARY:")
-        logger.info(f"📋   - Database field: {onboarding_completed_value}")
-        logger.info(f"📋   - Personality profile exists: {has_profile}")
-        logger.info(f"📋   - Final result: {result}")
-        return result
+        # STANDARDIZED RESPONSE: Match onboarding router format exactly
+        return {
+            "onboarding_completed": onboarding_completed,
+            "has_started": onboarding_completed,  # If completed, they must have started
+            "is_complete": onboarding_completed,
+            "message": "Onboarding completed" if onboarding_completed else "Onboarding needed"
+        }
         
     except Exception as e:
-        logger.error(f"Error checking personality profile: {e}")
-        # If we can't check, return False for safety
-        logger.error(f"❌ Returning False for user {current_user.id} due to error: {e}")
-        logger.info(f"📋 ERROR FALLBACK SUMMARY:")
-        logger.info(f"📋   - Error occurred: {e}")
-        logger.info(f"📋   - Database field: {onboarding_completed_value}")
-        logger.info(f"📋   - Returning: False (safety fallback)")
-        return {"onboarding_completed": False}
+        logger.error(f"Error in user router onboarding status check: {str(e)}")
+        # Safe fallback
+        return {
+            "onboarding_completed": False,
+            "has_started": False,
+            "is_complete": False,
+            "message": "Error checking status - assuming onboarding needed"
+        }
 
 @router.get("/me")
 async def get_current_user_info(

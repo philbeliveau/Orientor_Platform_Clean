@@ -103,7 +103,7 @@ def get_users_with_embeddings(db: Session) -> List[Dict[str, Any]]:
         logger.error(f"Error getting users with embeddings: {str(e)}")
         return []
 
-def find_similar_peers(db: Session, user_id: str, embedding: List[float], top_n: int = 5) -> List[Tuple[str, float]]:
+async def find_similar_peers(db: Session, user_id: str, embedding: List[float], top_n: int = 5) -> List[Tuple[str, float]]:
     """
     Find similar peers for a given user
     
@@ -118,7 +118,7 @@ def find_similar_peers(db: Session, user_id: str, embedding: List[float], top_n:
     """
     try:
         # Convert Clerk user ID to database user ID
-        db_user_id = get_database_user_id_sync(user_id, db)
+        db_user_id = await get_database_user_id_sync(user_id, db)
         
         # Get all other users by database ID
         other_profiles = db.query(UserProfile).filter(UserProfile.user_id != db_user_id).all()
@@ -155,7 +155,7 @@ def find_similar_peers(db: Session, user_id: str, embedding: List[float], top_n:
         logger.error(f"Error finding similar peers: {str(e)}")
         return []
 
-def update_suggested_peers(db: Session, user_id: str, similar_peers: List[Tuple[str, float]]) -> bool:
+async def update_suggested_peers(db: Session, user_id: str, similar_peers: List[Tuple[str, float]]) -> bool:
     """
     Update the suggested_peers table for a user
     
@@ -169,7 +169,7 @@ def update_suggested_peers(db: Session, user_id: str, similar_peers: List[Tuple[
     """
     try:
         # Convert Clerk user ID to database user ID
-        db_user_id = get_database_user_id_sync(user_id, db)
+        db_user_id = await get_database_user_id_sync(user_id, db)
         
         # Delete existing suggestions
         query = text("""
@@ -200,7 +200,7 @@ def update_suggested_peers(db: Session, user_id: str, similar_peers: List[Tuple[
         logger.error(f"Error updating suggested peers: {str(e)}")
         return False
 
-def generate_peer_suggestions(db: Session, user_id: str, top_n: int = 5) -> bool:
+async def generate_peer_suggestions(db: Session, user_id: str, top_n: int = 5) -> bool:
     """
     Generate peer suggestions for a user
     
@@ -214,7 +214,7 @@ def generate_peer_suggestions(db: Session, user_id: str, top_n: int = 5) -> bool
     """
     try:
         # Convert Clerk user ID to database user ID
-        db_user_id = get_database_user_id_sync(user_id, db)
+        db_user_id = await get_database_user_id_sync(user_id, db)
         
         # Get user's embedding
         query = text("""
@@ -236,14 +236,14 @@ def generate_peer_suggestions(db: Session, user_id: str, top_n: int = 5) -> bool
             return False
         
         # Find similar peers
-        similar_peers = find_similar_peers(db, user_id, embedding, top_n)
+        similar_peers = await find_similar_peers(db, user_id, embedding, top_n)
         
         if not similar_peers:
             logger.warning(f"No similar peers found for user {user_id}")
             return False
         
         # Update suggested_peers table
-        success = update_suggested_peers(db, user_id, similar_peers)
+        success = await update_suggested_peers(db, user_id, similar_peers)
         
         return success
     except Exception as e:
@@ -263,7 +263,7 @@ async def ensure_compatibility_vector(db: Session, user_id: str) -> Optional[Dic
     """
     try:
         # Convert Clerk user ID to database user ID
-        db_user_id = get_database_user_id_sync(user_id, db)
+        db_user_id = await get_database_user_id_sync(user_id, db)
         
         # Check if compatibility vector exists
         query = text("""
@@ -450,7 +450,7 @@ async def find_compatible_peers(
     """
     try:
         # Convert Clerk user ID to database user ID
-        db_user_id = get_database_user_id_sync(user_id, db)
+        db_user_id = await get_database_user_id_sync(user_id, db)
         
         # Ensure user has compatibility vector
         user_vector = await ensure_compatibility_vector(db, user_id)
@@ -616,7 +616,7 @@ async def update_suggested_peers_enhanced(
     """
     try:
         # Convert Clerk user ID to database user ID
-        db_user_id = get_database_user_id_sync(user_id, db)
+        db_user_id = await get_database_user_id_sync(user_id, db)
         
         # Delete existing suggestions
         delete_query = text("""

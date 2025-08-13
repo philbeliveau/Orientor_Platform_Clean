@@ -186,13 +186,13 @@ async def get_profile(
             )
         
         # Get user skills using Prisma
-        skills = await db.userskill.find_first(
+        skills = await db.user_skills.find_first(
             where={"user_id": current_user.id}
         )
         
         operation_logger.log_query_conversion(
             f"db.query(UserSkill).filter(UserSkill.user_id == {current_user.id}).first()",
-            f"db.userskill.find_first(where={{\"user_id\": {current_user.id}}})",
+            f"db.user_skills.find_first(where={{\"user_id\": {current_user.id}}})",
             "skills_lookup"
         )
         
@@ -266,7 +266,7 @@ async def update_profile(
             }
             
             # Update user skills using Prisma
-            skills = await transaction_db.userskill.find_first(
+            skills = await transaction_db.user_skills.find_first(
                 where={"user_id": current_user.id}
             )
             
@@ -274,25 +274,25 @@ async def update_profile(
                 # Create new skills record
                 skills_data = {"user_id": current_user.id}
                 skills_data.update({k: v for k, v in skill_fields.items() if v is not None})
-                skills = await transaction_db.userskill.create(data=skills_data)
+                skills = await transaction_db.user_skills.create(data=skills_data)
                 
                 operation_logger.log_query_conversion(
                     "UserSkill(user_id=current_user.id); db.add(skills)",
-                    f"transaction_db.userskill.create(data={{...}})",
+                    f"transaction_db.user_skills.create(data={{...}})",
                     "skills_creation"
                 )
             else:
                 # Update existing skills
                 update_skills_data = {k: v for k, v in skill_fields.items() if v is not None}
                 if update_skills_data:
-                    skills = await transaction_db.userskill.update(
+                    skills = await transaction_db.user_skills.update(
                         where={"id": skills.id},
                         data=update_skills_data
                     )
                     
                     operation_logger.log_query_conversion(
                         "setattr(skills, field, value) for each field",
-                        f"transaction_db.userskill.update(where={{\"id\": {skills.id}}}, data={{...}})",
+                        f"transaction_db.user_skills.update(where={{\"id\": {skills.id}}}, data={{...}})",
                         "skills_update"
                     )
             
@@ -643,13 +643,13 @@ async def get_user_profile(
             )
         
         # Get user skills using Prisma
-        skills = await db.userskill.find_first(
+        skills = await db.user_skills.find_first(
             where={"user_id": user_id}
         )
         
         operation_logger.log_query_conversion(
             f"db.query(UserSkill).filter(UserSkill.user_id == {user_id}).first()",
-            f"db.userskill.find_first(where={{\"user_id\": {user_id}}})",
+            f"db.user_skills.find_first(where={{\"user_id\": {user_id}}})",
             "user_skills_lookup"
         )
         

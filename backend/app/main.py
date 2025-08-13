@@ -67,8 +67,13 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Configure static files for avatars
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Configure static files for avatars (only if directory exists)
+import os
+static_dir = "static"
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+else:
+    logging.warning(f"Static directory '{static_dir}' does not exist - skipping static file mounting")
 
 # Configure CORS
 if os.getenv("ENV", "development") == "development":

@@ -160,7 +160,7 @@ async def get_saved_recommendations(
     logger.info(f"Found {len(recommendations)} recommendations for user {current_user.id}")
     
     # Get the user's skills and cognitive traits
-    user_skills = await db.userskill.find_first(
+    user_skills = await db.user_skills.find_first(
         where={'user_id': current_user.id}
     )
     
@@ -399,7 +399,7 @@ async def get_user_skills(
     current_user: User = Depends(get_current_user)
 ):
     # Get the user's skills record
-    user_skill = await db.userskill.find_first(
+    user_skill = await db.user_skills.find_first(
         where={'user_id': current_user.id}
     )
     if not user_skill:
@@ -430,12 +430,12 @@ async def update_user_skills(
     current_user: User = Depends(get_current_user)
 ):
     # Get or create the user's skills record
-    user_skill = await db.userskill.find_first(
+    user_skill = await db.user_skills.find_first(
         where={'user_id': current_user.id}
     )
     if not user_skill:
         # Create a new user skills record if it doesn't exist
-        user_skill = await db.userskill.create(
+        user_skill = await db.user_skills.create(
             data={'user_id': current_user.id}
         )
     
@@ -451,7 +451,7 @@ async def update_user_skills(
             update_data[field] = value
     
     if update_data:
-        user_skill = await db.userskill.update(
+        user_skill = await db.user_skills.update(
             where={'id': user_skill.id},
             data=update_data
         )
@@ -492,11 +492,11 @@ async def get_skill_comparison(
         )
     
     # Get user's skills
-    user_skill = await db.userskill.find_first(
+    user_skill = await db.user_skills.find_first(
         where={'user_id': current_user.id}
     )
     if not user_skill:
-        user_skill = await db.userskill.create(
+        user_skill = await db.user_skills.create(
             data={'user_id': current_user.id}
         )
     
