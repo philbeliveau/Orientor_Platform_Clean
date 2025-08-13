@@ -27,9 +27,9 @@ const nextConfig = {
     ];
   },
   
-  // Image optimization
+  // Image optimization - Now configurable via environment variable
   images: {
-    domains: ['localhost', 'ruling-halibut-89.clerk.accounts.dev'],
+    domains: process.env.NEXT_PUBLIC_CLERK_DOMAINS?.split(',') || ['localhost'],
   },
   
   // Webpack configuration for better bundling

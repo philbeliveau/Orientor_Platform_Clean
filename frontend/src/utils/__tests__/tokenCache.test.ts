@@ -24,7 +24,7 @@ function createMockJWT(expiration?: number): string {
   const header = { alg: 'HS256', typ: 'JWT' }
   const payload = { 
     sub: 'user123', 
-    exp: expiration || Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
+    exp: expiration || Math.floor(Date.now() / 1000) + parseInt(process.env.CACHE_TTL || '3600') // Based on config
   }
   
   const encodedHeader = btoa(JSON.stringify(header))
@@ -36,7 +36,7 @@ function createMockJWT(expiration?: number): string {
 
 // Helper to create expired JWT tokens
 function createExpiredJWT(): string {
-  const expiration = Math.floor(Date.now() / 1000) - 3600 // 1 hour ago
+  const expiration = Math.floor(Date.now() / 1000) - parseInt(process.env.CACHE_TTL || '3600') // Based on config
   return createMockJWT(expiration)
 }
 

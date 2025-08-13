@@ -778,8 +778,9 @@ class ValidationChecks:
 class SmokeTests:
     """Comprehensive smoke tests for post-deployment validation"""
     
-    def __init__(self, base_url: str = "http://localhost:8000"):
-        self.base_url = base_url
+    def __init__(self, base_url: str = None):
+        import os
+        self.base_url = base_url or os.getenv("BACKEND_BASE_URL", "http://localhost:8000")
         
     async def run_smoke_tests(self) -> Dict[str, Any]:
         """Run comprehensive smoke tests"""

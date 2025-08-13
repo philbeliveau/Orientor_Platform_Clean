@@ -248,9 +248,7 @@ def create_app():
         allow_origins=[
             "https://navigoproject.vercel.app",
             "https://*.vercel.app",  # Allow all Vercel subdomains for development
-            "http://localhost:3000",  # Local development
-            "http://localhost:3001"   # Staging
-        ],
+        ] + os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000,http://localhost:8000").split(","),
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
         allow_headers=[

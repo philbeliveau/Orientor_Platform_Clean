@@ -8,7 +8,7 @@ import MainLayout from '../../components/layout/MainLayout';
 import { generateCompetenceTree } from '../../services/competenceTreeService';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000';
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 interface ProfileResponse {
   id: number;

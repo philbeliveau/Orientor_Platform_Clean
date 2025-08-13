@@ -1,6 +1,7 @@
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 import secrets
+import os
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
@@ -50,8 +51,9 @@ class ShareService:
             db.commit()
             db.refresh(share)
             
-            # Create the share link
-            base_url = options.base_url or "http://localhost:3000"
+            # Create the share link - Use environment variable for frontend URL
+            frontend_url = os.getenv("FRONTEND_BASE_URL", "http://localhost:3000") 
+            base_url = options.base_url or frontend_url
             share_link = ShareLink(
                 share_id=share.id,
                 conversation_id=conversation_id,

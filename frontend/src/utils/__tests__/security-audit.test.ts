@@ -71,7 +71,8 @@ describe('Security Audit - Production Readiness', () => {
       // Original vulnerability: stale/expired tokens were served from cache
       // Fix: JWT validation with expiration checking and safety buffer
       
-      const expiredToken = createJWT(Math.floor(Date.now() / 1000) - 3600) // Expired 1 hour ago
+      const cacheTime = parseInt(process.env.CACHE_TTL || '3600')
+      const expiredToken = createJWT(Math.floor(Date.now() / 1000) - cacheTime) // Expired based on config
       const validToken = createJWT()
       
       const tokenFetcher = jest.fn()
@@ -212,7 +213,7 @@ function createJWT(expiration?: number): string {
   const header = { alg: 'HS256', typ: 'JWT' }
   const payload = { 
     sub: 'user123', 
-    exp: expiration || Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
+    exp: expiration || Math.floor(Date.now() / 1000) + parseInt(process.env.CACHE_TTL || '3600') // Based on config
   }
   
   const encodedHeader = btoa(JSON.stringify(header))

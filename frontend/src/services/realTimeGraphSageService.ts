@@ -154,7 +154,7 @@ class RealTimeGraphSageService {
           ...(token && { Authorization: `Bearer ${token}` })
         },
         signal: abortSignal,
-        timeout: 30000 // 30 second timeout
+        timeout: parseInt(process.env.API_TIMEOUT || '30000') // Configurable timeout
       };
       
       // Prepare request payload

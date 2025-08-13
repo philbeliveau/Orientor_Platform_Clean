@@ -38,7 +38,7 @@ export const generateCompetenceTree = async (token: string, userId: number): Pro
       {},
       {
         headers,
-        timeout: 180000, // 3 minute timeout
+        timeout: parseInt(process.env.API_TIMEOUT || '30000') * 6, // 6x standard timeout for heavy operations
         params: {
           max_depth: 3,
           max_nodes: 20

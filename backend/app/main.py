@@ -83,11 +83,12 @@ if os.getenv("ENV", "development") == "development":
         max_age=3600,
     )
 else:
-    # Production CORS settings
-    origins = [
-        "http://localhost:3000",  # Frontend development server
-        "http://localhost:3007",  # Frontend development server (alt port)
-        "http://localhost:8000",  # Backend when served 
+    # Production CORS settings - Now configurable via environment variable
+    cors_origins_env = os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:3000,http://localhost:8000")
+    base_origins = [origin.strip() for origin in cors_origins_env.split(",")]
+    
+    # Add additional production origins
+    additional_origins = [
         "https://navigoproject.vercel.app",  # Production frontend
         "http://localhost:5173",  # Vite development server
         "https://localhost:3000",  # HTTPS local development
@@ -98,6 +99,9 @@ else:
         "https://*.clerk.accounts.dev",  # Clerk development domains
         "https://*.clerk.com",  # Clerk production domains
     ]
+    
+    # Combine base origins from env var with additional production origins
+    origins = base_origins + additional_origins
     
     app.add_middleware(
         CORSMiddleware,

@@ -18,7 +18,7 @@ interface SmartLoadingState {
 export const useSmartLoading = (options: UseSmartLoadingOptions = {}) => {
   const {
     minLoadingTime = 500,
-    maxLoadingTime = 30000,
+    maxLoadingTime = parseInt(process.env.API_TIMEOUT || '30000'),
     showProgressAfter = 2000
   } = options;
 

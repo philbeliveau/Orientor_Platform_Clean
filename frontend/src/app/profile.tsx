@@ -73,8 +73,9 @@ const ProfilePage = () => {
                 return;
             }
             
+            const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
             await axios.put( 
-                'http://localhost:8000/users/update',
+                `${API_URL}/users/update`,
                 formData,
                 {
                     headers: {
