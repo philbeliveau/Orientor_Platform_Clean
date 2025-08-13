@@ -17,7 +17,18 @@
     "@playwright/test": "^1.54.2",
     "concurrently": "^8.2.2"
   },
-  "keywords": ["ai", "career", "guidance", "testing", "playwright", "e2e"],
+  "keywords": [
+    "ai",
+    "career",
+    "guidance",
+    "testing",
+    "playwright",
+    "e2e"
+  ],
   "author": "Orientor Platform Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@prisma/client": "^6.14.0",
+    "prisma": "^6.14.0"
+  }
 }
