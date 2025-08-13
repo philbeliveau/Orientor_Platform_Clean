@@ -150,7 +150,7 @@ async def read_conversations(
                 continue
             
             # Get peer profile info
-            peer_profile = await db.user_profiles.find_first(
+            peer_profile = await db.user_profile.find_first(
                 where={"user_id": peer_id}
             )
             peer_name = peer_profile.name if peer_profile and peer_profile.name else f"User {peer_id}"

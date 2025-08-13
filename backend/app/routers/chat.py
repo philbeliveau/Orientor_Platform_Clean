@@ -13,7 +13,7 @@ from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.services.conversation_service import ConversationService
 from app.services.chat_message_service import ChatMessageService
 from app.services.analytics_service import AnalyticsService
-from app.schemas.conversation import ConversationResponse, ConversationListResponse
+from app.schemas.conversation import ConversationResponse, ConversationListResponse, ConversationCreate
 from app.schemas.chat_message import ChatMessageResponse
 
 # Set up logging
@@ -256,6 +256,86 @@ async def send_message(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get response from AI service: {str(e)}"
+        )
+
+
+# Conversation management endpoints - for frontend compatibility
+@router.post("/conversations", response_model=ConversationResponse)
+async def create_conversation(
+    conversation_data: ConversationCreate,
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
+):
+    """Create a new conversation"""
+    try:
+        conversation = await ConversationService.create_conversation(
+            db, current_user.id, conversation_data
+        )
+        return conversation
+    except Exception as e:
+        logger.error(f"Error creating conversation: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create conversation: {str(e)}"
+        )
+
+
+@router.get("/conversations", response_model=ConversationListResponse)
+async def get_conversations(
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    category_id: Optional[int] = Query(None),
+    search: Optional[str] = Query(None),
+    favorites_only: bool = Query(False),
+    archived: Optional[bool] = Query(None)
+):
+    """Get user conversations with pagination and filtering"""
+    try:
+        result = await ConversationService.get_conversations(
+            db, current_user.id, page, page_size, category_id, search, favorites_only, archived
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error getting conversations: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get conversations: {str(e)}"
+        )
+
+
+@router.get("/conversations/{conversation_id}/messages")
+async def get_conversation_messages(
+    conversation_id: int,
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0)
+):
+    """Get messages for a conversation"""
+    try:
+        # Verify conversation belongs to user
+        conversation = await ConversationService.get_conversation_by_id(
+            db, conversation_id, current_user.id
+        )
+        if not conversation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found"
+            )
+        
+        messages = await ChatMessageService.get_messages_by_conversation(
+            db, conversation_id, limit, offset
+        )
+        return {"messages": messages}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting conversation messages: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get conversation messages: {str(e)}"
         )
 
 @router.post("/clear", response_model=ClearHistoryResponse)

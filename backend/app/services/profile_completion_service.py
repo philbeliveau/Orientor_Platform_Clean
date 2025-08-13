@@ -8,12 +8,8 @@ and provides recommendations for improving profile completeness.
 import logging
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timezone, timedelta
-from sqlalchemy.orm import Session
-from sqlalchemy import text, select
+from prisma import Prisma
 
-from ..models.user_profile import UserProfile
-from ..models.personality_profiles import PersonalityProfile
-from ..models.user import User
 from ..utils.clerk_auth import get_database_user_id_sync
 
 logger = logging.getLogger(__name__)
@@ -98,12 +94,12 @@ class ProfileCompletionCalculator:
     MIN_COMPLETION_FOR_RECOMMENDATIONS = 0.60
 
     @classmethod
-    def calculate_completion(cls, db: Session, user_id: str) -> ProfileCompletionResult:
+    def calculate_completion(cls, db: Prisma, user_id: str) -> ProfileCompletionResult:
         """
         Calculate profile completion percentage for a user.
         
         Args:
-            db: Database session
+            db: Prisma client
             user_id: Clerk user ID
             
         Returns:
@@ -111,13 +107,21 @@ class ProfileCompletionCalculator:
         """
         try:
             # Convert Clerk user ID to database user ID
-            db_user_id = get_database_user_id_sync(user_id, db)
+            db_user_id = get_database_user_id_sync(user_id)
             if not db_user_id:
                 logger.error(f"User not found for Clerk ID: {user_id}")
                 return cls._get_empty_result()
 
             # Get user profile
-            profile = db.query(UserProfile).filter(UserProfile.user_id == db_user_id).first()
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                profile = loop.run_until_complete(
+                    db.user_profile.find_first(where={"user_id": db_user_id})
+                )
+            finally:
+                loop.close()
             if not profile:
                 logger.info(f"No profile found for user {user_id}")
                 return cls._get_empty_result()
@@ -170,7 +174,7 @@ class ProfileCompletionCalculator:
             return cls._get_empty_result()
 
     @classmethod
-    def _calculate_basic_info_completion(cls, profile: UserProfile) -> float:
+    def _calculate_basic_info_completion(cls, profile) -> float:
         """Calculate completion for basic info fields."""
         fields = cls.COMPLETION_CATEGORIES["basic_info"]["fields"]
         completed_fields = 0
@@ -183,7 +187,7 @@ class ProfileCompletionCalculator:
         return completed_fields / len(fields)
 
     @classmethod
-    def _calculate_career_info_completion(cls, profile: UserProfile) -> float:
+    def _calculate_career_info_completion(cls, profile) -> float:
         """Calculate completion for career info fields."""
         fields = cls.COMPLETION_CATEGORIES["career_info"]["fields"]
         completed_fields = 0
@@ -196,15 +200,25 @@ class ProfileCompletionCalculator:
         return completed_fields / len(fields)
 
     @classmethod
-    def _calculate_assessments_completion(cls, db: Session, db_user_id: int) -> float:
+    def _calculate_assessments_completion(cls, db: Prisma, db_user_id: int) -> float:
         """Calculate completion for personality assessments."""
         # Check for recent personality assessments
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=365)  # Consider assessments valid for 1 year
         
-        recent_assessments = db.query(PersonalityProfile).filter(
-            PersonalityProfile.user_id == db_user_id,
-            PersonalityProfile.computed_at >= cutoff_date
-        ).all()
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            recent_assessments = loop.run_until_complete(
+                db.personality_profiles.find_many(
+                    where={
+                        "user_id": db_user_id,
+                        "computed_at": {"gte": cutoff_date}
+                    }
+                )
+            )
+        finally:
+            loop.close()
         
         if not recent_assessments:
             return 0.0
@@ -224,7 +238,7 @@ class ProfileCompletionCalculator:
         return completed_assessments / len(required_assessments)
 
     @classmethod
-    def _calculate_personal_details_completion(cls, profile: UserProfile) -> float:
+    def _calculate_personal_details_completion(cls, profile) -> float:
         """Calculate completion for personal details fields."""
         fields = cls.COMPLETION_CATEGORIES["personal_details"]["fields"]
         completed_fields = 0
@@ -237,7 +251,7 @@ class ProfileCompletionCalculator:
         return completed_fields / len(fields)
 
     @classmethod
-    def _calculate_preferences_completion(cls, profile: UserProfile) -> float:
+    def _calculate_preferences_completion(cls, profile) -> float:
         """Calculate completion for preferences fields."""
         fields = cls.COMPLETION_CATEGORIES["preferences"]["fields"]
         completed_fields = 0
@@ -250,7 +264,7 @@ class ProfileCompletionCalculator:
         return completed_fields / len(fields)
 
     @classmethod
-    def _calculate_skills_goals_completion(cls, profile: UserProfile) -> float:
+    def _calculate_skills_goals_completion(cls, profile) -> float:
         """Calculate completion for skills and goals fields."""
         fields = cls.COMPLETION_CATEGORIES["skills_goals"]["fields"]
         completed_fields = 0
@@ -300,8 +314,8 @@ class ProfileCompletionCalculator:
     def _get_next_actions(
         cls, 
         category_scores: Dict[str, float], 
-        profile: UserProfile,
-        db: Session,
+        profile,
+        db: Prisma,
         db_user_id: int
     ) -> List[CompletionAction]:
         """Get next recommended actions for profile completion."""
@@ -328,8 +342,8 @@ class ProfileCompletionCalculator:
         category: str,
         config: Dict[str, Any],
         score: float,
-        profile: UserProfile,
-        db: Session,
+        profile,
+        db: Prisma,
         db_user_id: int
     ) -> Optional[CompletionAction]:
         """Get specific action for a category."""
@@ -355,10 +369,20 @@ class ProfileCompletionCalculator:
             )
         elif category == "personality_assessments":
             # Check which specific assessments are missing
-            recent_assessments = db.query(PersonalityProfile).filter(
-                PersonalityProfile.user_id == db_user_id,
-                PersonalityProfile.computed_at >= datetime.now(timezone.utc) - timedelta(days=365)
-            ).all()
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                recent_assessments = loop.run_until_complete(
+                    db.personality_profiles.find_many(
+                        where={
+                            "user_id": db_user_id,
+                            "computed_at": {"gte": datetime.now(timezone.utc) - timedelta(days=365)}
+                        }
+                    )
+                )
+            finally:
+                loop.close()
             
             assessment_types = set()
             for assessment in recent_assessments:
@@ -422,7 +446,7 @@ class ProfileCompletionCalculator:
         return None
 
     @classmethod
-    def _get_missing_critical_data(cls, category_scores: Dict[str, float], profile: UserProfile) -> List[str]:
+    def _get_missing_critical_data(cls, category_scores: Dict[str, float], profile) -> List[str]:
         """Get list of missing critical data for recommendations."""
         missing = []
         

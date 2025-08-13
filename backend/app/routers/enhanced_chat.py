@@ -234,10 +234,10 @@ async def get_graphsage_insights(
         
         # Get user profile for context
         from app.models import UserProfile, UserSkill
-        user_profile = await db.user_profiles.find_first(
+        user_profile = await db.user_profile.find_first(
             where={"user_id": current_user.id}
         )
-        user_skills = await db.user_skills.find_first(
+        user_skill = await db.user_skill.find_first(
             where={"user_id": current_user.id}
         )
         
@@ -249,7 +249,7 @@ async def get_graphsage_insights(
             
         # Compute general skill relevance
         user_skill_dict = {}
-        if user_skills:
+        if user_skill:
             skill_mapping = {
                 "creativity": "Creativity",
                 "leadership": "Leadership",
@@ -259,7 +259,7 @@ async def get_graphsage_insights(
             }
             
             for skill_key, skill_name in skill_mapping.items():
-                value = getattr(user_skills, skill_key)
+                value = getattr(user_skill, skill_key)
                 if value is not None:
                     user_skill_dict[skill_name] = value
                     

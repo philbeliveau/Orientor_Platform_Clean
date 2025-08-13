@@ -75,7 +75,7 @@ async def get_users_with_embeddings() -> List[Dict[str, Any]]:
     try:
         prisma = await get_prisma_client()
         # Get all user profiles
-        profiles = await prisma.user_profiles.find_many()
+        profiles = await prisma.user_profile.find_many()
         users = []
         
         for profile in profiles:
@@ -122,7 +122,7 @@ async def find_similar_peers(user_id: str, embedding: List[float], top_n: int = 
         
         # Get all other users by database ID
         prisma = await get_prisma_client()
-        other_profiles = await prisma.user_profiles.find_many(
+        other_profiles = await prisma.user_profile.find_many(
             where={"user_id": {"not": db_user_id}}
         )
         
@@ -176,7 +176,7 @@ async def update_suggested_peers(user_id: str, similar_peers: List[Tuple[str, fl
         
         # Delete existing suggestions
         prisma = await get_prisma_client()
-        await prisma.suggested_peers.delete_many(
+        await prisma.suggestedpeer.delete_many(
             where={"user_id": db_user_id}
         )
         
@@ -190,7 +190,7 @@ async def update_suggested_peers(user_id: str, similar_peers: List[Tuple[str, fl
             })
         
         if suggestions_data:
-            await prisma.suggested_peers.create_many(data=suggestions_data)
+            await prisma.suggestedpeer.create_many(data=suggestions_data)
         logger.info(f"Updated suggested peers for user {user_id}")
         return True
     except Exception as e:
@@ -215,7 +215,7 @@ async def generate_peer_suggestions(user_id: str, top_n: int = 5) -> bool:
         
         # Get user's embedding
         prisma = await get_prisma_client()
-        result = await prisma.user_profiles.find_unique(
+        result = await prisma.user_profile.find_unique(
             where={"user_id": db_user_id},
             select={"embedding": True}
         )
@@ -262,7 +262,7 @@ async def ensure_compatibility_vector(user_id: str) -> Optional[Dict[str, Any]]:
         
         # Check if compatibility vector exists
         prisma = await get_prisma_client()
-        result = await prisma.user_profiles.find_unique(
+        result = await prisma.user_profile.find_unique(
             where={"user_id": db_user_id}
         )
         
@@ -276,7 +276,7 @@ async def ensure_compatibility_vector(user_id: str) -> Optional[Dict[str, Any]]:
                     return vector
         
         # Generate new compatibility vector
-        profile = await prisma.user_profiles.find_unique(
+        profile = await prisma.user_profile.find_unique(
             where={"user_id": db_user_id}
         )
         if not profile:
@@ -286,7 +286,7 @@ async def ensure_compatibility_vector(user_id: str) -> Optional[Dict[str, Any]]:
         compatibility_vector = await compatibility_service.extract_compatibility_vector(profile)
         
         # Store in database
-        await prisma.user_profiles.update(
+        await prisma.user_profile.update(
             where={"user_id": db_user_id},
             data={"compatibility_vector": json.dumps(compatibility_vector)}
         )
@@ -446,9 +446,9 @@ async def find_compatible_peers(
         
         # Get user's personality data
         prisma = await get_prisma_client()
-        user_personality_result = await prisma.personality_profiles.find_first(
+        user_personality_result = await prisma.personalityprofile.find_first(
             where={"user_id": db_user_id},
-            order={"computed_at": "desc"}
+            order_by={"computed_at": "desc"}
         )
         user_personality = None
         if user_personality_result:
@@ -458,7 +458,7 @@ async def find_compatible_peers(
             }
         
         # Get all other users with their compatibility vectors and personality data
-        results = await prisma.user_profiles.find_many(
+        results = await prisma.user_profile.find_many(
             where={
                 "user_id": {"not": db_user_id},
                 "compatibility_vector": {"not": None}
@@ -485,9 +485,9 @@ async def find_compatible_peers(
                     peer_vector = json.loads(peer_vector)
                 
                 # Get peer's personality data
-                peer_personality_result = await prisma.personality_profiles.find_first(
+                peer_personality_result = await prisma.personalityprofile.find_first(
                     where={"user_id": peer_id},
-                    order={"computed_at": "desc"}
+                    order_by={"computed_at": "desc"}
                 )
                 peer_personality = None
                 if peer_personality_result:
@@ -602,7 +602,7 @@ async def update_suggested_peers_enhanced(
         
         # Delete existing suggestions
         prisma = await get_prisma_client()
-        await prisma.suggested_peers.delete_many(
+        await prisma.suggestedpeer.delete_many(
             where={"user_id": db_user_id}
         )
         
@@ -617,7 +617,7 @@ async def update_suggested_peers_enhanced(
             })
         
         if suggestions_data:
-            await prisma.suggested_peers.create_many(data=suggestions_data)
+            await prisma.suggestedpeer.create_many(data=suggestions_data)
         logger.info(f"Updated enhanced suggested peers for user {user_id}")
         return True
         

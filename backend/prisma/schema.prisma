@@ -58,7 +58,7 @@ model career_fit_analyses {
   updated_at                   DateTime? @default(now()) @db.Timestamptz(6)
 }
 
-model career_goals {
+model careergoal {
   id                  Int       @id @default(autoincrement())
   user_id             Int
   esco_occupation_id  String?   @db.VarChar(255)
@@ -73,9 +73,11 @@ model career_goals {
   achieved_at         DateTime? @db.Timestamp(6)
   source              String?   @db.VarChar(255)
   source_metadata     String?
+
+  @@map("career_goals")
 }
 
-model career_milestones {
+model careermilestone {
   id               Int       @id
   goal_id          Int
   skill_id         String    @db.VarChar(255)
@@ -87,6 +89,8 @@ model career_milestones {
   completed_at     DateTime? @db.Timestamp(6)
   xp_value         Int?
   xp_awarded       Boolean?
+
+  @@map("career_milestones")
 }
 
 model career_profile_aggregates {
@@ -105,7 +109,7 @@ model career_profile_aggregates {
   created_at               DateTime? @default(now()) @db.Timestamptz(6)
 }
 
-model career_signals {
+model careersignal {
   id                 Int       @id
   user_id            Int
   course_id          Int?
@@ -117,9 +121,11 @@ model career_signals {
   trend_analysis     Json?     @db.Json
   created_at         DateTime? @default(now()) @db.Timestamptz(6)
   updated_at         DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@map("career_signals")
 }
 
-model chat_messages {
+model chatmessage {
   id               Int       @id @default(autoincrement())
   conversation_id  Int
   role             String    @db.VarChar(20)
@@ -130,6 +136,8 @@ model chat_messages {
   updated_at       DateTime? @default(now()) @db.Timestamptz(6)
   model_used       String?   @db.VarChar(50)
   response_time_ms Int?
+
+  @@map("chat_messages")
 }
 
 model conversation_categories {
@@ -142,7 +150,7 @@ model conversation_categories {
   updated_at  DateTime? @default(now()) @db.Timestamptz(6)
 }
 
-model conversation_logs {
+model conversationlog {
   id                  Int       @id
   user_id             Int
   course_id           Int
@@ -155,6 +163,8 @@ model conversation_logs {
   career_implications Json?     @db.Json
   llm_metadata        Json?     @db.Json
   created_at          DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@map("conversation_logs")
 }
 
 model conversation_shares {
@@ -169,7 +179,7 @@ model conversation_shares {
   last_accessed_at DateTime? @db.Timestamptz(6)
 }
 
-model conversations {
+model conversation {
   id                   Int       @id @default(autoincrement())
   user_id              Int
   title                String    @db.VarChar(255)
@@ -182,9 +192,11 @@ model conversations {
   last_message_at      DateTime? @db.Timestamptz(6)
   message_count        Int?
   total_tokens_used    Int?
+
+  @@map("conversations")
 }
 
-model courses {
+model course {
   id                Int       @id @default(autoincrement())
   user_id           Int
   course_name       String    @db.VarChar(255)
@@ -199,6 +211,8 @@ model courses {
   learning_outcomes Json?     @db.Json
   created_at        DateTime? @default(now()) @db.Timestamptz(6)
   updated_at        DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@map("courses")
 }
 
 model developmental_milestones {
@@ -360,7 +374,7 @@ model llm_descriptions {
   expires_at      DateTime? @db.Timestamptz(6)
 }
 
-model message_components {
+model messagecomponent {
   id                 Int       @id
   message_id         Int?
   component_type     String    @db.VarChar(50)
@@ -370,9 +384,11 @@ model message_components {
   actions            Json?
   saved              Boolean?  @default(false)
   component_metadata Json?
+
+  @@map("message_components")
 }
 
-model messages {
+model message {
   message_id   Int
   sender_id    Int
   topic        String
@@ -386,9 +402,11 @@ model messages {
   updated_at   DateTime @default(now()) @db.Timestamp(6)
   inserted_at  DateTime @default(now()) @db.Timestamp(6)
   id           String   @id @db.Uuid
+
+  @@map("messages")
 }
 
-model node_notes {
+model nodenote {
   id           String    @id @db.VarChar(255)
   user_id      Int?
   node_id      String?   @db.VarChar(255)
@@ -396,6 +414,8 @@ model node_notes {
   note_text    String?
   created_at   DateTime? @default(now()) @db.Timestamp(6)
   updated_at   DateTime? @default(now()) @db.Timestamp(6)
+
+  @@map("node_notes")
 }
 
 model personality_assessments {
@@ -415,7 +435,7 @@ model personality_assessments {
   updated_at         DateTime  @default(now()) @db.Timestamptz(6)
 }
 
-model personality_profiles {
+model personality_profile {
   id                    Int       @id @default(autoincrement())
   user_id               Int
   assessment_id         Int?
@@ -431,6 +451,8 @@ model personality_profiles {
   expires_at            DateTime? @db.Timestamptz(6)
   created_at            DateTime  @default(now()) @db.Timestamptz(6)
   updated_at            DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@map("personality_profiles")
 }
 
 model personality_responses {
@@ -490,7 +512,7 @@ model programs {
   updated_at      DateTime? @db.Timestamp(6)
 }
 
-model psychological_insights {
+model psychologicalinsight {
   id               Int       @id
   user_id          Int
   course_id        Int
@@ -502,6 +524,8 @@ model psychological_insights {
   extracted_at     DateTime? @default(now()) @db.Timestamptz(6)
   created_at       DateTime? @default(now()) @db.Timestamptz(6)
   updated_at       DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@map("psychological_insights")
 }
 
 model public_feed {
@@ -511,7 +535,7 @@ model public_feed {
   timestamp  DateTime? @default(now()) @db.Timestamp(6)
 }
 
-model reflection_questions {
+model reflectionquestion {
   id         Int       @id @default(autoincrement())
   question   String
   category   String    @db.VarChar(100)
@@ -519,6 +543,7 @@ model reflection_questions {
   updated_at DateTime? @default(now()) @db.Timestamptz(6)
 
   @@index([id], map: "ix_reflection_questions_id")
+  @@map("reflection_questions")
 }
 
 model saved_jobs {
@@ -534,7 +559,7 @@ model saved_jobs {
   metadata         Json?     @default("{}")
 }
 
-model saved_recommendations {
+model savedrecommendation {
   id                     Int      @id
   user_id                Int
   oasis_code             String   @db.VarChar(255)
@@ -572,6 +597,7 @@ model saved_recommendations {
   interaction_metadata   Json?
 
   @@unique([user_id, oasis_code], map: "uq_user_oasis_code")
+  @@map("saved_recommendations")
 }
 
 model skills_to_domains {
@@ -580,7 +606,7 @@ model skills_to_domains {
   id       Int     @id @default(autoincrement())
 }
 
-model strengths_reflection_responses {
+model strengthsreflectionresponse {
   id               Int      @id(map: "pk_strengths_reflection_responses") @default(autoincrement())
   user_id          Int
   question_id      Int
@@ -589,9 +615,11 @@ model strengths_reflection_responses {
   response_time_ms Int?
   created_at       DateTime @default(now()) @db.Timestamptz(6)
   updated_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("strengths_reflection_responses")
 }
 
-model suggested_peers {
+model suggestedpeers {
   user_id      Int
   suggested_id Int
   similarity   Float?
@@ -599,9 +627,10 @@ model suggested_peers {
   updated_at   DateTime? @db.Timestamptz(6)
 
   @@id([user_id, suggested_id], map: "pk_suggested_peers")
+  @@map("suggested_peers")
 }
 
-model tool_invocations {
+model toolinvocation {
   id                Int       @id
   conversation_id   Int?
   tool_name         String    @db.VarChar(50)
@@ -613,6 +642,8 @@ model tool_invocations {
   relevance_score   Float?
   user_id           Int?
   created_at        DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@map("tool_invocations")
 }
 
 model tree_generations {
@@ -627,13 +658,15 @@ model tree_generations {
   last_accessed_at   DateTime? @db.Timestamptz(6)
 }
 
-model tree_paths {
+model treepath {
   id         String    @id @db.Uuid
   user_id    Int?
   tree_type  String?   @db.VarChar(255)
   tree_json  Json?     @db.Json
   name       String?   @db.VarChar(255)
   created_at DateTime? @default(now()) @db.Timestamp(6)
+
+  @@map("tree_paths")
 }
 
 model user_chat_analytics {
@@ -648,7 +681,7 @@ model user_chat_analytics {
   created_at            DateTime? @default(now()) @db.Timestamptz(6)
 }
 
-model user_journey_milestones {
+model userjourneymilestone {
   id                  Int       @id
   user_id             Int?
   milestone_type      String    @db.VarChar(50)
@@ -666,6 +699,8 @@ model user_journey_milestones {
   updated_at          DateTime? @default(now()) @db.Timestamptz(6)
   ai_insights         Json?
   next_steps          Json?
+
+  @@map("user_journey_milestones")
 }
 
 model user_notes {
@@ -677,7 +712,7 @@ model user_notes {
   updated_at              DateTime @default(now()) @db.Timestamptz(6)
 }
 
-model user_profiles {
+model user_profile {
   id                   Int      @id @default(autoincrement())
   user_id              Int      @unique
   name                 String?  @db.VarChar
@@ -709,6 +744,7 @@ model user_profiles {
   users                users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id], map: "idx_user_profiles_user_id")
+  @@map("user_profiles")
 }
 
 model user_program_preferences {
@@ -721,7 +757,7 @@ model user_program_preferences {
   updated_at     DateTime? @db.Timestamp(6)
 }
 
-model user_progress {
+model userprogress {
   id                  String    @id @db.VarChar(255)
   user_id             Int?
   total_xp            Int?
@@ -729,6 +765,8 @@ model user_progress {
   last_completed_node String?   @db.VarChar(255)
   completed_actions   Json?     @db.Json
   last_updated        DateTime? @default(now()) @db.Timestamp(6)
+
+  @@map("user_progress")
 }
 
 model user_recommendations {
@@ -740,7 +778,7 @@ model user_recommendations {
   created_at   DateTime? @default(now()) @db.Timestamptz(6)
 }
 
-model user_representation {
+model userrepresentation {
   id                 Int      @id
   user_id            Int
   generated_at       DateTime @default(now()) @db.Timestamptz(6)
@@ -752,6 +790,8 @@ model user_representation {
   avatar_description String?
   avatar_image_url   String?
   avatar_name        String?
+
+  @@map("user_representation")
 }
 
 model user_skill_graphs {
@@ -776,15 +816,17 @@ model user_skill_nodes {
   unlocked_at DateTime? @db.Timestamp(6)
 }
 
-model user_skill_trees {
+model user_skill_tree {
   id         Int       @id
   user_id    Int?
   graph_id   String    @db.Uuid
   tree_data  Json
   created_at DateTime? @default(now()) @db.Timestamp(6)
+
+  @@map("user_skill_trees")
 }
 
-model user_skills {
+model user_skill {
   id                  Int       @id @default(autoincrement())
   user_id             Int?
   creativity          Float?
@@ -801,6 +843,8 @@ model user_skills {
   evaluation          Float?
   decision_making     Float?
   stress_tolerance    Float?
+
+  @@map("user_skills")
 }
 
 model users {
@@ -814,7 +858,7 @@ model users {
   last_name            String?        @db.VarChar(100)
   is_active            Boolean?       @default(true)
   last_clerk_sync      DateTime?      @db.Timestamptz(6)
-  user_profiles        user_profiles?
+  user_profiles        user_profile?
 
   @@index([onboarding_completed], map: "idx_users_onboarding_completed")
   @@index([id], map: "ix_users_id")

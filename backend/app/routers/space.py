@@ -160,7 +160,7 @@ async def get_saved_recommendations(
     logger.info(f"Found {len(recommendations)} recommendations for user {current_user.id}")
     
     # Get the user's skills and cognitive traits
-    user_skills = await db.user_skills.find_first(
+    user_skill = await db.user_skill.find_first(
         where={'user_id': current_user.id}
     )
     
@@ -176,27 +176,27 @@ async def get_saved_recommendations(
         
         # Build skill comparison if both user and role skills are available
         skill_comparison = None
-        if user_skills:
+        if user_skill:
             # Add user's cognitive traits to the recommendation
-            rec.user_analytical_thinking = user_skills.analytical_thinking
-            rec.user_attention_to_detail = user_skills.attention_to_detail
-            rec.user_collaboration = user_skills.collaboration
-            rec.user_adaptability = user_skills.adaptability
-            rec.user_independence = user_skills.independence
-            rec.user_evaluation = user_skills.evaluation
-            rec.user_decision_making = user_skills.decision_making
-            rec.user_stress_tolerance = user_skills.stress_tolerance
+            rec.user_analytical_thinking = user_skill.analytical_thinking
+            rec.user_attention_to_detail = user_skill.attention_to_detail
+            rec.user_collaboration = user_skill.collaboration
+            rec.user_adaptability = user_skill.adaptability
+            rec.user_independence = user_skill.independence
+            rec.user_evaluation = user_skill.evaluation
+            rec.user_decision_making = user_skill.decision_making
+            rec.user_stress_tolerance = user_skill.stress_tolerance
             
             # Build skill comparison
-            if (user_skills.creativity is not None or user_skills.leadership is not None or \
-                user_skills.digital_literacy is not None or user_skills.critical_thinking is not None or \
-                user_skills.problem_solving is not None):
+            if (user_skill.creativity is not None or user_skill.leadership is not None or \
+                user_skill.digital_literacy is not None or user_skill.critical_thinking is not None or \
+                user_skill.problem_solving is not None):
                 
                 comparison = {}
                 for skill in ["creativity", "leadership", "digital_literacy", "critical_thinking", "problem_solving"]:
                     role_skill_name = f"role_{skill}"
                     comparison[skill] = SkillComparison(
-                        user_skill=getattr(user_skills, skill),
+                        user_skill=getattr(user_skill, skill),
                         role_skill=getattr(rec, role_skill_name)
                     )
                 
@@ -394,12 +394,12 @@ async def delete_note(
 
 # ===== User Skills Endpoints =====
 @router.get("/skills", response_model=UserSkillUpdate)
-async def get_user_skills(
+async def get_user_skill(
     db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
     # Get the user's skills record
-    user_skill = await db.user_skills.find_first(
+    user_skill = await db.user_skill.find_first(
         where={'user_id': current_user.id}
     )
     if not user_skill:
@@ -424,18 +424,18 @@ async def get_user_skills(
     )
 
 @router.put("/skills", response_model=UserSkillUpdate)
-async def update_user_skills(
+async def update_user_skill(
     skills: UserSkillUpdate,
     db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
     # Get or create the user's skills record
-    user_skill = await db.user_skills.find_first(
+    user_skill = await db.user_skill.find_first(
         where={'user_id': current_user.id}
     )
     if not user_skill:
         # Create a new user skills record if it doesn't exist
-        user_skill = await db.user_skills.create(
+        user_skill = await db.user_skill.create(
             data={'user_id': current_user.id}
         )
     
@@ -451,7 +451,7 @@ async def update_user_skills(
             update_data[field] = value
     
     if update_data:
-        user_skill = await db.user_skills.update(
+        user_skill = await db.user_skill.update(
             where={'id': user_skill.id},
             data=update_data
         )
@@ -492,11 +492,11 @@ async def get_skill_comparison(
         )
     
     # Get user's skills
-    user_skill = await db.user_skills.find_first(
+    user_skill = await db.user_skill.find_first(
         where={'user_id': current_user.id}
     )
     if not user_skill:
-        user_skill = await db.user_skills.create(
+        user_skill = await db.user_skill.create(
             data={'user_id': current_user.id}
         )
     

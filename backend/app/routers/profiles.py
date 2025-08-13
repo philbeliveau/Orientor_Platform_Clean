@@ -162,37 +162,37 @@ async def get_profile(
         logger.info(f"Attempting to get profile for user ID: {current_user.id}")
         
         # Convert SQLAlchemy query to Prisma
-        profile = await db.user_profiles.find_first(
+        profile = await db.user_profile.find_first(
             where={"user_id": current_user.id}
         )
         
         operation_logger.log_query_conversion(
             f"db.query(UserProfile).filter(UserProfile.user_id == {current_user.id}).first()",
-            f"db.user_profiles.find_first(where={{\"user_id\": {current_user.id}}})",
+            f"db.user_profile.find_first(where={{\"user_id\": {current_user.id}}})",
             "profile_lookup"
         )
         
         if not profile:
             logger.info(f"No profile found for user ID: {current_user.id}, creating a new one")
             # Create a blank profile using Prisma
-            profile = await db.user_profiles.create(
+            profile = await db.user_profile.create(
                 data={"user_id": current_user.id}
             )
             
             operation_logger.log_query_conversion(
                 "UserProfile(user_id=current_user.id); db.add(profile); db.commit()",
-                f"db.user_profiles.create(data={{\"user_id\": {current_user.id}}})",
+                f"db.user_profile.create(data={{\"user_id\": {current_user.id}}})",
                 "profile_creation"
             )
         
         # Get user skills using Prisma
-        skills = await db.user_skills.find_first(
+        skills = await db.user_skill.find_first(
             where={"user_id": current_user.id}
         )
         
         operation_logger.log_query_conversion(
             f"db.query(UserSkill).filter(UserSkill.user_id == {current_user.id}).first()",
-            f"db.user_skills.find_first(where={{\"user_id\": {current_user.id}}})",
+            f"db.user_skill.find_first(where={{\"user_id\": {current_user.id}}})",
             "skills_lookup"
         )
         
@@ -235,13 +235,13 @@ async def update_profile(
         # Use transaction for complex update operation
         async with get_prisma_transaction() as transaction_db:
             # Get the current profile using Prisma
-            profile = await transaction_db.user_profiles.find_first(
+            profile = await transaction_db.user_profile.find_first(
                 where={"user_id": current_user.id}
             )
             
             operation_logger.log_query_conversion(
                 f"db.query(UserProfile).filter(UserProfile.user_id == {current_user.id}).first()",
-                f"transaction_db.user_profiles.find_first(where={{\"user_id\": {current_user.id}}})",
+                f"transaction_db.user_profile.find_first(where={{\"user_id\": {current_user.id}}})",
                 "profile_lookup_for_update"
             )
             
@@ -266,7 +266,7 @@ async def update_profile(
             }
             
             # Update user skills using Prisma
-            skills = await transaction_db.user_skills.find_first(
+            skills = await transaction_db.user_skill.find_first(
                 where={"user_id": current_user.id}
             )
             
@@ -274,25 +274,25 @@ async def update_profile(
                 # Create new skills record
                 skills_data = {"user_id": current_user.id}
                 skills_data.update({k: v for k, v in skill_fields.items() if v is not None})
-                skills = await transaction_db.user_skills.create(data=skills_data)
+                skills = await transaction_db.user_skill.create(data=skills_data)
                 
                 operation_logger.log_query_conversion(
                     "UserSkill(user_id=current_user.id); db.add(skills)",
-                    f"transaction_db.user_skills.create(data={{...}})",
+                    f"transaction_db.user_skill.create(data={{...}})",
                     "skills_creation"
                 )
             else:
                 # Update existing skills
                 update_skills_data = {k: v for k, v in skill_fields.items() if v is not None}
                 if update_skills_data:
-                    skills = await transaction_db.user_skills.update(
+                    skills = await transaction_db.user_skill.update(
                         where={"id": skills.id},
                         data=update_skills_data
                     )
                     
                     operation_logger.log_query_conversion(
                         "setattr(skills, field, value) for each field",
-                        f"transaction_db.user_skills.update(where={{\"id\": {skills.id}}}, data={{...}})",
+                        f"transaction_db.user_skill.update(where={{\"id\": {skills.id}}}, data={{...}})",
                         "skills_update"
                     )
             
@@ -310,14 +310,14 @@ async def update_profile(
             logger.info(f"Updating profile fields: {list(update_data.keys())}")
             
             if update_data:
-                profile = await transaction_db.user_profiles.update(
+                profile = await transaction_db.user_profile.update(
                     where={"id": profile.id},
                     data=update_data
                 )
                 
                 operation_logger.log_query_conversion(
                     "setattr(profile, field, value) for each field; db.commit()",
-                    f"transaction_db.user_profiles.update(where={{\"id\": {profile.id}}}, data={{...}})",
+                    f"transaction_db.user_profile.update(where={{\"id\": {profile.id}}}, data={{...}})",
                     "profile_update"
                 )
         
@@ -619,38 +619,38 @@ async def get_user_profile(
         logger.info(f"Attempting to get profile for user ID: {user_id}")
         
         # Convert SQLAlchemy query to Prisma
-        profile = await db.user_profiles.find_first(
+        profile = await db.user_profile.find_first(
             where={"user_id": user_id}
         )
         
         operation_logger.log_query_conversion(
             f"db.query(UserProfile).filter(UserProfile.user_id == {user_id}).first()",
-            f"db.user_profiles.find_first(where={{\"user_id\": {user_id}}})",
+            f"db.user_profile.find_first(where={{\"user_id\": {user_id}}})",
             "user_profile_lookup"
         )
         
         if not profile:
             logger.info(f"No profile found for user ID: {user_id}, creating a new one")
             # Create a new profile using Prisma
-            profile = await db.user_profiles.create(
+            profile = await db.user_profile.create(
                 data={"user_id": user_id}
             )
             
             operation_logger.log_query_conversion(
                 "UserProfile(user_id=user_id); db.add(profile); db.commit()",
-                f"db.user_profiles.create(data={{\"user_id\": {user_id}}})",
+                f"db.user_profile.create(data={{\"user_id\": {user_id}}})",
                 "user_profile_creation"
             )
         
         # Get user skills using Prisma
-        skills = await db.user_skills.find_first(
+        skills = await db.user_skill.find_first(
             where={"user_id": user_id}
         )
         
         operation_logger.log_query_conversion(
             f"db.query(UserSkill).filter(UserSkill.user_id == {user_id}).first()",
-            f"db.user_skills.find_first(where={{\"user_id\": {user_id}}})",
-            "user_skills_lookup"
+            f"db.user_skill.find_first(where={{\"user_id\": {user_id}}})",
+            "user_skill_lookup"
         )
         
         response = ProfileResponse.model_validate(profile)

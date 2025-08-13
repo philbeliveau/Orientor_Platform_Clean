@@ -66,7 +66,7 @@ async def get_courses(
     
     return await db.course.find_many(
         where=where_clause,
-        order_by={"created_at": "desc"}
+        order={"created_at": "desc"}
     )
 
 @router.post("/", response_model=CourseSchema)

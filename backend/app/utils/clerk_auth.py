@@ -266,12 +266,12 @@ async def ensure_user_profile_exists(user, db: Prisma) -> None:
         from ..models.user_profile import UserProfile  # Import here to avoid circular imports
         
         # Check if user profile already exists
-        existing_profile = await db.user_profiles.find_first(where={"user_id": user.id})
+        existing_profile = await db.user_profile.find_first(where={"user_id": user.id})
         
         if not existing_profile:
             # Create new user profile
             logger.info(f"Creating user profile for user ID {user.id}")
-            new_profile = await db.user_profiles.create(
+            new_profile = await db.user_profile.create(
                 data={
                     "user_id": user.id,
                     "name": f"{user.first_name} {user.last_name}".strip() if user.first_name or user.last_name else None,
