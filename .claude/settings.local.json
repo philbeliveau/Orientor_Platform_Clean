@@ -70,7 +70,11 @@
       "Bash(claude hooks:*)",
       "Bash(claude config --help)",
       "Bash(claude config set:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)",
+      "Bash(PYTHONPATH=. python -c \"\ntry:\n    from app.routers.career_goals import router\n    print(''✅ Career goals router imported successfully'')\n    \n    # Count the routes\n    route_count = len([route for route in router.routes])\n    print(f''📊 Found {route_count} routes in career_goals router'')\n    \n    # Check for any remaining SQLAlchemy patterns\n    import inspect\n    source = inspect.getsource(router)\n    if ''from_orm('' in source:\n        print(''⚠️  WARNING: Still contains from_orm() calls'')\n    else:\n        print(''✅ No from_orm() calls found'')\n        \n    if ''db.rollback()'' in source:\n        print(''⚠️  WARNING: Still contains db.rollback() calls'')\n    else:\n        print(''✅ No db.rollback() calls found'')\n        \nexcept Exception as e:\n    print(f''❌ Import failed: {e}'')\n    import traceback\n    print(''Full traceback:'')\n    traceback.print_exc()\n\")",
+      "Bash(echo:*)",
+      "Bash(echo \"SERVER_PORT=$SERVER_PORT\")"
     ],
     "deny": []
   },

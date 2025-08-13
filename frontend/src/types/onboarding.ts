@@ -2,14 +2,14 @@ export interface ChatMessage {
   id: string;
   type: 'system' | 'user';
   content: string;
-  timestamp: Date;
+  timestamp?: string;
 }
 
 export interface OnboardingResponse {
   questionId: string;
   question: string;
   response: string;
-  timestamp: Date;
+  timestamp?: string;
 }
 
 export interface HEXACODimension {

@@ -55,7 +55,7 @@ class OnboardingResponse(BaseModel):
     questionId: str
     question: str
     response: str
-    timestamp: Optional[datetime] = None
+    timestamp: Optional[str] = None
 
 class OnboardingData(BaseModel):
     responses: List[OnboardingResponse] = []  # Make optional with default empty list
