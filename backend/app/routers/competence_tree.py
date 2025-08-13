@@ -322,7 +322,7 @@ async def get_user_anchor_skills(
     logger.info(f"Request received to get anchor skills for user {current_user.id}")
     try:
         # Get the user's latest skill tree
-        skill_tree = await db.user_skill_trees.find_first(
+        skill_tree = await db.user_skill_tree.find_first(
             where={"user_id": current_user.id},
             order_by={"created_at": "desc"}
         )
@@ -449,7 +449,7 @@ async def get_competence_tree(
     try:
         # Get the competence tree from the database
         logger.info(f"Retrieving competence tree {graph_id} from database")
-        skill_tree = await db.user_skill_trees.find_first(
+        skill_tree = await db.user_skill_tree.find_first(
             where={
                 "graph_id": graph_id,
                 "user_id": current_user.id

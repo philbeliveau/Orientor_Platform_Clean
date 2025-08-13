@@ -298,7 +298,7 @@ class ClerkApiService {
   }
 
   async getOnboardingStatus(token: string): Promise<ApiResponse<OnboardingStatus>> {
-    const response = await this.request<OnboardingStatus>('/user/onboarding-status', {
+    const response = await this.request<OnboardingStatus>('/api/v1/onboarding/status', {
       method: 'GET',
       token,
     });

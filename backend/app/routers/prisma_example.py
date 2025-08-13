@@ -54,10 +54,10 @@ async def get_current_user_prisma(
     """
     try:
         # Use Prisma to get user data with type safety
-        prisma_user = await db.user.find_unique(
+        prisma_user = await db.users.find_unique(
             where={"clerk_user_id": current_user.clerk_user_id},
             include={
-                "user_profile": True,
+                "user_profiles": True,
                 "conversations": {
                     "take": 5,
                     "order_by": {"created_at": "desc"}
@@ -94,7 +94,7 @@ async def search_users_prisma(
     """
     try:
         # Type-safe search with Prisma
-        users = await db.user.find_many(
+        users = await db.users.find_many(
             where={
                 "OR": [
                     {"first_name": {"contains": query, "mode": "insensitive"}},
@@ -103,10 +103,11 @@ async def search_users_prisma(
                 ]
             },
             include={
-                "user_profile": {
+                "user_profiles": {
                     "select": {
-                        "avatar_type": True,
-                        "bio": True
+                        "name": True,
+                        "age": True,
+                        "major": True
                     }
                 }
             },
@@ -138,10 +139,10 @@ async def get_recent_conversations(
     Shows how to work with related data efficiently
     """
     try:
-        conversations = await db.conversation.find_many(
+        conversations = await db.conversations.find_many(
             where={"user_id": current_user.id},
             include={
-                "user": {
+                "users": {
                     "select": {
                         "first_name": True,
                         "last_name": True,
@@ -188,7 +189,7 @@ async def update_user_profile_prisma(
         # Use Prisma transaction for atomic updates
         async with db.tx() as transaction:
             # Update user basic info
-            updated_user = await transaction.user.update(
+            updated_user = await transaction.users.update(
                 where={"id": current_user.id},
                 data={
                     "first_name": profile_data.get("first_name"),
@@ -198,7 +199,7 @@ async def update_user_profile_prisma(
             )
             
             # Update or create profile
-            profile = await transaction.user_profile.upsert(
+            profile = await transaction.user_profiles.upsert(
                 where={"user_id": current_user.id},
                 data={
                     "create": {
@@ -229,7 +230,7 @@ async def get_user_analytics(
     """
     try:
         # Aggregate user data with Prisma
-        stats = await db.user.find_unique(
+        stats = await db.users.find_unique(
             where={"id": current_user.id},
             include={
                 "_count": {
@@ -241,14 +242,14 @@ async def get_user_analytics(
         )
         
         # Get recent activity
-        recent_activity = await db.chat_message.find_many(
+        recent_activity = await db.chat_messages.find_many(
             where={"user_id": current_user.id},
             order_by={"created_at": "desc"},
             take=10,
             select={
                 "created_at": True,
                 "role": True,
-                "conversation": {
+                "conversations": {
                     "select": {"title": True}
                 }
             }

@@ -2,8 +2,7 @@ import os
 import logging
 import numpy as np
 from typing import List, Optional, Dict, Any, Tuple
-from sqlalchemy.orm import Session
-from sqlalchemy import text, select
+from app.utils.prisma_client import get_prisma_client
 import ast
 import subprocess
 import json
@@ -63,7 +62,7 @@ def cosine_similarity(a: List[float], b: List[float]) -> float:
     b = np.array(b)
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
-def get_users_with_embeddings(db: Session) -> List[Dict[str, Any]]:
+async def get_users_with_embeddings() -> List[Dict[str, Any]]:
     """
     Get all users and generate their embeddings on-the-fly
     
@@ -74,8 +73,9 @@ def get_users_with_embeddings(db: Session) -> List[Dict[str, Any]]:
         List of user data including embeddings
     """
     try:
+        prisma = await get_prisma_client()
         # Get all user profiles
-        profiles = db.query(UserProfile).all()
+        profiles = await prisma.user_profiles.find_many()
         users = []
         
         for profile in profiles:
@@ -103,7 +103,7 @@ def get_users_with_embeddings(db: Session) -> List[Dict[str, Any]]:
         logger.error(f"Error getting users with embeddings: {str(e)}")
         return []
 
-async def find_similar_peers(db: Session, user_id: str, embedding: List[float], top_n: int = 5) -> List[Tuple[str, float]]:
+async def find_similar_peers(user_id: str, embedding: List[float], top_n: int = 5) -> List[Tuple[str, float]]:
     """
     Find similar peers for a given user
     
@@ -118,10 +118,13 @@ async def find_similar_peers(db: Session, user_id: str, embedding: List[float], 
     """
     try:
         # Convert Clerk user ID to database user ID
-        db_user_id = await get_database_user_id_sync(user_id, db)
+        db_user_id = await get_database_user_id_sync(user_id)
         
         # Get all other users by database ID
-        other_profiles = db.query(UserProfile).filter(UserProfile.user_id != db_user_id).all()
+        prisma = await get_prisma_client()
+        other_profiles = await prisma.user_profiles.find_many(
+            where={"user_id": {"not": db_user_id}}
+        )
         
         # Calculate similarities
         similarities = []
@@ -155,7 +158,7 @@ async def find_similar_peers(db: Session, user_id: str, embedding: List[float], 
         logger.error(f"Error finding similar peers: {str(e)}")
         return []
 
-async def update_suggested_peers(db: Session, user_id: str, similar_peers: List[Tuple[str, float]]) -> bool:
+async def update_suggested_peers(user_id: str, similar_peers: List[Tuple[str, float]]) -> bool:
     """
     Update the suggested_peers table for a user
     
@@ -169,38 +172,32 @@ async def update_suggested_peers(db: Session, user_id: str, similar_peers: List[
     """
     try:
         # Convert Clerk user ID to database user ID
-        db_user_id = await get_database_user_id_sync(user_id, db)
+        db_user_id = await get_database_user_id_sync(user_id)
         
         # Delete existing suggestions
-        query = text("""
-            DELETE FROM suggested_peers
-            WHERE user_id = :user_id
-        """)
-        
-        db.execute(query, {"user_id": db_user_id})
+        prisma = await get_prisma_client()
+        await prisma.suggested_peers.delete_many(
+            where={"user_id": db_user_id}
+        )
         
         # Insert new suggestions
+        suggestions_data = []
         for peer_id, similarity in similar_peers:
-            query = text("""
-                INSERT INTO suggested_peers (user_id, suggested_id, similarity)
-                VALUES (:user_id, :peer_id, :similarity)
-            """)
-            
-            db.execute(query, {
+            suggestions_data.append({
                 "user_id": db_user_id,
-                "peer_id": peer_id,
+                "suggested_id": peer_id,
                 "similarity": float(similarity)
             })
         
-        db.commit()
+        if suggestions_data:
+            await prisma.suggested_peers.create_many(data=suggestions_data)
         logger.info(f"Updated suggested peers for user {user_id}")
         return True
     except Exception as e:
-        db.rollback()
         logger.error(f"Error updating suggested peers: {str(e)}")
         return False
 
-async def generate_peer_suggestions(db: Session, user_id: str, top_n: int = 5) -> bool:
+async def generate_peer_suggestions(user_id: str, top_n: int = 5) -> bool:
     """
     Generate peer suggestions for a user
     
@@ -214,16 +211,14 @@ async def generate_peer_suggestions(db: Session, user_id: str, top_n: int = 5) -
     """
     try:
         # Convert Clerk user ID to database user ID
-        db_user_id = await get_database_user_id_sync(user_id, db)
+        db_user_id = await get_database_user_id_sync(user_id)
         
         # Get user's embedding
-        query = text("""
-            SELECT embedding
-            FROM user_profiles
-            WHERE user_id = :user_id
-        """)
-        
-        result = db.execute(query, {"user_id": db_user_id}).fetchone()
+        prisma = await get_prisma_client()
+        result = await prisma.user_profiles.find_unique(
+            where={"user_id": db_user_id},
+            select={"embedding": True}
+        )
         
         if not result or not result.embedding:
             logger.error(f"No embedding found for user {user_id}")
@@ -236,21 +231,21 @@ async def generate_peer_suggestions(db: Session, user_id: str, top_n: int = 5) -
             return False
         
         # Find similar peers
-        similar_peers = await find_similar_peers(db, user_id, embedding, top_n)
+        similar_peers = await find_similar_peers(user_id, embedding, top_n)
         
         if not similar_peers:
             logger.warning(f"No similar peers found for user {user_id}")
             return False
         
         # Update suggested_peers table
-        success = await update_suggested_peers(db, user_id, similar_peers)
+        success = await update_suggested_peers(user_id, similar_peers)
         
         return success
     except Exception as e:
         logger.error(f"Error generating peer suggestions: {str(e)}")
         return False
 
-async def ensure_compatibility_vector(db: Session, user_id: str) -> Optional[Dict[str, Any]]:
+async def ensure_compatibility_vector(user_id: str) -> Optional[Dict[str, Any]]:
     """
     Ensure user has a compatibility vector, generating if needed.
     
@@ -263,16 +258,13 @@ async def ensure_compatibility_vector(db: Session, user_id: str) -> Optional[Dic
     """
     try:
         # Convert Clerk user ID to database user ID
-        db_user_id = await get_database_user_id_sync(user_id, db)
+        db_user_id = await get_database_user_id_sync(user_id)
         
         # Check if compatibility vector exists
-        query = text("""
-            SELECT compatibility_vector
-            FROM user_profiles
-            WHERE user_id = :user_id
-        """)
-        
-        result = db.execute(query, {"user_id": db_user_id}).fetchone()
+        prisma = await get_prisma_client()
+        result = await prisma.user_profiles.find_unique(
+            where={"user_id": db_user_id}
+        )
         
         if result and result.compatibility_vector:
             vector = result.compatibility_vector
@@ -284,25 +276,20 @@ async def ensure_compatibility_vector(db: Session, user_id: str) -> Optional[Dic
                     return vector
         
         # Generate new compatibility vector
-        profile = db.query(UserProfile).filter(UserProfile.user_id == db_user_id).first()
+        profile = await prisma.user_profiles.find_unique(
+            where={"user_id": db_user_id}
+        )
         if not profile:
             logger.error(f"User profile not found for user {user_id}")
             return None
         
-        compatibility_vector = await compatibility_service.extract_compatibility_vector(profile, db)
+        compatibility_vector = await compatibility_service.extract_compatibility_vector(profile)
         
         # Store in database
-        update_query = text("""
-            UPDATE user_profiles
-            SET compatibility_vector = :vector
-            WHERE user_id = :user_id
-        """)
-        
-        db.execute(update_query, {
-            "user_id": db_user_id,
-            "vector": json.dumps(compatibility_vector)
-        })
-        db.commit()
+        await prisma.user_profiles.update(
+            where={"user_id": db_user_id},
+            data={"compatibility_vector": json.dumps(compatibility_vector)}
+        )
         
         logger.info(f"Generated and stored compatibility vector for user {user_id}")
         return compatibility_vector
@@ -433,7 +420,6 @@ def calculate_personality_compatibility(
         return 0.5
 
 async def find_compatible_peers(
-    db: Session, 
     user_id: str, 
     top_n: int = 5
 ) -> List[Tuple[str, float, Dict[str, Any]]]:
@@ -450,44 +436,43 @@ async def find_compatible_peers(
     """
     try:
         # Convert Clerk user ID to database user ID
-        db_user_id = await get_database_user_id_sync(user_id, db)
+        db_user_id = await get_database_user_id_sync(user_id)
         
         # Ensure user has compatibility vector
-        user_vector = await ensure_compatibility_vector(db, user_id)
+        user_vector = await ensure_compatibility_vector(user_id)
         if not user_vector:
             logger.error(f"Failed to get compatibility vector for user {user_id}")
             return []
         
         # Get user's personality data
-        user_personality_stmt = select(PersonalityProfile).where(
-            PersonalityProfile.user_id == db_user_id
-        ).order_by(PersonalityProfile.computed_at.desc())
-        
-        user_personality_result = db.execute(user_personality_stmt).first()
+        prisma = await get_prisma_client()
+        user_personality_result = await prisma.personality_profiles.find_first(
+            where={"user_id": db_user_id},
+            order={"computed_at": "desc"}
+        )
         user_personality = None
         if user_personality_result:
-            personality_profile = user_personality_result[0]
             user_personality = {
-                "hexaco_scores": personality_profile.scores.get("hexaco", {}) if personality_profile.scores else {},
-                "riasec_scores": personality_profile.scores.get("riasec", {}) if personality_profile.scores else {}
+                "hexaco_scores": user_personality_result.scores.get("hexaco", {}) if user_personality_result.scores else {},
+                "riasec_scores": user_personality_result.scores.get("riasec", {}) if user_personality_result.scores else {}
             }
         
         # Get all other users with their compatibility vectors and personality data
-        query = text("""
-            SELECT 
-                up.user_id,
-                up.compatibility_vector,
-                up.name,
-                up.major,
-                up.year,
-                up.job_title,
-                up.industry
-            FROM user_profiles up
-            WHERE up.user_id != :user_id
-            AND up.compatibility_vector IS NOT NULL
-        """)
-        
-        results = db.execute(query, {"user_id": db_user_id}).fetchall()
+        results = await prisma.user_profiles.find_many(
+            where={
+                "user_id": {"not": db_user_id},
+                "compatibility_vector": {"not": None}
+            },
+            select={
+                "user_id": True,
+                "compatibility_vector": True,
+                "name": True,
+                "major": True,
+                "year": True,
+                "job_title": True,
+                "industry": True
+            }
+        )
         
         compatibility_scores = []
         
@@ -500,17 +485,15 @@ async def find_compatible_peers(
                     peer_vector = json.loads(peer_vector)
                 
                 # Get peer's personality data
-                peer_personality_stmt = select(PersonalityProfile).where(
-                    PersonalityProfile.user_id == peer_id
-                ).order_by(PersonalityProfile.computed_at.desc())
-                
-                peer_personality_result = db.execute(peer_personality_stmt).first()
+                peer_personality_result = await prisma.personality_profiles.find_first(
+                    where={"user_id": peer_id},
+                    order={"computed_at": "desc"}
+                )
                 peer_personality = None
                 if peer_personality_result:
-                    personality_profile = peer_personality_result[0]
                     peer_personality = {
-                        "hexaco_scores": personality_profile.scores.get("hexaco", {}) if personality_profile.scores else {},
-                        "riasec_scores": personality_profile.scores.get("riasec", {}) if personality_profile.scores else {}
+                        "hexaco_scores": peer_personality_result.scores.get("hexaco", {}) if peer_personality_result.scores else {},
+                        "riasec_scores": peer_personality_result.scores.get("riasec", {}) if peer_personality_result.scores else {}
                     }
                 
                 # Calculate compatibility score
@@ -599,7 +582,6 @@ def generate_compatibility_explanation(
         return "Compatible based on profile analysis."
 
 async def update_suggested_peers_enhanced(
-    db: Session, 
     user_id: str, 
     compatible_peers: List[Tuple[str, float, Dict[str, Any]]]
 ) -> bool:
@@ -616,39 +598,34 @@ async def update_suggested_peers_enhanced(
     """
     try:
         # Convert Clerk user ID to database user ID
-        db_user_id = await get_database_user_id_sync(user_id, db)
+        db_user_id = await get_database_user_id_sync(user_id)
         
         # Delete existing suggestions
-        delete_query = text("""
-            DELETE FROM suggested_peers
-            WHERE user_id = :user_id
-        """)
-        db.execute(delete_query, {"user_id": db_user_id})
+        prisma = await get_prisma_client()
+        await prisma.suggested_peers.delete_many(
+            where={"user_id": db_user_id}
+        )
         
         # Insert new suggestions
+        suggestions_data = []
         for peer_id, score, explanation in compatible_peers:
-            insert_query = text("""
-                INSERT INTO suggested_peers (user_id, suggested_id, similarity, created_at)
-                VALUES (:user_id, :peer_id, :similarity, :created_at)
-            """)
-            
-            db.execute(insert_query, {
+            suggestions_data.append({
                 "user_id": db_user_id,
-                "peer_id": peer_id,
+                "suggested_id": peer_id,
                 "similarity": float(score),
                 "created_at": datetime.now(timezone.utc)
             })
         
-        db.commit()
+        if suggestions_data:
+            await prisma.suggested_peers.create_many(data=suggestions_data)
         logger.info(f"Updated enhanced suggested peers for user {user_id}")
         return True
         
     except Exception as e:
-        db.rollback()
         logger.error(f"Error updating enhanced suggested peers: {e}")
         return False
 
-async def generate_enhanced_peer_suggestions(db: Session, user_id: str, top_n: int = 5) -> bool:
+async def generate_enhanced_peer_suggestions(user_id: str, top_n: int = 5) -> bool:
     """
     Generate enhanced peer suggestions using compatibility analysis.
     
@@ -662,14 +639,14 @@ async def generate_enhanced_peer_suggestions(db: Session, user_id: str, top_n: i
     """
     try:
         # Find compatible peers
-        compatible_peers = await find_compatible_peers(db, user_id, top_n)
+        compatible_peers = await find_compatible_peers(user_id, top_n)
         
         if not compatible_peers:
             logger.warning(f"No compatible peers found for user {user_id}")
             return False
         
         # Update suggested_peers table
-        success = await update_suggested_peers_enhanced(db, user_id, compatible_peers)
+        success = await update_suggested_peers_enhanced(user_id, compatible_peers)
         return success
         
     except Exception as e:

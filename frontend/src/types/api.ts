@@ -138,10 +138,10 @@ export interface SaveCareerResponse {
 
 // Onboarding types
 export interface OnboardingStatus {
-  completed: boolean;
-  current_step?: number;
-  steps_completed?: string[];
-  user_id: number;
+  onboarding_completed: boolean;
+  has_started: boolean;
+  is_complete: boolean;
+  message: string;
 }
 
 // Generic pagination types

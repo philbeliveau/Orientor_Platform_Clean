@@ -140,17 +140,26 @@ export const useOnboardingService = () => {
       try {
         console.log('Checking onboarding status...');
         const token = await checkAuth();
-        const response = await clerkApiService.getOnboardingStatus(token) as { 
-          onboarding_completed: boolean; 
-          has_started: boolean; 
-          is_complete: boolean; 
-          message: string; 
-        };
+        const response = await clerkApiService.getOnboardingStatus(token);
         console.log('Onboarding status response:', response);
         
+        // Extract data from API response wrapper
+        const data = response.data || response;
+        console.log('Extracted data:', data);
+        
         // STANDARDIZED: Both endpoints now return same format
-        const isComplete = response.onboarding_completed || response.is_complete;
-        const hasStarted = response.has_started || isComplete;
+        const isComplete = data.onboarding_completed || data.is_complete;
+        const hasStarted = data.has_started || isComplete;
+        
+        console.log('🔍 ONBOARDING SERVICE MAPPING:', {
+          raw_response: response,
+          extracted_data: data,
+          raw_onboarding_completed: data.onboarding_completed,
+          raw_is_complete: data.is_complete,
+          raw_has_started: data.has_started,
+          mapped_isComplete: isComplete,
+          mapped_hasStarted: hasStarted
+        });
         
         return {
           isComplete: isComplete,
@@ -262,16 +271,14 @@ export const useOnboardingService = () => {
     needsOnboarding: async (): Promise<boolean> => {
       try {
         const token = await checkAuth();
-        const response = await clerkApiService.getOnboardingStatus(token) as { 
-          onboarding_completed: boolean; 
-          has_started: boolean; 
-          is_complete: boolean; 
-          message: string; 
-        };
+        const response = await clerkApiService.getOnboardingStatus(token);
         console.log('Onboarding status check result:', response);
         
+        // Extract data from API response wrapper
+        const data = response.data || response;
+        
         // STANDARDIZED: Both endpoints now return same format
-        const isComplete = response.onboarding_completed || response.is_complete;
+        const isComplete = data.onboarding_completed || data.is_complete;
         
         return !isComplete;
       } catch (error: any) {

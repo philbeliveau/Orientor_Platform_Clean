@@ -10,11 +10,15 @@ import { useAuth } from '@clerk/nextjs';
  */
 export const checkOnboardingRequired = async (token: string): Promise<boolean> => {
   try {
-    const status = await clerkApiService.request('/auth/onboarding-status', {
+    // ✅ CORRECTED: Use standardized onboarding endpoint
+    const status = await clerkApiService.request('/api/v1/onboarding/status', {
       method: 'GET',
       token
-    }) as { completed: boolean };
-    return !status.completed;
+    }) as { onboarding_completed: boolean; has_started: boolean; is_complete: boolean; message: string };
+    
+    // ✅ CORRECTED: Check standardized onboarding router response format
+    const isComplete = status.onboarding_completed || status.is_complete;
+    return !isComplete;
   } catch (error) {
     console.error('Error checking onboarding status:', error);
     // If we can't check, assume they need onboarding for safety

@@ -199,7 +199,7 @@ async def _collect_user_data(db: Prisma, user_id: int) -> Dict[str, Any]:
     
     try:
         # Récupérer l'utilisateur
-        user = await db.user.find_first(
+        user = await db.users.find_first(
             where={"id": user_id},
             include={"profile": True, "skills": True}
         )
@@ -279,7 +279,7 @@ async def generate_avatar_test(
     """
     try:
         # Vérifier que l'utilisateur existe
-        user = await db.user.find_first(
+        user = await db.users.find_first(
             where={"id": user_id}
         )
         if not user:

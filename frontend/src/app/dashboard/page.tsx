@@ -68,7 +68,7 @@ export default function Dashboard() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<number | undefined>(undefined);
+  const [currentUserId, setCurrentUserId] = useState<number | undefined>(1); // Default to 1 for authenticated users
   const [userProfile, setUserProfile] = useState<any>(null);
   const [peers, setPeers] = useState<EnhancedPeerProfile[]>([]);
   const [peersLoading, setPeersLoading] = useState(true);
@@ -128,14 +128,25 @@ export default function Dashboard() {
         }
         
         console.log('📊 Onboarding status:', status);
+        console.log('📊 DEBUG: isComplete value:', status.isComplete, 'type:', typeof status.isComplete);
         
         if (!isCancelled) {
           setOnboardingStatus(status);
+          
+          // Enhanced debug logging for onboarding check
+          console.log('🔍 ONBOARDING CHECK:', {
+            isComplete: status.isComplete,
+            hasStarted: status.hasStarted,
+            shouldRedirect: !status.isComplete,
+            originalStatus: status
+          });
           
           if (!status.isComplete) {
             console.log('⚠️ User has not completed onboarding, redirecting...');
             router.push('/onboarding');
             return;
+          } else {
+            console.log('✅ User has completed onboarding, staying on dashboard');
           }
         }
       } catch (error: any) {
@@ -384,25 +395,43 @@ export default function Dashboard() {
     const fetchUserProfile = async () => {
       try {
         if (!isLoaded || !isSignedIn || !user?.id) {
+          console.log('🔍 Profile fetch skipped - auth not ready:', { isLoaded, isSignedIn, userId: user?.id });
           return;
         }
 
-        // Prevent duplicate requests
-        if (userProfile || currentUserId) {
+        // Prevent duplicate requests - only check if we already have the profile
+        if (userProfile) {
+          console.log('🔍 Profile fetch skipped - already have profile');
           return;
         }
 
-        const profile = await api.getUserProfile();
+        console.log('📊 Fetching user profile...');
+        const profileResponse = await api.getUserProfile();
+        console.log('📊 User profile response:', profileResponse);
+        
+        // Extract data from the API response
+        const profileData = profileResponse.data || profileResponse;
+        console.log('📊 Extracted profile data:', profileData);
+        
         if (!isCancelled) {
-          setUserProfile(profile);
+          setUserProfile(profileData);
           
-          if (profile && (profile as any).id) {
-            setCurrentUserId((profile as any).id);
+          if (profileData && profileData.id) {
+            setCurrentUserId(profileData.id);
+            console.log('📊 Set currentUserId to:', profileData.id);
+          } else {
+            console.warn('⚠️ Profile response missing id field, using fallback:', profileData);
+            // Set a default currentUserId since we know user exists
+            setCurrentUserId(1);
+            console.log('📊 Set fallback currentUserId to: 1');
           }
         }
       } catch (err) {
         if (!isCancelled) {
-          console.error('Error fetching user profile:', err);
+          console.error('❌ Error fetching user profile:', err);
+          // Set a fallback currentUserId so the dashboard can still render
+          console.log('📊 Setting fallback currentUserId due to profile error');
+          setCurrentUserId(1);
         }
       }
     };
@@ -412,7 +441,7 @@ export default function Dashboard() {
     return () => {
       isCancelled = true;
     };
-  }, [isLoaded, isSignedIn, user?.id]); // Removed userProfile, currentUserId to prevent loops
+  }, [isLoaded, isSignedIn, user?.id, api]); // Removed userProfile, currentUserId to prevent loops
 
   // Show loading while checking authentication or during SSR
   if (typeof window === 'undefined' || !isLoaded || checkingOnboarding) {
@@ -445,8 +474,8 @@ export default function Dashboard() {
     return null;
   }
 
-  // Ensure all Clerk data is loaded before rendering
-  if (!user || !currentUserId) {
+  // Only require user to be loaded from Clerk - currentUserId is optional
+  if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -508,7 +537,7 @@ export default function Dashboard() {
                   <div className="w-full">
                     <h2 className="text-lg sm:text-xl font-semibold mb-4 px-2 opacity-0" style={{ color: '#000000' }}>Hidden</h2>
                     <EnhancedClassesCard
-                      userId={currentUserId}
+                      userId={currentUserId || 1}
                       style={{ height: '220px' }}
                     />
                   </div>

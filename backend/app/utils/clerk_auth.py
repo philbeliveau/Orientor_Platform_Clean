@@ -422,13 +422,12 @@ async def get_database_user_id(clerk_user_id: str, db: Prisma) -> int:
             detail="Failed to resolve user ID"
         )
 
-async def get_database_user_id_sync(clerk_user_id: str, db: Prisma) -> int:
+async def get_database_user_id_sync(clerk_user_id: str) -> int:
     """
     Async version of get_database_user_id for services.
     
     Args:
         clerk_user_id: The Clerk user ID (string)
-        db: Database session
         
     Returns:
         Integer database user ID
@@ -437,6 +436,8 @@ async def get_database_user_id_sync(clerk_user_id: str, db: Prisma) -> int:
         HTTPException: If user not found in database
     """
     try:
+        from .prisma_client import get_prisma_client
+        db = await get_prisma_client()
         user = await db.users.find_first(where={"clerk_user_id": clerk_user_id})
         if not user:
             logger.error(f"User not found in database for Clerk ID: {clerk_user_id}")

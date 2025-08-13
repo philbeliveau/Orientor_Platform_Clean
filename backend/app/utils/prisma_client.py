@@ -83,7 +83,7 @@ async def get_prisma() -> AsyncGenerator[Prisma, None]:
     
     Usage:
         async with get_prisma() as db:
-            users = await db.user.find_many()
+            users = await db.users.find_many()
     """
     start_time = time.time()
     retry_count = 0
@@ -125,7 +125,7 @@ async def get_prisma_transaction() -> AsyncGenerator[Prisma, None]:
     
     Usage:
         async with get_prisma_transaction() as db:
-            user = await db.user.create(data={...})
+            user = await db.users.create(data={...})
             profile = await db.user_profile.create(data={...})
             # Transaction is automatically committed
     """
@@ -152,7 +152,7 @@ async def get_prisma_client() -> Prisma:
     Usage in FastAPI routes:
         @app.get("/users")
         async def get_users(db: Prisma = Depends(get_prisma_client)):
-            return await db.user.find_many()
+            return await db.users.find_many()
     """
     await prisma_manager.connect()
     return prisma_manager.client
@@ -166,13 +166,18 @@ async def prisma_health_check() -> dict:
     try:
         await prisma_manager.connect()
         
-        # Test query
-        result = await prisma_manager.client.execute_raw("SELECT version() as version")
+        # Test query - execute_raw returns number of affected rows for non-SELECT queries
+        # For SELECT queries, we need to use query_raw instead
+        result = await prisma_manager.client.query_raw("SELECT version() as version")
+        
+        version = "unknown"
+        if result and len(result) > 0 and isinstance(result[0], dict):
+            version = result[0].get("version", "unknown")
         
         return {
             "status": "healthy",
             "connected": True,
-            "version": result[0]["version"] if result else "unknown",
+            "version": version,
             "client": "prisma"
         }
     except Exception as e:
@@ -205,14 +210,14 @@ class PrismaUserService:
     async def get_user_by_id(user_id: int) -> Optional[dict]:
         """Get user by ID with type safety"""
         async with get_prisma() as db:
-            user = await db.user.find_unique(where={"id": user_id})
+            user = await db.users.find_unique(where={"id": user_id})
             return user.dict() if user else None
     
     @staticmethod
     async def get_users_with_profiles(limit: int = 10) -> list[dict]:
         """Get users with their profiles (example of relations)"""
         async with get_prisma() as db:
-            users = await db.user.find_many(
+            users = await db.users.find_many(
                 take=limit,
                 include={
                     "user_profile": True,  # This will include related profile data
@@ -229,7 +234,7 @@ class PrismaUserService:
         """Create user with profile in a transaction"""
         async with get_prisma() as db:
             # Example transaction
-            result = await db.user.create(
+            result = await db.users.create(
                 data={
                     **user_data,
                     "user_profile": {

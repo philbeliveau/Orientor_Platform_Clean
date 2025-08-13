@@ -100,7 +100,7 @@ async def get_user_data(db: Prisma, user_id: int) -> Dict[str, Any]:
 
     try:
         # Récupérer le profil utilisateur
-        profile = await db.user_profiles.find_first(
+        profile = await db.user_profile.find_first(
             where={"user_id": user_id}
         )
         if not profile:
@@ -111,20 +111,20 @@ async def get_user_data(db: Prisma, user_id: int) -> Dict[str, Any]:
             )
         
         # Récupérer les compétences de l'utilisateur
-        skills_result = await db.user_skills.find_first(
+        skills_result = await db.user_skill.find_first(
             where={"user_id": user_id}
         )
         
         # Récupérer les recommandations sauvegardées
-        saved_recommendations = await db.saved_recommendations.find_many(
+        saved_recommendations = await db.savedrecommendation.find_many(
             where={"user_id": user_id}
         )
         
         # Récupérer les scores RIASEC depuis user_profiles.personal_analysis
         riasec_analysis = profile.personal_analysis if profile else None
         
-        # Récupérer les scores HEXACO depuis personality_profiles.narrative_description
-        hexaco_result = await db.personality_profiles.find_first(
+        # Récupérer les scores HEXACO depuis personality_profile.narrative_description
+        hexaco_result = await db.personality_profile.find_first(
             where={
                 "user_id": user_id,
                 "profile_type": "hexaco"
@@ -731,7 +731,7 @@ async def save_insight(
         logger.info(f"Sauvegarde d'un insight philosophique pour l'utilisateur actuellement connecté (ID: {user_id})")
         
         # Récupérer le profil utilisateur
-        profile = await db.user_profiles.find_first(
+        profile = await db.user_profile.find_first(
             where={"user_id": user_id}
         )
         if not profile:

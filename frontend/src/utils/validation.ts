@@ -179,23 +179,24 @@ export function validateCompatiblePeer(obj: any) {
 
 /**
  * Validates required fields for Onboarding Status objects
- * Handles multiple response formats from different endpoints
+ * Expects the standardized onboarding router format
  */
 export function validateOnboardingStatus(obj: any) {
   if (!obj || typeof obj !== 'object') {
     throw new Error('Invalid onboarding status: Expected an object');
   }
   
-  // Handle different response formats:
-  // 1. User router: { onboarding_completed: boolean }
-  // 2. Onboarding router: { isComplete: boolean, hasStarted: boolean }
-  // 3. Full format: { completed: boolean, user_id: number }
-  
-  if ('onboarding_completed' in obj || 'isComplete' in obj || 'completed' in obj) {
+  // Validate standardized onboarding router response format
+  if (
+    typeof obj.onboarding_completed === 'boolean' &&
+    typeof obj.has_started === 'boolean' &&
+    typeof obj.is_complete === 'boolean' &&
+    typeof obj.message === 'string'
+  ) {
     return obj; // Valid format, return as-is
   }
   
-  throw new Error('Invalid onboarding status format: missing completion status field');
+  throw new Error('Invalid onboarding status format: Expected onboarding router schema with onboarding_completed, has_started, is_complete, and message fields');
 }
 
 /**

@@ -137,7 +137,7 @@ def with_db_error_handling(operation_name: str):
     Usage:
         @with_db_error_handling("user creation")
         async def create_user(db: Prisma, user_data: dict):
-            return await db.user.create(data=user_data)
+            return await db.users.create(data=user_data)
     """
     def decorator(func):
         async def wrapper(*args, **kwargs):

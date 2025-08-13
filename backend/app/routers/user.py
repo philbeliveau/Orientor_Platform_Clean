@@ -67,7 +67,7 @@ async def get_onboarding_status(
             
             if personality_profile:
                 logger.info(f"🔧 Fixing onboarding_completed for user {current_user.id} - has profile but field is False")
-                await db.user.update(
+                await db.users.update(
                     where={'id': current_user.id},
                     data={'onboarding_completed': True}
                 )

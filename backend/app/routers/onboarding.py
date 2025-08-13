@@ -105,7 +105,7 @@ async def get_onboarding_status(
             
             if personality_profile:
                 logger.info(f"🔧 Fixing onboarding_completed for user {current_user.id} - has profile but field is False")
-                await db.user.update(
+                await db.users.update(
                     where={'id': current_user.id},
                     data={'onboarding_completed': True}
                 )
@@ -357,7 +357,7 @@ async def complete_onboarding(
         # SIMPLIFIED: Update user onboarding completion (no complex cache logic)
         logger.info(f"🔄 Updating onboarding_completed for user {current_user.id}")
         
-        await db.user.update(
+        await db.users.update(
             where={'id': current_user.id},
             data={'onboarding_completed': True}
         )
@@ -563,7 +563,7 @@ async def skip_onboarding(
         )
         
         # Update user onboarding completion status
-        await db.user.update(
+        await db.users.update(
             where={'id': current_user.id},
             data={'onboarding_completed': True}
         )
