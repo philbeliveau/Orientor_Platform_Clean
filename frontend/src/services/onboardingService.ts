@@ -40,29 +40,97 @@ export interface OnboardingResponsesData {
   total_items: number;
 }
 
+export interface OnboardingErrorDetails {
+  type: 'network' | 'auth' | 'validation' | 'server' | 'unknown';
+  message: string;
+  code?: string;
+  retryable: boolean;
+}
+
+export class OnboardingError extends Error {
+  public details: OnboardingErrorDetails;
+  
+  constructor(message: string, details: OnboardingErrorDetails) {
+    super(message);
+    this.name = 'OnboardingError';
+    this.details = details;
+  }
+}
+
 // Legacy service class removed - now using hook-based pattern
 
 // Hook-based wrapper simplified per CLAUDE.md requirements
 export const useOnboardingService = () => {
   const { getToken, isSignedIn, isLoaded } = useAuth();
   
+  // Helper to create structured errors
+  const createError = (error: any, operation: string): OnboardingError => {
+    console.error(`Onboarding ${operation} error:`, error);
+    
+    if (error?.response?.status === 401 || error?.message?.includes('401')) {
+      return new OnboardingError(`Authentication failed during ${operation}`, {
+        type: 'auth',
+        message: 'Please sign in again',
+        code: 'AUTH_REQUIRED',
+        retryable: false
+      });
+    }
+    
+    if (error?.response?.status === 500 || error?.message?.includes('500')) {
+      return new OnboardingError(`Server error during ${operation}`, {
+        type: 'server',
+        message: 'Server encountered an error. Please try again.',
+        code: 'SERVER_ERROR',
+        retryable: true
+      });
+    }
+    
+    if (!navigator.onLine) {
+      return new OnboardingError(`Network error during ${operation}`, {
+        type: 'network',
+        message: 'Check your internet connection and try again',
+        code: 'NETWORK_ERROR',
+        retryable: true
+      });
+    }
+    
+    return new OnboardingError(`Failed to ${operation}`, {
+      type: 'unknown',
+      message: error?.message || 'An unexpected error occurred',
+      code: 'UNKNOWN_ERROR',
+      retryable: true
+    });
+  };
+
   // Simple authentication check as required by CLAUDE.md
   const checkAuth = async () => {
     if (!isLoaded) {
       // Wait a bit for auth to load instead of throwing immediately
       await new Promise(resolve => setTimeout(resolve, 100));
       if (!isLoaded) {
-        throw new Error('Authentication still loading');
+        throw new OnboardingError('Authentication still loading', {
+          type: 'auth',
+          message: 'Please wait for authentication to load',
+          retryable: true
+        });
       }
     }
     if (!isSignedIn) {
-      throw new Error('User not authenticated - please sign in');
+      throw new OnboardingError('User not authenticated', {
+        type: 'auth',
+        message: 'Please sign in to continue',
+        retryable: false
+      });
     }
     
     // ✅ CORRECT - Use Clerk hooks as per CLAUDE.md
     const token = await getToken();
     if (!token) {
-      throw new Error('No authentication token available');
+      throw new OnboardingError('No authentication token available', {
+        type: 'auth',
+        message: 'Authentication token missing',
+        retryable: false
+      });
     }
     return token;
   };
@@ -99,11 +167,12 @@ export const useOnboardingService = () => {
           hasStarted: hasStarted,
         };
       } catch (error: any) {
-        console.error('Failed to get onboarding status:', error);
-        if (error.message?.includes('401') || error.message?.includes('403')) {
-          console.error('Authentication error while checking onboarding status');
-          throw error;
+        const onboardingError = createError(error, 'get status');
+        if (onboardingError.details.type === 'auth') {
+          throw onboardingError;
         }
+        // For non-auth errors, return safe defaults
+        console.warn('Onboarding status check failed, returning safe defaults');
         return {
           isComplete: false,
           hasStarted: false,
@@ -117,8 +186,7 @@ export const useOnboardingService = () => {
         const response = await clerkApiService.request('/api/v1/onboarding/start', { method: 'POST', token }) as OnboardingSessionResponse;
         return response;
       } catch (error) {
-        console.error('Failed to start onboarding:', error);
-        throw error;
+        throw createError(error, 'start onboarding');
       }
     },
 
@@ -132,8 +200,7 @@ export const useOnboardingService = () => {
         }) as OnboardingProgressResponse;
         return response;
       } catch (error) {
-        console.error('Failed to save onboarding response:', error);
-        throw error;
+        throw createError(error, 'save response');
       }
     },
 
@@ -156,8 +223,7 @@ export const useOnboardingService = () => {
         console.log('Onboarding completion response:', response);
         return response;
       } catch (error) {
-        console.error('Failed to complete onboarding:', error);
-        throw error;
+        throw createError(error, 'complete onboarding');
       }
     },
 

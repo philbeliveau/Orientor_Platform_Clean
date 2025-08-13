@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, RefreshCw, Check, AlertTriangle } from 'lucide-react';
 import { useOnboardingStore } from '../../stores/onboardingStore';
-import { useOnboardingService } from '../../services/onboardingService';
+import { useOnboardingService, OnboardingError } from '../../services/onboardingService';
+import ErrorBoundary from '../ui/ErrorBoundary';
 import { ChatMessage as ChatMessageType } from '../../types/onboarding';
 import TypingIndicator from './TypingIndicator';
 import PsychProfile from './PsychProfile';
@@ -16,7 +17,6 @@ interface ChatOnboardProps {
 
 const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' }) => {
   const [inputValue, setInputValue] = useState('');
-  const [serviceError, setServiceError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   
@@ -50,11 +50,15 @@ const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' })
     isTyping,
     isComplete,
     psychProfile,
+    error,
+    isRetrying,
     addMessage,
     addResponse,
     nextQuestion,
     setTyping,
     reset,
+    clearError,
+    retry,
     getCurrentQuestion,
     getProgress,
     startOnboarding,
@@ -159,7 +163,7 @@ const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' })
       }
       } catch (error) {
         console.error('Failed to initialize onboarding:', error);
-        setServiceError('Failed to initialize onboarding chat');
+        // Error will be handled by the store automatically
       }
     };
 
@@ -286,8 +290,60 @@ const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' })
 
 
 
+  // Error display component
+  const ErrorDisplay = () => {
+    if (!error) return null;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-red-50 border-l-4 border-red-400 p-4 mb-4"
+      >
+        <div className="flex items-center">
+          <AlertTriangle className="w-5 h-5 text-red-400 mr-3" />
+          <div className="flex-1">
+            <h3 className="text-sm font-medium text-red-800">
+              {error.details.type === 'auth' ? 'Authentication Required' : 'Connection Issue'}
+            </h3>
+            <p className="text-sm text-red-700 mt-1">
+              {error.details.message}
+            </p>
+          </div>
+          {error.details.retryable && (
+            <button
+              onClick={() => retry(onboardingService)}
+              disabled={isRetrying}
+              className="ml-3 bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded text-sm font-medium transition-colors disabled:opacity-50"
+            >
+              {isRetrying ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin inline mr-1" />
+                  Retrying...
+                </>
+              ) : (
+                'Retry'
+              )}
+            </button>
+          )}
+          <button
+            onClick={() => clearError()}
+            className="ml-2 text-red-400 hover:text-red-600"
+          >
+            ×
+          </button>
+        </div>
+      </motion.div>
+    );
+  };
+
   return (
-    <div className={`min-h-screen bg-white flex flex-col ${className}`}>
+    <ErrorBoundary
+      onError={(error, errorInfo) => {
+        console.error('ChatOnboard Error Boundary:', error, errorInfo);
+      }}
+    >
+      <div className={`min-h-screen bg-white flex flex-col ${className}`}>
       {/* Header */}
       <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-gray-100 p-6">
         <div className="flex items-center justify-between max-w-4xl mx-auto">
@@ -308,6 +364,13 @@ const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' })
           >
             <RefreshCw size={18} />
           </button>
+        </div>
+      </div>
+
+      {/* Error Display */}
+      <div className="px-8 pt-4">
+        <div className="max-w-4xl mx-auto">
+          <ErrorDisplay />
         </div>
       </div>
 
@@ -375,6 +438,7 @@ const ChatOnboard: React.FC<ChatOnboardProps> = ({ onComplete, className = '' })
         </div>
       )}
     </div>
+    </ErrorBoundary>
   );
 };
 

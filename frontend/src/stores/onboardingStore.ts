@@ -7,9 +7,14 @@ import {
   PsychProfile,
   OnboardingQuestion 
 } from '../types/onboarding';
-import type { useOnboardingService } from '../services/onboardingService';
+import type { useOnboardingService, OnboardingError } from '../services/onboardingService';
 
 interface OnboardingStore extends OnboardingState {
+  // Error state
+  error: OnboardingError | null;
+  isRetrying: boolean;
+  retryCount: number;
+  
   // Actions
   addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
   addResponse: (response: Omit<OnboardingResponse, 'timestamp'>) => void;
@@ -18,6 +23,11 @@ interface OnboardingStore extends OnboardingState {
   setPsychProfile: (profile: PsychProfile) => void;
   complete: () => void;
   reset: () => void;
+  
+  // Error handling
+  setError: (error: OnboardingError | null) => void;
+  clearError: () => void;
+  retry: (service: ReturnType<typeof useOnboardingService>) => Promise<void>;
   
   // API Actions - now accept service as parameter
   startOnboarding: (service: ReturnType<typeof useOnboardingService>) => Promise<void>;
@@ -119,6 +129,11 @@ export const useOnboardingStore = create<OnboardingStore>()(
     (set, get) => ({
       ...initialState,
       
+      // Error state
+      error: null,
+      isRetrying: false,
+      retryCount: 0,
+      
       addMessage: (message) => {
         const newMessage: ChatMessage = {
           ...message,
@@ -166,15 +181,58 @@ export const useOnboardingStore = create<OnboardingStore>()(
       },
       
       reset: () => {
-        set(initialState, false, 'reset');
+        set({ ...initialState, error: null, isRetrying: false, retryCount: 0 }, false, 'reset');
+      },
+      
+      // Error handling
+      setError: (error) => {
+        set({ error, isRetrying: false }, false, 'setError');
+      },
+      
+      clearError: () => {
+        set({ error: null, isRetrying: false, retryCount: 0 }, false, 'clearError');
+      },
+      
+      retry: async (service) => {
+        const { error, retryCount } = get();
+        if (!error || !error.details.retryable || retryCount >= 3) {
+          return;
+        }
+        
+        set({ isRetrying: true, retryCount: retryCount + 1 }, false, 'retry');
+        
+        try {
+          // Retry the last failed operation based on error context
+          if (error.message.includes('start onboarding')) {
+            await get().startOnboarding(service);
+          } else if (error.message.includes('complete onboarding')) {
+            await get().completeOnboarding(service);
+          } else if (error.message.includes('get status')) {
+            await get().loadOnboardingStatus(service);
+          }
+          
+          // Clear error on successful retry
+          get().clearError();
+        } catch (retryError) {
+          if (retryError instanceof Error) {
+            set({ 
+              error: retryError as OnboardingError, 
+              isRetrying: false 
+            }, false, 'retryFailed');
+          }
+        }
       },
       
       // API Actions
       startOnboarding: async (service: ReturnType<typeof useOnboardingService>) => {
         try {
+          get().clearError();
           await service.startOnboarding();
         } catch (error) {
           console.error('Failed to start onboarding session:', error);
+          if (error instanceof Error) {
+            get().setError(error as OnboardingError);
+          }
           // Continue with local flow even if API fails
         }
       },
@@ -184,12 +242,16 @@ export const useOnboardingStore = create<OnboardingStore>()(
           await service.saveResponse(response);
         } catch (error) {
           console.error('Failed to save response to API:', error);
+          if (error instanceof Error) {
+            get().setError(error as OnboardingError);
+          }
           // Continue with local flow even if API fails
         }
       },
       
       completeOnboarding: async (service: ReturnType<typeof useOnboardingService>) => {
         try {
+          get().clearError();
           const { responses, psychProfile } = get();
           await service.completeOnboarding({
             responses,
@@ -199,6 +261,9 @@ export const useOnboardingStore = create<OnboardingStore>()(
           set({ isComplete: true }, false, 'completeOnboarding');
         } catch (error) {
           console.error('Failed to complete onboarding on API:', error);
+          if (error instanceof Error) {
+            get().setError(error as OnboardingError);
+          }
           // Still mark as complete locally even if API fails
           set({ isComplete: true }, false, 'completeOnboarding');
         }
@@ -212,6 +277,9 @@ export const useOnboardingStore = create<OnboardingStore>()(
           }
         } catch (error) {
           console.error('Failed to load onboarding status:', error);
+          if (error instanceof Error) {
+            get().setError(error as OnboardingError);
+          }
           // Don't update state if API fails
         }
       },
