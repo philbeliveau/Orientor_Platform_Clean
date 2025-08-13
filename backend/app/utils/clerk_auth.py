@@ -12,12 +12,12 @@ from typing import Dict, Any, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import httpx
-from sqlalchemy.orm import Session
 import jwt
 from datetime import datetime, timedelta
+from prisma import Prisma
 
 from ..models.user import User
-from ..utils.database import get_db
+from ..utils.prisma_client import get_prisma_client
 from ..core.config import settings
 from .auth_cache_clean import (
     verify_clerk_token_cached,
@@ -75,7 +75,7 @@ async def verify_clerk_token(token: str) -> Dict[str, Any]:
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ) -> Dict[str, Any]:
     """
     Get current authenticated user from Clerk token (Legacy wrapper).
@@ -172,9 +172,9 @@ async def clerk_health_check() -> Dict[str, Any]:
             "error": str(e)
         }
 
-def create_clerk_user_in_db(
+async def create_clerk_user_in_db(
     clerk_user_data: Dict[str, Any],
-    db: Session
+    db: Prisma
 ) -> Optional[Dict[str, Any]]:
     """
     Create or update user in local database from Clerk data
@@ -202,24 +202,26 @@ def create_clerk_user_in_db(
             return None
         
         # First try to find user by clerk_user_id
-        existing_user = db.query(User).filter(User.clerk_user_id == clerk_user_id).first()
+        existing_user = await db.users.find_first(where={"clerk_user_id": clerk_user_id})
         
         # Fallback to email lookup if not found by clerk_user_id
         if not existing_user:
-            existing_user = db.query(User).filter(User.email == email).first()
+            existing_user = await db.users.find_first(where={"email": email})
         
         if existing_user:
             # Update existing user with Clerk ID
             if not existing_user.clerk_user_id:
                 logger.info(f"Migrating user {email} to Clerk ID {clerk_user_id}")
-                existing_user.clerk_user_id = clerk_user_id
             
-            # Update user info
-            existing_user.first_name = clerk_user_data.get("first_name", existing_user.first_name)
-            existing_user.last_name = clerk_user_data.get("last_name", existing_user.last_name)
-            
-            db.commit()
-            db.refresh(existing_user)
+            # Update user info using Prisma
+            existing_user = await db.users.update(
+                where={"id": existing_user.id},
+                data={
+                    "clerk_user_id": clerk_user_id,
+                    "first_name": clerk_user_data.get("first_name") or existing_user.first_name,
+                    "last_name": clerk_user_data.get("last_name") or existing_user.last_name
+                }
+            )
             
             # Ensure user profile exists
             ensure_user_profile_exists(existing_user, db)
@@ -232,19 +234,17 @@ def create_clerk_user_in_db(
         
         # Create new user
         logger.info(f"Creating new user from Clerk: {email}")
-        new_user = User(
-            clerk_user_id=clerk_user_id,
-            email=email,
-            first_name=clerk_user_data.get("first_name"),
-            last_name=clerk_user_data.get("last_name")
+        new_user = await db.users.create(
+            data={
+                "clerk_user_id": clerk_user_id,
+                "email": email,
+                "first_name": clerk_user_data.get("first_name"),
+                "last_name": clerk_user_data.get("last_name")
+            }
         )
         
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-        
         # Create associated user profile
-        ensure_user_profile_exists(new_user, db)
+        await ensure_user_profile_exists(new_user, db)
         logger.info(f"✅ Created user and profile for {email} (ID: {new_user.id})")
         
         return {
@@ -255,10 +255,9 @@ def create_clerk_user_in_db(
         
     except Exception as e:
         logger.error(f"Failed to create/update user in DB: {str(e)}")
-        db.rollback()
         return None
 
-def ensure_user_profile_exists(user: User, db: Session) -> None:
+async def ensure_user_profile_exists(user, db: Prisma) -> None:
     """
     Ensure a user profile exists for the given user.
     Creates one if it doesn't exist.
@@ -267,54 +266,51 @@ def ensure_user_profile_exists(user: User, db: Session) -> None:
         from ..models.user_profile import UserProfile  # Import here to avoid circular imports
         
         # Check if user profile already exists
-        existing_profile = db.query(UserProfile).filter(UserProfile.user_id == user.id).first()
+        existing_profile = await db.user_profiles.find_first(where={"user_id": user.id})
         
         if not existing_profile:
             # Create new user profile
             logger.info(f"Creating user profile for user ID {user.id}")
-            new_profile = UserProfile(
-                user_id=user.id,
-                name=f"{user.first_name} {user.last_name}".strip() if user.first_name or user.last_name else None,
-                # Set default values that won't cause issues
-                age=None,
-                sex=None,
-                major=None,
-                year=None,
-                gpa=None,
-                hobbies=None,
-                country=None,
-                state_province=None,
-                unique_quality=None,
-                story=None,
-                favorite_movie=None,
-                favorite_book=None,
-                favorite_celebrities=None,
-                learning_style=None,
-                interests=None,
-                job_title=None,
-                industry=None,
-                years_experience=None,
-                education_level=None,
-                career_goals=None,
-                skills=[],  # Empty array for ARRAY(String)
-                personal_analysis=None
+            new_profile = await db.user_profiles.create(
+                data={
+                    "user_id": user.id,
+                    "name": f"{user.first_name} {user.last_name}".strip() if user.first_name or user.last_name else None,
+                    # Set default values that won't cause issues
+                    "age": None,
+                    "sex": None,
+                    "major": None,
+                    "year": None,
+                    "gpa": None,
+                    "hobbies": None,
+                    "country": None,
+                    "state_province": None,
+                    "unique_quality": None,
+                    "story": None,
+                    "favorite_movie": None,
+                    "favorite_book": None,
+                    "favorite_celebrities": None,
+                    "learning_style": None,
+                    "interests": None,
+                    "job_title": None,
+                    "industry": None,
+                    "years_experience": None,
+                    "education_level": None,
+                    "career_goals": None,
+                    "skills": [],  # Empty array for ARRAY(String)
+                    "personal_analysis": None
+                }
             )
-            
-            db.add(new_profile)
-            db.commit()
-            db.refresh(new_profile)
             logger.info(f"✅ Created user profile for user ID {user.id}")
         else:
             logger.debug(f"User profile already exists for user ID {user.id}")
             
     except Exception as e:
         logger.error(f"Failed to create user profile for user ID {user.id}: {str(e)}")
-        db.rollback()
         raise
 
 async def get_current_user_with_db_sync(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ) -> User:
     """
     Get current authenticated user from Clerk token and return SQLAlchemy User object.
@@ -340,7 +336,7 @@ async def get_current_user_with_db_sync(
             return cached_user
         
         # Sync/create user in local database
-        user_data = create_clerk_user_in_db(clerk_user_data["clerk_data"], db)
+        user_data = await create_clerk_user_in_db(clerk_user_data["clerk_data"], db)
         
         if not user_data:
             logger.error("Failed to create user in database")
@@ -349,8 +345,8 @@ async def get_current_user_with_db_sync(
                 detail="Failed to sync user with database"
             )
         
-        # Return SQLAlchemy User object
-        user = db.query(User).filter(User.id == user_data["id"]).first()
+        # Return User object
+        user = await db.users.find_first(where={"id": user_data["id"]})
         if not user:
             logger.error(f"User not found in database after sync: {user_data['id']}")
             raise HTTPException(
@@ -381,7 +377,7 @@ async def get_current_user_with_db_sync(
             detail="Could not validate credentials"
         )
 
-def get_user_id_from_clerk_data(clerk_user_data: Dict[str, Any]) -> int:
+async def get_user_id_from_clerk_data(clerk_user_data: Dict[str, Any]) -> int:
     """
     Helper function to extract local database user ID from Clerk user data.
     Useful for routers that need the local database ID.
@@ -389,14 +385,14 @@ def get_user_id_from_clerk_data(clerk_user_data: Dict[str, Any]) -> int:
     if "clerk_data" in clerk_user_data:
         # Get user by clerk_user_id
         clerk_id = clerk_user_data["id"]  # This is the Clerk ID
-        from ..utils.database import get_db_session
+        from ..utils.prisma_client import get_prisma
         
-        with get_db_session() as db:
-            user = db.query(User).filter(User.clerk_user_id == clerk_id).first()
+        async with get_prisma() as db:
+            user = await db.users.find_first(where={"clerk_user_id": clerk_id})
             return user.id if user else None
     return None
 
-async def get_database_user_id(clerk_user_id: str, db: Session) -> int:
+async def get_database_user_id(clerk_user_id: str, db: Prisma) -> int:
     """
     Convert Clerk user ID to database user ID, ensuring user exists.
     
@@ -411,7 +407,7 @@ async def get_database_user_id(clerk_user_id: str, db: Session) -> int:
         HTTPException: If user not found in database
     """
     try:
-        user = db.query(User).filter(User.clerk_user_id == clerk_user_id).first()
+        user = await db.users.find_first(where={"clerk_user_id": clerk_user_id})
         if not user:
             logger.error(f"User not found in database for Clerk ID: {clerk_user_id}")
             raise HTTPException(
@@ -426,9 +422,9 @@ async def get_database_user_id(clerk_user_id: str, db: Session) -> int:
             detail="Failed to resolve user ID"
         )
 
-def get_database_user_id_sync(clerk_user_id: str, db: Session) -> int:
+async def get_database_user_id_sync(clerk_user_id: str, db: Prisma) -> int:
     """
-    Synchronous version of get_database_user_id for services that don't use async.
+    Async version of get_database_user_id for services.
     
     Args:
         clerk_user_id: The Clerk user ID (string)
@@ -441,7 +437,7 @@ def get_database_user_id_sync(clerk_user_id: str, db: Session) -> int:
         HTTPException: If user not found in database
     """
     try:
-        user = db.query(User).filter(User.clerk_user_id == clerk_user_id).first()
+        user = await db.users.find_first(where={"clerk_user_id": clerk_user_id})
         if not user:
             logger.error(f"User not found in database for Clerk ID: {clerk_user_id}")
             raise HTTPException(

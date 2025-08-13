@@ -43,8 +43,13 @@ class PrismaManager:
                 self._connected = True
                 logger.info("✅ Prisma client connected successfully")
             except Exception as e:
-                logger.error(f"❌ Failed to connect Prisma client: {e}")
-                raise
+                # Check if it's already connected error
+                if "Already connected to the query engine" in str(e):
+                    self._connected = True
+                    logger.info("✅ Prisma client was already connected")
+                else:
+                    logger.error(f"❌ Failed to connect Prisma client: {e}")
+                    raise
     
     async def disconnect(self) -> None:
         """Disconnect from the database"""
@@ -96,6 +101,12 @@ async def get_prisma() -> AsyncGenerator[Prisma, None]:
             return
             
         except Exception as e:
+            # Don't retry on "already connected" errors
+            if "Already connected to the query engine" in str(e):
+                prisma_manager._connected = True
+                yield prisma_manager.client
+                return
+                
             retry_count += 1
             if retry_count >= max_retries:
                 logger.error(f"Database operation failed after {max_retries} retries: {e}")
