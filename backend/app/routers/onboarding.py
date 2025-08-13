@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from prisma import Prisma
 from sqlalchemy import text
+from app.utils.error_handling import handle_prisma_error, log_database_operation
 from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.models import User, UserProfile
 from app.models.personality_profiles import PersonalityAssessment, PersonalityResponse, PersonalityProfile
@@ -101,7 +102,7 @@ async def get_onboarding_status(
         )
         
         # Check if user has started onboarding
-        assessment = await db.personalityassessment.find_first(
+        assessment = await db.personality_assessments.find_first(
             where={
                 'user_id': current_user.id,
                 'assessment_type': 'onboarding'
@@ -138,10 +139,11 @@ async def start_onboarding(
 ):
     """Start a new onboarding session"""
     try:
+        log_database_operation("start_onboarding", current_user.id)
         logger.info(f"Starting onboarding for user ID: {current_user.id}")
         
         # Check if user already has an active onboarding session
-        existing_assessment = await db.personalityassessment.find_first(
+        existing_assessment = await db.personality_assessments.find_first(
             where={
                 'user_id': current_user.id,
                 'assessment_type': 'onboarding',
@@ -157,7 +159,7 @@ async def start_onboarding(
             }
         
         # Create new assessment session
-        assessment = await db.personalityassessment.create(
+        assessment = await db.personality_assessments.create(
             data={
                 'user_id': current_user.id,
                 'assessment_type': 'onboarding',
@@ -177,13 +179,8 @@ async def start_onboarding(
             "message": "Onboarding session started successfully"
         }
         
-    except SQLAlchemyError as e:
-        logger.error(f"Database error starting onboarding: {str(e)}")
-        # No rollback needed in Prisma
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
-        logger.error(f"Error starting onboarding: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to start onboarding: {str(e)}")
+        raise handle_prisma_error(e, "starting onboarding session")
 
 @router.post("/onboarding/response")
 async def save_onboarding_response(
@@ -196,7 +193,7 @@ async def save_onboarding_response(
         logger.info(f"Saving onboarding response for user ID: {current_user.id}")
         
         # Get the current assessment session
-        assessment = await db.personalityassessment.find_first(
+        assessment = await db.personality_assessments.find_first(
             where={
                 'user_id': current_user.id,
                 'assessment_type': 'onboarding',
@@ -207,7 +204,7 @@ async def save_onboarding_response(
         if not assessment:
             # Create a new assessment session if none exists
             logger.info(f"Creating new onboarding session for user {current_user.id}")
-            assessment = await db.personalityassessment.create(
+            assessment = await db.personality_assessments.create(
                 data={
                     'user_id': current_user.id,
                     'assessment_type': 'onboarding',
@@ -221,7 +218,7 @@ async def save_onboarding_response(
             )
         
         # Save the response
-        personality_response = await db.personalityresponse.create(
+        personality_response = await db.personality_responses.create(
             data={
                 'assessment_id': assessment.id,
                 'item_id': response_data.questionId,
@@ -235,7 +232,7 @@ async def save_onboarding_response(
         )
         
         # Update assessment progress
-        await db.personalityassessment.update(
+        await db.personality_assessments.update(
             where={'id': assessment.id},
             data={
                 'completed_items': assessment.completed_items + 1,
@@ -255,10 +252,8 @@ async def save_onboarding_response(
         
     except HTTPException:
         raise
-    except SQLAlchemyError as e:
-        logger.error(f"Database error saving response: {str(e)}")
-        # No rollback needed in Prisma
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as db_e:
+        raise handle_prisma_error(db_e, "saving onboarding response")
     except Exception as e:
         logger.error(f"Error saving response: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to save response: {str(e)}")
@@ -274,7 +269,7 @@ async def complete_onboarding(
         logger.info(f"Completing onboarding for user ID: {current_user.id}")
         
         # Get the assessment session - first try in_progress, then any onboarding session
-        assessment = await db.personalityassessment.find_first(
+        assessment = await db.personality_assessments.find_first(
             where={
                 'user_id': current_user.id,
                 'assessment_type': 'onboarding',
@@ -284,7 +279,7 @@ async def complete_onboarding(
         
         if not assessment:
             # Try to find any onboarding assessment for this user
-            assessment = await db.personalityassessment.find_first(
+            assessment = await db.personality_assessments.find_first(
                 where={
                     'user_id': current_user.id,
                     'assessment_type': 'onboarding'
@@ -298,7 +293,7 @@ async def complete_onboarding(
             else:
                 # Create a new assessment session if none exists
                 logger.info(f"Creating new assessment session for user {current_user.id} during completion")
-                assessment = await db.personalityassessment.create(
+                assessment = await db.personality_assessments.create(
                     data={
                         'user_id': current_user.id,
                         'assessment_type': 'onboarding',
@@ -314,7 +309,7 @@ async def complete_onboarding(
         # Save any remaining responses (only if responses provided)
         if onboarding_data.responses:
             for response_data in onboarding_data.responses:
-                existing_response = await db.personalityresponse.find_first(
+                existing_response = await db.personality_responses.find_first(
                     where={
                         'assessment_id': assessment.id,
                         'item_id': response_data.questionId
@@ -322,7 +317,7 @@ async def complete_onboarding(
                 )
                 
                 if not existing_response:
-                    personality_response = await db.personalityresponse.create(
+                    personality_response = await db.personality_responses.create(
                         data={
                             'assessment_id': assessment.id,
                             'item_id': response_data.questionId,
@@ -369,7 +364,7 @@ async def complete_onboarding(
             )
         
         # Mark assessment as completed
-        await db.personalityassessment.update(
+        await db.personality_assessments.update(
             where={'id': assessment.id},
             data={
                 'status': 'completed',
@@ -462,10 +457,8 @@ async def complete_onboarding(
         
     except HTTPException:
         raise
-    except SQLAlchemyError as e:
-        logger.error(f"Database error completing onboarding: {str(e)}")
-        # No rollback needed in Prisma
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as db_e:
+        raise handle_prisma_error(db_e, "completing onboarding")
     except Exception as e:
         logger.error(f"Error completing onboarding: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to complete onboarding: {str(e)}")
@@ -509,7 +502,7 @@ async def get_onboarding_responses(
         logger.info(f"Getting onboarding responses for user ID: {current_user.id}")
         
         # Get the assessment
-        assessment = await db.personalityassessment.find_first(
+        assessment = await db.personality_assessments.find_first(
             where={
                 'user_id': current_user.id,
                 'assessment_type': 'onboarding'
@@ -520,7 +513,7 @@ async def get_onboarding_responses(
             return {"responses": []}
         
         # Get all responses
-        responses = await db.personalityresponse.find_many(
+        responses = await db.personality_responses.find_many(
             where={'assessment_id': assessment.id}
         )
         
@@ -554,7 +547,7 @@ async def reset_onboarding(
         logger.info(f"Resetting onboarding for user ID: {current_user.id}")
         
         # Delete existing assessment and responses
-        assessments = await db.personalityassessment.find_many(
+        assessments = await db.personality_assessments.find_many(
             where={
                 'user_id': current_user.id,
                 'assessment_type': 'onboarding'
@@ -563,7 +556,7 @@ async def reset_onboarding(
         
         for assessment in assessments:
             # Delete responses first (foreign key constraint)
-            await db.personalityresponse.delete_many(
+            await db.personality_responses.delete_many(
                 where={'assessment_id': assessment.id}
             )
             
@@ -573,7 +566,7 @@ async def reset_onboarding(
             )
             
             # Delete assessment
-            await db.personalityassessment.delete(
+            await db.personality_assessments.delete(
                 where={'id': assessment.id}
             )
         
@@ -609,7 +602,7 @@ async def skip_onboarding(
             return {"message": "User already has a profile"}
         
         # Create a fake assessment for tracking
-        assessment = await db.personalityassessment.create(
+        assessment = await db.personality_assessments.create(
             data={
                 'user_id': current_user.id,
                 'assessment_type': 'onboarding',
@@ -671,10 +664,8 @@ async def skip_onboarding(
             "assessment_id": assessment.id
         }
         
-    except SQLAlchemyError as e:
-        logger.error(f"Database error skipping onboarding: {str(e)}")
-        # No rollback needed in Prisma
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as db_e:
+        raise handle_prisma_error(db_e, "skipping onboarding")
     except Exception as e:
         logger.error(f"Error skipping onboarding: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to skip onboarding: {str(e)}")

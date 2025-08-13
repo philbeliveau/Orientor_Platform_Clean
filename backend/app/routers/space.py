@@ -167,7 +167,7 @@ async def get_saved_recommendations(
     result = []
     for rec in recommendations:
         # Get notes for this recommendation
-        notes = await db.usernote.find_many(
+        notes = await db.user_notes.find_many(
             where={
                 'user_id': current_user.id,
                 'saved_recommendation_id': rec.id
@@ -306,7 +306,7 @@ async def create_note(
             )
     
     # Create the note
-    db_note = await db.usernote.create(
+    db_note = await db.user_notes.create(
         data={
             'user_id': current_user.id,
             'saved_recommendation_id': note.saved_recommendation_id,
@@ -329,7 +329,7 @@ async def get_notes(
     if saved_recommendation_id is not None:
         where_clause['saved_recommendation_id'] = saved_recommendation_id
     
-    return await db.usernote.find_many(where=where_clause)
+    return await db.user_notes.find_many(where=where_clause)
 
 @router.put("/notes/{note_id}", response_model=UserNoteSchema)
 async def update_note(
@@ -339,7 +339,7 @@ async def update_note(
     current_user: User = Depends(get_current_user)
 ):
     # Find the note
-    db_note = await db.usernote.find_first(
+    db_note = await db.user_notes.find_first(
         where={
             'id': note_id,
             'user_id': current_user.id
@@ -358,7 +358,7 @@ async def update_note(
         update_data['content'] = note_update.content
     
     if update_data:
-        db_note = await db.usernote.update(
+        db_note = await db.user_notes.update(
             where={'id': note_id},
             data=update_data
         )
@@ -372,7 +372,7 @@ async def delete_note(
     current_user: User = Depends(get_current_user)
 ):
     # Find the note
-    db_note = await db.usernote.find_first(
+    db_note = await db.user_notes.find_first(
         where={
             'id': note_id,
             'user_id': current_user.id
@@ -386,7 +386,7 @@ async def delete_note(
         )
     
     # Delete the note
-    await db.usernote.delete(
+    await db.user_notes.delete(
         where={'id': note_id}
     )
     
