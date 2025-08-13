@@ -109,7 +109,7 @@ class TestClerkUserIdIntegration:
             mock_db_session.execute.return_value.first.return_value = None
             mock_db_session.execute.return_value.fetchall.return_value = []
             
-            result = await find_compatible_peers(mock_db_session, MOCK_CLERK_USER_ID, 5)
+            result = await find_compatible_peers(MOCK_CLERK_USER_ID, 5)
             
             # Verify user ID translation was called
             mock_ensure.assert_called_with(mock_db_session, MOCK_CLERK_USER_ID)

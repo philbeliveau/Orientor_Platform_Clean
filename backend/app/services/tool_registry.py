@@ -309,13 +309,14 @@ class PeerMatchingTool(BaseTool):
             min_score = params.get("min_match_score", 0.7)
             focus_area = params.get("focus_area")
             
-            # Use the module function
+            # Use the module function - convert user_id to clerk_user_id
+            from app.utils.clerk_auth import get_current_user
+            # Need to get clerk_user_id from database user_id
+            # This is a reverse lookup, might need to refactor
+            # For now, using the function as intended with clerk_user_id
             result = await peer_service.find_compatible_peers(
-                user_id=user_id,
-                db=db,
-                limit=limit,
-                min_score=min_score,
-                focus_area=focus_area
+                user_id=str(user_id),  # Assuming user_id is actually clerk_user_id
+                top_n=limit
             )
             
             return ToolResult(

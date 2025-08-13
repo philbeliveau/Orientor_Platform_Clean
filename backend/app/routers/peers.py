@@ -138,13 +138,12 @@ async def get_suggested_peers(
 @router.get("/compatible", response_model=List[EnhancedPeerResponse])
 async def get_compatible_peers(
     limit: int = Query(3, gt=0, le=10),
-    current_user: User = Depends(get_current_user),
-    db: Prisma = Depends(get_prisma_client)
+    current_user: User = Depends(get_current_user)
 ):
     """Get compatible peers with detailed explanations."""
     try:
         # Find compatible peers using enhanced algorithm
-        compatible_peers = await find_compatible_peers(db, current_user.clerk_user_id, limit)
+        compatible_peers = await find_compatible_peers(current_user.clerk_user_id, limit)
         
         if not compatible_peers:
             logger.info(f"No compatible peers found for user {current_user.id}")
@@ -176,13 +175,12 @@ async def get_compatible_peers(
 
 @router.get("/homepage", response_model=List[HomepagePeerResponse])
 async def get_homepage_peers(
-    current_user: User = Depends(get_current_user),
-    db: Prisma = Depends(get_prisma_client)
+    current_user: User = Depends(get_current_user)
 ):
     """Get peer suggestions for homepage display."""
     try:
         # Find top 3 compatible peers for homepage
-        compatible_peers = await find_compatible_peers(db, current_user.clerk_user_id, 3)
+        compatible_peers = await find_compatible_peers(current_user.clerk_user_id, 3)
         
         if not compatible_peers:
             logger.info(f"No compatible peers found for homepage for user {current_user.id}")
