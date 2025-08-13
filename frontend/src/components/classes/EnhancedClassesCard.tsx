@@ -61,11 +61,19 @@ const EnhancedClassesCard: React.FC<EnhancedClassesCardProps> = ({
         const coursesData = await courseServices.getCourses();
         if (!isMounted) return;
 
+        // Add defensive programming - ensure coursesData is an array
+        const validCoursesData = Array.isArray(coursesData) ? coursesData : [];
+        
+        // Log for debugging if the response isn't an array
+        if (!Array.isArray(coursesData)) {
+          console.warn('EnhancedClassesCard: getCourses() returned non-array data:', typeof coursesData, coursesData);
+        }
+
         if (isMounted) {
-          setCourses(coursesData.slice(0, 3)); // Show top 3 most recent courses
+          setCourses(validCoursesData.slice(0, 3)); // Show top 3 most recent courses
 
           // Check if any courses need analysis
-          const needsAnalysis = coursesData.some((course: Course) => 
+          const needsAnalysis = validCoursesData.some((course: Course) => 
             !course.insights_count || course.insights_count === 0
           );
           setShowAnalysisPrompt(needsAnalysis);
