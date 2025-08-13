@@ -73,64 +73,61 @@ class PsychProfileCreate(BaseModel):
     topTraits: List[str]
     description: str
 
-@router.get("/onboarding/status", response_model=OnboardingStatus)
+@router.get("/onboarding/status")
 async def get_onboarding_status(
     current_user: User = Depends(get_current_user_with_onboarding),
     db: Prisma = Depends(get_prisma_client)
 ):
-    """Get the current onboarding status for a user"""
+    """Get the current onboarding status for a user - STANDARDIZED RESPONSE"""
     try:
-        logger.info(f"🔍 ONBOARDING ROUTER: Getting status for user ID: {current_user.id}")
+        logger.info(f"🔍 Getting onboarding status for user ID: {current_user.id}")
         
-        # FIRST: Check the database field (authoritative source)
-        onboarding_completed_field = getattr(current_user, 'onboarding_completed', None)
-        logger.info(f"🔍 Database field onboarding_completed: {onboarding_completed_field}")
+        # SIMPLIFIED: Single source of truth - database field
+        onboarding_completed = getattr(current_user, 'onboarding_completed', False)
+        logger.info(f"📊 User {current_user.id} onboarding_completed: {onboarding_completed}")
         
-        if onboarding_completed_field:
-            logger.info(f"✅ User {current_user.id} completed onboarding (database field = True)")
-            # If database says complete, return complete status
-            return OnboardingStatus(
-                isComplete=True,
-                hasStarted=True,
-                currentStep=None,  # No current step if complete
-                completedAt=current_user.updated_at  # Use user update time as fallback
+        # If not completed, check if they have started
+        has_started = False
+        if not onboarding_completed:
+            assessment = await db.personality_assessments.find_first(
+                where={
+                    'user_id': current_user.id,
+                    'assessment_type': 'onboarding'
+                }
             )
+            has_started = assessment is not None
         
-        # FALLBACK: Check if user has completed onboarding by looking for personality profile
-        personality_profile = await db.personalityprofile.find_first(
-            where={'user_id': current_user.id}
-        )
+        # FALLBACK FIX: If they have a profile but database field is False, fix it
+        if not onboarding_completed:
+            personality_profile = await db.personalityprofile.find_first(
+                where={'user_id': current_user.id}
+            )
+            
+            if personality_profile:
+                logger.info(f"🔧 Fixing onboarding_completed for user {current_user.id} - has profile but field is False")
+                await db.user.update(
+                    where={'id': current_user.id},
+                    data={'onboarding_completed': True}
+                )
+                onboarding_completed = True
         
-        # Check if user has started onboarding
-        assessment = await db.personality_assessments.find_first(
-            where={
-                'user_id': current_user.id,
-                'assessment_type': 'onboarding'
-            }
-        )
-        
-        has_started = assessment is not None
-        is_complete = personality_profile is not None
-        
-        logger.info(f"🔍 Fallback check - has_started: {has_started}, is_complete: {is_complete}")
-        
-        # If they have a profile but database field is not set, update it
-        if is_complete and not onboarding_completed_field:
-            logger.info(f"🔄 Updating database field for user {current_user.id} based on personality profile")
-            current_user.onboarding_completed = True
-            # No need for explicit commit in Prisma
-            db.refresh(current_user)
-        
-        return OnboardingStatus(
-            isComplete=is_complete,
-            hasStarted=has_started,
-            currentStep="profile_generation" if has_started and not is_complete else None,
-            completedAt=personality_profile.created_at if personality_profile else None
-        )
+        # STANDARDIZED RESPONSE: Always return same format for consistency
+        return {
+            "onboarding_completed": onboarding_completed,
+            "has_started": has_started or onboarding_completed,
+            "is_complete": onboarding_completed,
+            "message": "Onboarding completed" if onboarding_completed else "Onboarding needed"
+        }
         
     except Exception as e:
         logger.error(f"Error getting onboarding status: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to get onboarding status: {str(e)}")
+        # Safe fallback response
+        return {
+            "onboarding_completed": False,
+            "has_started": False,
+            "is_complete": False,
+            "message": "Error checking status - assuming onboarding needed"
+        }
 
 @router.post("/onboarding/start")
 async def start_onboarding(
@@ -223,10 +220,10 @@ async def save_onboarding_response(
                 'assessment_id': assessment.id,
                 'item_id': response_data.questionId,
                 'item_type': 'open_ended',  # Use valid constraint value
-                'response_value': {
+                'response_value': json.dumps({
                     'question': response_data.question,
                     'response': response_data.response
-                },
+                }),
                 'created_at': datetime.utcnow()
             }
         )
@@ -268,45 +265,30 @@ async def complete_onboarding(
     try:
         logger.info(f"Completing onboarding for user ID: {current_user.id}")
         
-        # Get the assessment session - first try in_progress, then any onboarding session
+        # Get or create assessment session
         assessment = await db.personality_assessments.find_first(
             where={
                 'user_id': current_user.id,
-                'assessment_type': 'onboarding',
-                'status': 'in_progress'
+                'assessment_type': 'onboarding'
             }
         )
         
         if not assessment:
-            # Try to find any onboarding assessment for this user
-            assessment = await db.personality_assessments.find_first(
-                where={
+            # Create new assessment session
+            assessment = await db.personality_assessments.create(
+                data={
                     'user_id': current_user.id,
-                    'assessment_type': 'onboarding'
+                    'assessment_type': 'onboarding',
+                    'assessment_version': 'v1.0',
+                    'session_id': str(uuid.uuid4()),
+                    'status': 'in_progress',
+                    'started_at': datetime.utcnow(),
+                    'total_items': max(len(onboarding_data.responses), 1),
+                    'completed_items': len(onboarding_data.responses)
                 }
             )
-            
-            if assessment:
-                # Update the found assessment to in_progress so we can complete it
-                assessment.status = "in_progress"
-                assessment.updated_at = datetime.utcnow()
-            else:
-                # Create a new assessment session if none exists
-                logger.info(f"Creating new assessment session for user {current_user.id} during completion")
-                assessment = await db.personality_assessments.create(
-                    data={
-                        'user_id': current_user.id,
-                        'assessment_type': 'onboarding',
-                        'assessment_version': 'v1.0',
-                        'session_id': str(uuid.uuid4()),
-                        'status': 'in_progress',
-                        'started_at': datetime.utcnow(),
-                        'total_items': max(len(onboarding_data.responses), 1),  # At least 1 to avoid division by zero
-                        'completed_items': len(onboarding_data.responses)
-                    }
-                )
         
-        # Save any remaining responses (only if responses provided)
+        # Save responses if provided
         if onboarding_data.responses:
             for response_data in onboarding_data.responses:
                 existing_response = await db.personality_responses.find_first(
@@ -317,20 +299,20 @@ async def complete_onboarding(
                 )
                 
                 if not existing_response:
-                    personality_response = await db.personality_responses.create(
+                    await db.personality_responses.create(
                         data={
                             'assessment_id': assessment.id,
                             'item_id': response_data.questionId,
-                            'item_type': 'open_ended',  # Use valid constraint value
-                            'response_value': {
+                            'item_type': 'open_ended',
+                            'response_value': json.dumps({
                                 'question': response_data.question,
                                 'response': response_data.response
-                            },
+                            }),
                             'created_at': datetime.utcnow()
                         }
                     )
         
-        # Create psychological profile if one doesn't already exist
+        # Create or update psychological profile
         existing_profile = await db.personalityprofile.find_first(
             where={
                 'user_id': current_user.id,
@@ -339,7 +321,7 @@ async def complete_onboarding(
         )
         
         if onboarding_data.psychProfile and not existing_profile:
-            personality_profile = await db.personalityprofile.create(
+            await db.personalityprofile.create(
                 data={
                     'user_id': current_user.id,
                     'assessment_id': assessment.id,
@@ -353,7 +335,6 @@ async def complete_onboarding(
                 }
             )
         elif existing_profile and onboarding_data.psychProfile:
-            # Update existing profile
             await db.personalityprofile.update(
                 where={'id': existing_profile.id},
                 data={
@@ -373,81 +354,15 @@ async def complete_onboarding(
             }
         )
         
-        # CRITICAL: Mark the user as having completed onboarding
-        logger.info(f"🔄 BEFORE UPDATE: user {current_user.id} onboarding_completed = {getattr(current_user, 'onboarding_completed', 'FIELD_NOT_FOUND')}")
+        # SIMPLIFIED: Update user onboarding completion (no complex cache logic)
+        logger.info(f"🔄 Updating onboarding_completed for user {current_user.id}")
         
-        # Update user onboarding completion status
         await db.user.update(
             where={'id': current_user.id},
             data={'onboarding_completed': True}
         )
-        logger.info(f"✅ Database update successful for user {current_user.id}")
         
-        # Refresh the current_user object to ensure we have the latest data
-        try:
-            db.refresh(current_user)
-            logger.info(f"✅ User object refreshed from database")
-        except Exception as refresh_error:
-            logger.error(f"⚠️ Failed to refresh user object: {refresh_error}")
-        
-        # Verify the database update was successful
-        logger.info(f"🔍 FINAL VERIFICATION: user {current_user.id} onboarding_completed = {current_user.onboarding_completed}")
-        
-        # Double-check by querying the database directly
-        try:
-            verification_result = db.execute(
-                text("SELECT onboarding_completed FROM users WHERE id = :user_id"),
-                {"user_id": current_user.id}
-            ).fetchone()
-            if verification_result:
-                db_value = verification_result[0]
-                logger.info(f"🔍 DATABASE DIRECT QUERY: user {current_user.id} onboarding_completed = {db_value}")
-                if not db_value:
-                    logger.error(f"❌ CRITICAL: Database still shows onboarding_completed=False after commit!")
-            else:
-                logger.error(f"❌ CRITICAL: Could not find user {current_user.id} in database!")
-        except Exception as verify_error:
-            logger.error(f"⚠️ Could not verify database update: {verify_error}")
-        
-        # CRITICAL FIX: Invalidate user cache using the proper auth system function
-        # This MUST happen AFTER successful database commit to ensure cache reflects new data
-        cache_invalidation_success = False
-        try:
-            import asyncio
-            from ..utils.optimized_clerk_auth import invalidate_user_session_cache
-            
-            if hasattr(current_user, 'clerk_user_id') and current_user.clerk_user_id:
-                logger.info(f"🔄 Starting cache invalidation for clerk_user_id: {current_user.clerk_user_id}")
-                
-                # Run the async cache invalidation
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    result = loop.run_until_complete(invalidate_user_session_cache(current_user.clerk_user_id))
-                    cache_invalidation_success = result
-                    if result:
-                        logger.info(f"✅ Successfully invalidated user session cache for {current_user.clerk_user_id}")
-                    else:
-                        logger.warning(f"⚠️ Cache invalidation returned False for {current_user.clerk_user_id} (user may not have been cached)")
-                except Exception as invalidation_error:
-                    logger.error(f"❌ Cache invalidation function failed: {invalidation_error}")
-                    raise invalidation_error
-                finally:
-                    loop.close()
-            else:
-                logger.warning(f"⚠️ No clerk_user_id found for user {current_user.id}, cannot invalidate cache")
-                logger.info(f"🔍 User attributes: {[attr for attr in dir(current_user) if not attr.startswith('_')]}")
-        except Exception as cache_error:
-            logger.error(f"❌ Could not invalidate user cache: {cache_error}")
-            # Don't fail the request due to cache issues, but log it prominently
-            logger.error(f"⚠️ IMPORTANT: Cache invalidation failed - subsequent status checks may return stale data!")
-        
-        logger.info(f"✅ Completed onboarding for user {current_user.id}")
-        logger.info(f"📋 COMPLETION SUMMARY:")
-        logger.info(f"📋   - Database updated: {current_user.onboarding_completed}")
-        logger.info(f"📋   - Cache invalidated: {cache_invalidation_success}")
-        logger.info(f"📋   - Assessment ID: {assessment.id}")
-        logger.info(f"📋   - Profile created: {onboarding_data.psychProfile is not None}")
+        logger.info(f"✅ Successfully marked user {current_user.id} onboarding as completed")
         
         return {
             "message": "Onboarding completed successfully",
