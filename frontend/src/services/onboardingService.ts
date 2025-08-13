@@ -338,9 +338,19 @@ export const useOnboardingService = () => {
           message: response.message,
           onboarding_completed: true
         };
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to mark onboarding complete:', error);
-        throw error;
+        
+        // Enhanced error handling for specific error types
+        if (error.message?.includes('personalityprofile')) {
+          throw new Error('Database configuration error. Please contact support.');
+        } else if (error.message?.includes('500')) {
+          throw new Error('Server error occurred. Please try again in a moment.');
+        } else if (error.message?.includes('401') || error.message?.includes('403')) {
+          throw new Error('Authentication error. Please sign in again.');
+        } else {
+          throw new Error('Failed to complete onboarding. Please try again.');
+        }
       }
     }
   };

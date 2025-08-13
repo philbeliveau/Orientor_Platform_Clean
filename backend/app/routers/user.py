@@ -61,7 +61,7 @@ async def get_onboarding_status(
         
         # FALLBACK FIX: If database field is False, check personality profile and fix if needed
         if not onboarding_completed:
-            personality_profile = await db.personalityprofile.find_first(
+            personality_profile = await db.personality_profiles.find_first(
                 where={'user_id': current_user.id}
             )
             

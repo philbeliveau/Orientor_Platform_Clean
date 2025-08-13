@@ -99,7 +99,7 @@ async def get_onboarding_status(
         
         # FALLBACK FIX: If they have a profile but database field is False, fix it
         if not onboarding_completed:
-            personality_profile = await db.personalityprofile.find_first(
+            personality_profile = await db.personality_profiles.find_first(
                 where={'user_id': current_user.id}
             )
             
@@ -313,7 +313,7 @@ async def complete_onboarding(
                     )
         
         # Create or update psychological profile
-        existing_profile = await db.personalityprofile.find_first(
+        existing_profile = await db.personality_profiles.find_first(
             where={
                 'user_id': current_user.id,
                 'assessment_id': assessment.id
@@ -321,7 +321,7 @@ async def complete_onboarding(
         )
         
         if onboarding_data.psychProfile and not existing_profile:
-            await db.personalityprofile.create(
+            await db.personality_profiles.create(
                 data={
                     'user_id': current_user.id,
                     'assessment_id': assessment.id,
@@ -335,7 +335,7 @@ async def complete_onboarding(
                 }
             )
         elif existing_profile and onboarding_data.psychProfile:
-            await db.personalityprofile.update(
+            await db.personality_profiles.update(
                 where={'id': existing_profile.id},
                 data={
                     'scores': onboarding_data.psychProfile,
@@ -372,11 +372,9 @@ async def complete_onboarding(
         
     except HTTPException:
         raise
-    except Exception as db_e:
-        raise handle_prisma_error(db_e, "completing onboarding")
     except Exception as e:
-        logger.error(f"Error completing onboarding: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to complete onboarding: {str(e)}")
+        logger.error(f"Unexpected error during completing onboarding: {str(e)}")
+        raise handle_prisma_error(e, "completing onboarding")
 
 @router.get("/onboarding/profile")
 async def get_onboarding_profile(
@@ -387,7 +385,7 @@ async def get_onboarding_profile(
     try:
         logger.info(f"Getting onboarding profile for user ID: {current_user.id}")
         
-        personality_profile = await db.personalityprofile.find_first(
+        personality_profile = await db.personality_profiles.find_first(
             where={'user_id': current_user.id}
         )
         
@@ -476,7 +474,7 @@ async def reset_onboarding(
             )
             
             # Delete profiles
-            await db.personalityprofile.delete_many(
+            await db.personality_profiles.delete_many(
                 where={'assessment_id': assessment.id}
             )
             
@@ -508,7 +506,7 @@ async def skip_onboarding(
         logger.info(f"Skipping onboarding for user ID: {current_user.id}")
         
         # Check if user already has a profile
-        existing_profile = await db.personalityprofile.find_first(
+        existing_profile = await db.personality_profiles.find_first(
             where={'user_id': current_user.id}
         )
         
@@ -532,7 +530,7 @@ async def skip_onboarding(
         )
         
         # Create a default personality profile
-        default_profile = await db.personalityprofile.create(
+        default_profile = await db.personality_profiles.create(
             data={
                 'user_id': current_user.id,
                 'assessment_id': assessment.id,

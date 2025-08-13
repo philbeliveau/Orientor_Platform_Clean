@@ -124,7 +124,7 @@ async def get_user_data(db: Prisma, user_id: int) -> Dict[str, Any]:
         riasec_analysis = profile.personal_analysis if profile else None
         
         # Récupérer les scores HEXACO depuis personality_profiles.narrative_description
-        hexaco_result = await db.personalityprofile.find_first(
+        hexaco_result = await db.personality_profiles.find_first(
             where={
                 "user_id": user_id,
                 "profile_type": "hexaco"
