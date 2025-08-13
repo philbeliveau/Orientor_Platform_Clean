@@ -140,27 +140,17 @@ export const useOnboardingService = () => {
       try {
         console.log('Checking onboarding status...');
         const token = await checkAuth();
-        const response = await clerkApiService.getOnboardingStatus(token) as { onboarding_completed: boolean } | { isComplete: boolean; hasStarted: boolean };
+        const response = await clerkApiService.getOnboardingStatus(token) as { 
+          onboarding_completed: boolean; 
+          has_started: boolean; 
+          is_complete: boolean; 
+          message: string; 
+        };
         console.log('Onboarding status response:', response);
         
-        // Handle both response formats from different endpoints
-        let isComplete: boolean;
-        let hasStarted: boolean;
-        
-        if ('onboarding_completed' in response) {
-          // User router format: {onboarding_completed: boolean}
-          isComplete = response.onboarding_completed;
-          hasStarted = isComplete;
-        } else if ('isComplete' in response) {
-          // Onboarding router format: {isComplete: boolean, hasStarted: boolean}
-          isComplete = response.isComplete;
-          hasStarted = response.hasStarted;
-        } else {
-          // Fallback for unexpected format
-          console.warn('Unexpected response format:', response);
-          isComplete = false;
-          hasStarted = false;
-        }
+        // STANDARDIZED: Both endpoints now return same format
+        const isComplete = response.onboarding_completed || response.is_complete;
+        const hasStarted = response.has_started || isComplete;
         
         return {
           isComplete: isComplete,
@@ -272,23 +262,16 @@ export const useOnboardingService = () => {
     needsOnboarding: async (): Promise<boolean> => {
       try {
         const token = await checkAuth();
-        const response = await clerkApiService.getOnboardingStatus(token) as { onboarding_completed: boolean } | { isComplete: boolean; hasStarted: boolean };
+        const response = await clerkApiService.getOnboardingStatus(token) as { 
+          onboarding_completed: boolean; 
+          has_started: boolean; 
+          is_complete: boolean; 
+          message: string; 
+        };
         console.log('Onboarding status check result:', response);
         
-        // Handle both response formats from different endpoints
-        let isComplete: boolean;
-        
-        if ('onboarding_completed' in response) {
-          // User router format: {onboarding_completed: boolean}
-          isComplete = response.onboarding_completed;
-        } else if ('isComplete' in response) {
-          // Onboarding router format: {isComplete: boolean, hasStarted: boolean}
-          isComplete = response.isComplete;
-        } else {
-          // Fallback for unexpected format
-          console.warn('Unexpected response format:', response);
-          isComplete = false;
-        }
+        // STANDARDIZED: Both endpoints now return same format
+        const isComplete = response.onboarding_completed || response.is_complete;
         
         return !isComplete;
       } catch (error: any) {
