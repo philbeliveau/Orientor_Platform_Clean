@@ -80,11 +80,25 @@ const OnboardingPage: React.FC = () => {
         console.log('Redirecting to dashboard after onboarding completion');
         router.push('/dashboard');
       }, 2000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error handling onboarding completion:', error);
-      // Still redirect to dashboard even if there's an error
-      console.log('Error occurred, but still redirecting to dashboard');
-      router.push('/dashboard');
+      
+      // Provide better error feedback to user
+      if (error?.message?.includes('401') || error?.message?.includes('403')) {
+        console.error('Authentication error during onboarding completion');
+        setError('Authentication error. Please sign in again.');
+        setTimeout(() => router.push('/sign-in'), 2000);
+        return;
+      }
+      
+      // For other errors, still proceed but warn user
+      console.log('Error occurred during completion, but proceeding to dashboard');
+      setError('Onboarding completion had an issue, but you can still proceed.');
+      
+      // Still redirect to dashboard after showing error briefly
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 3000);
     }
   };
 

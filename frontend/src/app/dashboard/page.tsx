@@ -286,13 +286,14 @@ export default function Dashboard() {
         setPeersLoading(true);
         setPeersError(null);
         
-        const peers = await api.request<EnhancedPeerProfile[]>('/api/v1/peers/compatible', {
+        const peersResponse = await api.request<EnhancedPeerProfile[]>('/api/v1/peers/compatible', {
           method: 'GET'
         });
         
         if (!isCancelled) {
-          // Get top 3 peers for homepage
-          const topPeers = peers.slice(0, 3);
+          // Ensure we have an array and get top 3 peers for homepage
+          const peersArray = Array.isArray(peersResponse) ? peersResponse : [];
+          const topPeers = peersArray.slice(0, 3);
           setPeers(topPeers);
         }
       } catch (err: any) {

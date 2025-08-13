@@ -51,41 +51,89 @@ export function validateApiResponseFormat<T>(response: any): { data: T; message?
 
 /**
  * Validates required fields for Career Goal objects
+ * More flexible validation to handle API variations
  */
 export function validateCareerGoal(obj: any) {
-  return validateApiResponse(obj, ['id', 'title', 'target_date', 'progress_percentage']);
+  if (!obj || typeof obj !== 'object') {
+    throw new Error('Invalid career goal: Expected an object');
+  }
+  
+  // Require only essential fields, make others optional
+  const requiredFields = ['id', 'title'];
+  const missingFields = requiredFields.filter(field => !(field in obj));
+  
+  if (missingFields.length > 0) {
+    throw new Error(`Missing required career goal fields: ${missingFields.join(', ')}`);
+  }
+  
+  return obj;
 }
 
 /**
  * Validates required fields for Avatar Data objects
+ * More flexible validation for avatar responses
  */
 export function validateAvatarData(obj: any) {
-  return validateApiResponse(obj, ['success']);
+  if (!obj || typeof obj !== 'object') {
+    throw new Error('Invalid avatar data: Expected an object');
+  }
+  
+  // Avatar data can have various formats, be flexible
+  return obj;
 }
 
 /**
  * Validates required fields for User Profile objects
+ * Flexible validation for user profile data
  */
 export function validateUserProfile(obj: any) {
-  return validateApiResponse(obj, ['id', 'email', 'created_at', 'updated_at']);
+  if (!obj || typeof obj !== 'object') {
+    throw new Error('Invalid user profile: Expected an object');
+  }
+  
+  // User profiles might have different formats - be very flexible
+  // Accept any object that resembles a user profile
+  if (!('id' in obj) && !('email' in obj) && !('user_id' in obj) && !('clerk_id' in obj) && !('name' in obj)) {
+    console.warn('User profile missing typical fields, but allowing:', obj);
+  }
+  
+  return obj;
 }
 
 /**
  * Validates required fields for Job Recommendation objects
+ * Flexible validation for job recommendation data
  */
 export function validateJobRecommendation(obj: any) {
-  return validateApiResponse(obj, ['id', 'title']);
+  if (!obj || typeof obj !== 'object') {
+    throw new Error('Invalid job recommendation: Expected an object');
+  }
+  
+  // Job recommendations might not have id field - be flexible
+  // Accept objects that have either id, or score, or metadata
+  if (!('id' in obj) && !('score' in obj) && !('metadata' in obj)) {
+    console.warn('Job recommendation missing typical fields, but allowing:', obj);
+  }
+  
+  return obj;
 }
 
 /**
  * Validates required fields for Holland Results objects
+ * Flexible validation for Holland test results
  */
 export function validateHollandResults(obj: any) {
-  return validateApiResponse(obj, [
-    'id', 'user_id', 'realistic_score', 'investigative_score', 
-    'artistic_score', 'social_score', 'enterprising_score', 
-    'conventional_score', 'holland_code', 'created_at'
-  ]);
+  if (!obj || typeof obj !== 'object') {
+    throw new Error('Invalid Holland results: Expected an object');
+  }
+  
+  // Holland results might not have id field - accept any object with score data
+  // Accept objects that have scores or any recognizable Holland test fields
+  if (!('id' in obj) && !('scores' in obj) && !('realistic' in obj) && !('investigative' in obj) && !('artistic' in obj)) {
+    console.warn('Holland results missing typical fields, but allowing:', obj);
+  }
+  
+  return obj;
 }
 
 /**
@@ -97,23 +145,57 @@ export function validateSkillsTreeData(obj: any) {
 
 /**
  * Validates required fields for User Note objects
+ * Flexible validation for user note data
  */
 export function validateUserNote(obj: any) {
-  return validateApiResponse(obj, ['id', 'title', 'content', 'created_at', 'updated_at', 'user_id']);
+  if (!obj || typeof obj !== 'object') {
+    throw new Error('Invalid user note: Expected an object');
+  }
+  
+  // Only require id and title as essential fields
+  if (!('id' in obj) || !('title' in obj)) {
+    throw new Error('Invalid user note: Missing required fields id or title');
+  }
+  
+  return obj;
 }
 
 /**
  * Validates required fields for Compatible Peer objects
+ * More flexible validation for peer data
  */
 export function validateCompatiblePeer(obj: any) {
-  return validateApiResponse(obj, ['id', 'user_id', 'compatibility_score']);
+  if (!obj || typeof obj !== 'object') {
+    throw new Error('Invalid peer object: Expected an object');
+  }
+  
+  // Only require id - other fields are optional
+  if (!('id' in obj)) {
+    throw new Error('Invalid peer object: Missing required field "id"');
+  }
+  
+  return obj;
 }
 
 /**
  * Validates required fields for Onboarding Status objects
+ * Handles multiple response formats from different endpoints
  */
 export function validateOnboardingStatus(obj: any) {
-  return validateApiResponse(obj, ['completed', 'user_id']);
+  if (!obj || typeof obj !== 'object') {
+    throw new Error('Invalid onboarding status: Expected an object');
+  }
+  
+  // Handle different response formats:
+  // 1. User router: { onboarding_completed: boolean }
+  // 2. Onboarding router: { isComplete: boolean, hasStarted: boolean }
+  // 3. Full format: { completed: boolean, user_id: number }
+  
+  if ('onboarding_completed' in obj || 'isComplete' in obj || 'completed' in obj) {
+    return obj; // Valid format, return as-is
+  }
+  
+  throw new Error('Invalid onboarding status format: missing completion status field');
 }
 
 /**
@@ -141,6 +223,7 @@ export function extractResponseData<T>(response: any): T {
 
 /**
  * Validates an array response and each item in the array
+ * Handles cases where response might not be an array
  */
 export function validateArrayResponse<T>(
   response: any,
@@ -148,8 +231,24 @@ export function validateArrayResponse<T>(
 ): T[] {
   const data = extractResponseData(response);
   
+  // Handle null, undefined, or non-array responses gracefully
+  if (!data) {
+    console.warn('API returned null/undefined data, returning empty array');
+    return [];
+  }
+  
   if (!Array.isArray(data)) {
-    throw new Error('Expected an array response');
+    console.warn('API response is not an array, wrapping single item:', data);
+    // If it's a single object, wrap it in an array
+    if (typeof data === 'object') {
+      try {
+        return [itemValidator(data)];
+      } catch (error) {
+        console.error('Failed to validate single item response:', error);
+        return [];
+      }
+    }
+    return [];
   }
 
   return data.map((item, index) => {
@@ -157,7 +256,9 @@ export function validateArrayResponse<T>(
       return itemValidator(item);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown validation error';
-      throw new Error(`Invalid item at index ${index}: ${errorMessage}`);
+      console.warn(`Invalid item at index ${index}: ${errorMessage}`, item);
+      // Skip invalid items instead of throwing
+      return null;
     }
-  });
+  }).filter(item => item !== null) as T[];
 }

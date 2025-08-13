@@ -269,12 +269,26 @@ export const useOnboardingService = () => {
       try {
         console.log('Marking onboarding as complete...');
         const token = await checkAuth();
+        
+        // Send proper data structure with empty responses array (now that responses is optional)
+        const data = {
+          responses: [], // Empty responses array - backend now accepts this
+          psychProfile: null
+        };
+        
         const response = await clerkApiService.request('/api/v1/onboarding/complete', { 
           method: 'POST',
+          body: JSON.stringify(data),
           token
-        }) as { message: string; onboarding_completed: boolean };
+        }) as { message: string; assessment_id: number; profile_created: boolean };
+        
         console.log('Onboarding completion response:', response);
-        return response;
+        
+        // Transform response to match expected interface
+        return {
+          message: response.message,
+          onboarding_completed: true
+        };
       } catch (error) {
         console.error('Failed to mark onboarding complete:', error);
         throw error;
