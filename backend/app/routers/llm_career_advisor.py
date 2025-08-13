@@ -1,9 +1,24 @@
+# ============================================================================
+# PRISMA MIGRATION - Enhanced Database Integration
+# ============================================================================
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
+# 
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
+# ============================================================================
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from prisma import Prisma
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
 import logging
-from ..utils.database import get_db
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..models import User, UserProfile, UserSkill, SavedRecommendation
 from ..services.llm_service import generate_career_advice
@@ -26,7 +41,7 @@ class LLMQueryResponse(BaseModel):
 async def query_career_advisor(
     request: LLMQueryRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Process LLM queries about specific careers with user context.
@@ -54,8 +69,12 @@ async def query_career_advisor(
 
     try:
         # Get user profile and skills
-        user_profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
-        user_skills = db.query(UserSkill).filter(UserSkill.user_id == current_user.id).first()
+        user_profile = await db.user_profile.find_first(
+            where={"user_id": current_user.id}
+        )
+        user_skills = await db.user_skill.find_first(
+            where={"user_id": current_user.id}
+        )
         
         if not user_profile:
             raise HTTPException(status_code=400, detail="User profile not found")
@@ -66,10 +85,12 @@ async def query_career_advisor(
         
         if request.job_source == "esco":
             # Get ESCO job from saved_recommendations (home page recommendations)
-            saved_rec = db.query(SavedRecommendation).filter(
-                SavedRecommendation.oasis_code == request.job_id,
-                SavedRecommendation.user_id == current_user.id
-            ).first()
+            saved_rec = await db.savedrecommendation.find_first(
+                where={
+                    "oasis_code": request.job_id,
+                    "user_id": current_user.id
+                }
+            )
             
             if saved_rec:
                 job_details = {
@@ -94,22 +115,19 @@ async def query_career_advisor(
                 
         elif request.job_source == "oasis":
             # Get OaSIS job from saved_jobs (SwipeMyWay discoveries)
-            from sqlalchemy import text
-            query = text("""
-                SELECT job_title, metadata
-                FROM saved_jobs
-                WHERE esco_id = :job_id AND user_id = :user_id
-                LIMIT 1
-            """)
-            result = db.execute(query, {"job_id": request.job_id, "user_id": current_user.id}).fetchone()
+            result = await db.execute_raw(
+                "SELECT job_title, metadata FROM saved_jobs WHERE esco_id = $1 AND user_id = $2 LIMIT 1",
+                request.job_id, current_user.id
+            )
             
-            if result:
+            if result and len(result) > 0:
+                row = result[0]
                 job_details = {
-                    "title": result.job_title,
-                    "description": result.metadata.get("description", "") if result.metadata else "",
-                    "skills": result.metadata.get("skills", []) if result.metadata else [],
-                    "education_level": result.metadata.get("education_level", "") if result.metadata else "",
-                    "experience_years": result.metadata.get("experience_years", "") if result.metadata else ""
+                    "title": row["job_title"],
+                    "description": row["metadata"].get("description", "") if row["metadata"] else "",
+                    "skills": row["metadata"].get("skills", []) if row["metadata"] else [],
+                    "education_level": row["metadata"].get("education_level", "") if row["metadata"] else "",
+                    "experience_years": row["metadata"].get("experience_years", "") if row["metadata"] else ""
                 }
                 formatter_type = "OaSIS-RoleFormatter"  # OaSIS uses OaSIS formatter
         

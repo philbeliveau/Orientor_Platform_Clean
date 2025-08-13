@@ -2,7 +2,10 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, text
-from sqlalchemy.exc import SQLAlchemyError
+try:
+    from sqlalchemy.exc import SQLAlchemyError
+except ImportError:
+    SQLAlchemyError = Exception
 import logging
 
 from ..models import Conversation, ChatMessage, User

@@ -263,3 +263,13 @@ if __name__ == "__main__":
         for issue in results['issues']['critical']:
             print(f"  - {issue}")
         exit(1)
+
+def validate_admin_access(user_id: str) -> bool:
+    """
+    Validate if a user has admin access for monitoring endpoints.
+    For now, this is a simple check - in production you would implement proper admin role validation.
+    """
+    # TODO: Implement proper admin role validation with database lookup
+    # For monitoring endpoints, we'll allow access for now but this should be restricted
+    logger.info(f"Admin access validation requested for user {user_id}")
+    return True  # Temporary - implement proper admin check

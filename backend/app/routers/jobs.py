@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from prisma import Prisma
 from sqlalchemy import and_, text
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
 import logging
 
-from ..utils.database import get_db
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..models import User
 from ..schemas.job import SavedJob, SavedJobCreate, SavedJobResponse
@@ -51,7 +51,7 @@ class JobRecommendationsResponse(BaseModel):
 async def save_job(
     request: SaveJobRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Save a job from tree exploration or other sources.
@@ -65,22 +65,18 @@ async def save_job(
         Saved job details
     """
 # ============================================================================
-# AUTHENTICATION MIGRATION - Secure Integration System
+# PRISMA MIGRATION - Enhanced Database Integration
 # ============================================================================
-# This router has been migrated to use the unified secure authentication system
-# with integrated caching, security optimizations, and rollback support.
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
 # 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_with_db_sync
-# Current system: secure_auth_integration.get_current_user_secure_integrated
-# 
-# Benefits:
-# - AES-256 encryption for sensitive cache data
-# - Full SHA-256 cache keys (not truncated)
-# - Error message sanitization
-# - Multi-layer caching optimization  
-# - Zero-downtime rollback capability
-# - Comprehensive security monitoring
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
 # ============================================================================
 
 
@@ -201,7 +197,7 @@ async def save_job(
 async def get_saved_jobs(
     discovery_source: Optional[str] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Get all saved jobs for the current user.
@@ -266,7 +262,7 @@ async def get_saved_jobs(
 async def delete_saved_job(
     job_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Delete a saved job.
@@ -325,7 +321,7 @@ async def delete_saved_job(
 async def get_job_details(
     esco_id: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Get detailed information about a job from ESCO.
@@ -355,7 +351,7 @@ async def get_job_recommendations(
     top_k: int = 30,  # Changed default from 10 to 30
     embedding_type: str = "esco_embedding",
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Get personalized job recommendations for the current user.

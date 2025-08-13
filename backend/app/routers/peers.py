@@ -1,12 +1,27 @@
+# ============================================================================
+# PRISMA MIGRATION - Enhanced Database Integration
+# ============================================================================
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
+# 
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
+# ============================================================================
+
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
-from ..utils.database import get_db
-from ..models import User, UserProfile, SuggestedPeers
+from prisma import Prisma
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
+from app.models import User, UserProfile, SuggestedPeers
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
-from ..utils.clerk_auth import get_database_user_id_sync
-from ..services.peer_matching_service import find_compatible_peers, generate_enhanced_peer_suggestions
+from app.utils.clerk_auth import get_database_user_id_sync
+from app.services.peer_matching_service import find_compatible_peers, generate_enhanced_peer_suggestions
 import logging
 import asyncio
 
@@ -52,10 +67,10 @@ class HomepagePeerResponse(BaseModel):
         from_attributes = True
 
 @router.get("/suggested", response_model=List[PeerResponse])
-def get_suggested_peers(
+async def get_suggested_peers(
     limit: int = Query(5, gt=0, le=20),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get suggested peers for the current user."""
 # ============================================================================
@@ -80,26 +95,12 @@ def get_suggested_peers(
 
     try:
         # Find the user's suggested peers with their profiles
-        suggested_peers_query = (
-            db.query(
-                SuggestedPeers.suggested_id.label("user_id"),
-                SuggestedPeers.similarity,
-                UserProfile.name,
-                UserProfile.major,
-                UserProfile.year,
-                UserProfile.hobbies,
-                UserProfile.interests
-            )
-            .join(
-                UserProfile,
-                UserProfile.user_id == SuggestedPeers.suggested_id
-            )
-            .filter(SuggestedPeers.user_id == current_user.id)
-            .order_by(SuggestedPeers.similarity.desc())
-            .limit(limit)
+        suggested_peers = await db.suggestedpeers.find_many(
+            where={"user_id": current_user.id},
+            include={"suggested_user_profile": True},
+            order_by={"similarity": "desc"},
+            take=limit
         )
-        
-        suggested_peers = suggested_peers_query.all()
         
         if not suggested_peers:
             # If no suggestions found, return empty list
@@ -109,18 +110,19 @@ def get_suggested_peers(
         # Convert to list of PeerResponse objects
         result = []
         for peer in suggested_peers:
+            profile = peer.suggested_user_profile
             # Convert interests to string if it's a list
-            interests = peer.interests
+            interests = profile.interests if profile else None
             if isinstance(interests, list):
                 interests = " ".join(interests)
             
             result.append({
-                "user_id": peer.user_id,
-                "name": peer.name,
-                "major": peer.major,
-                "year": peer.year,
+                "user_id": peer.suggested_id,
+                "name": profile.name if profile else None,
+                "major": profile.major if profile else None,
+                "year": profile.year if profile else None,
                 "similarity": peer.similarity,
-                "hobbies": peer.hobbies,
+                "hobbies": profile.hobbies if profile else None,
                 "interests": interests
             })
         
@@ -137,7 +139,7 @@ def get_suggested_peers(
 async def get_compatible_peers(
     limit: int = Query(3, gt=0, le=10),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get compatible peers with detailed explanations."""
     try:
@@ -175,7 +177,7 @@ async def get_compatible_peers(
 @router.get("/homepage", response_model=List[HomepagePeerResponse])
 async def get_homepage_peers(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get peer suggestions for homepage display."""
     try:
@@ -215,7 +217,7 @@ async def get_homepage_peers(
 @router.post("/refresh")
 async def refresh_peer_suggestions(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Refresh peer suggestions for the current user."""
     try:

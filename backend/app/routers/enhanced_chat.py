@@ -1,3 +1,18 @@
+# ============================================================================
+# PRISMA MIGRATION - Enhanced Database Integration
+# ============================================================================
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
+# 
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
+# ============================================================================
+
 """
 Enhanced Chat Router with GraphSage Integration
 
@@ -29,11 +44,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List, Optional, Dict, Any
 import logging
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from prisma import Prisma
 
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.models import User
-from app.utils.database import get_db
 from app.services.enhanced_chat_service import enhanced_chat_service
 
 logger = logging.getLogger(__name__)
@@ -84,7 +99,7 @@ class CareerPathAnalysisResponse(BaseModel):
 async def send_enhanced_message(
     message: EnhancedMessageRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Send a message with GraphSage enhancement and get intelligent response.
@@ -109,7 +124,7 @@ async def send_enhanced_message(
 async def get_skill_explanation(
     request: SkillExplanationRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Get detailed explanation for why a specific skill is relevant for the user.
@@ -141,7 +156,7 @@ async def get_skill_explanation(
 @router.get("/learning-recommendations", response_model=LearningRecommendationsResponse)
 async def get_learning_recommendations(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Get personalized learning recommendations based on GraphSage analysis.
@@ -174,7 +189,7 @@ async def get_learning_recommendations(
 async def analyze_career_path(
     request: CareerPathAnalysisRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Analyze how well a career path matches the user's skills using GraphSage.
@@ -206,7 +221,7 @@ async def analyze_career_path(
 @router.get("/graphsage-insights")
 async def get_graphsage_insights(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Get general GraphSage insights for the current user.
@@ -219,8 +234,12 @@ async def get_graphsage_insights(
         
         # Get user profile for context
         from app.models import UserProfile, UserSkill
-        user_profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
-        user_skills = db.query(UserSkill).filter(UserSkill.user_id == current_user.id).first()
+        user_profile = await db.user_profiles.find_first(
+            where={"user_id": current_user.id}
+        )
+        user_skills = await db.user_skills.find_first(
+            where={"user_id": current_user.id}
+        )
         
         if not user_profile:
             raise HTTPException(

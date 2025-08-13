@@ -5,7 +5,10 @@ import os
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from sqlalchemy.exc import SQLAlchemyError
+try:
+    from sqlalchemy.exc import SQLAlchemyError
+except ImportError:
+    SQLAlchemyError = Exception
 import logging
 
 from ..models import ConversationShare, Conversation, ChatMessage, User

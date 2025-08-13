@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from prisma import Prisma
 from typing import List, Optional, Dict, Union
 from datetime import datetime
-from ..utils.database import get_db
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from ..services.Oasisembedding_service import generate_embedding
 from ..services.Swipe_career_recommendation_service import get_pinecone_career_recommendations
 from ..services.profile_completion_service import ProfileCompletionCalculator
@@ -81,22 +81,18 @@ class SwipeResponse(BaseModel):
 def try_parse_float(value: str) -> Optional[float]:
     """Try to parse a string to float, return None if fails"""
 # ============================================================================
-# AUTHENTICATION MIGRATION - Secure Integration System
+# PRISMA MIGRATION - Enhanced Database Integration
 # ============================================================================
-# This router has been migrated to use the unified secure authentication system
-# with integrated caching, security optimizations, and rollback support.
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
 # 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_with_db_sync
-# Current system: secure_auth_integration.get_current_user_secure_integrated
-# 
-# Benefits:
-# - AES-256 encryption for sensitive cache data
-# - Full SHA-256 cache keys (not truncated)
-# - Error message sanitization
-# - Multi-layer caching optimization  
-# - Zero-downtime rollback capability
-# - Comprehensive security monitoring
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
 # ============================================================================
 
 
@@ -151,11 +147,11 @@ def extract_fields_from_text(text: str) -> Dict[str, str]:
     return fields
 
 @router.get("", response_model=Union[RecommendationsResponse, LimitedRecommendationsResponse])
-def get_career_recommendations(
+async def get_career_recommendations(
     limit: int = Query(30, gt=0, le=30),
     force: bool = Query(False, description="Force recommendations even if profile incomplete"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get career recommendations for the current user based on their profile embedding."""
     try:
@@ -275,10 +271,10 @@ def get_career_recommendations(
         )
 
 @router.post("/swipe", response_model=SwipeResponse)
-def swipe_recommendation(
+async def swipe_recommendation(
     swipe: SwipeRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Record a swipe action on a career recommendation."""
     try:

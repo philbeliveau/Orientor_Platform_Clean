@@ -1,12 +1,27 @@
+# ============================================================================
+# PRISMA MIGRATION - Enhanced Database Integration
+# ============================================================================
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
+# 
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
+# ============================================================================
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 import logging
+from prisma import Prisma
 
-from ..utils.database import get_db
-from ..models.user import User
-from ..models.user_representation import UserRepresentation
-from ..services.avatar_service import AvatarService
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
+from app.models.user import User
+from app.models.user_representation import UserRepresentation
+from app.services.avatar_service import AvatarService
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 
 # Configuration du logging
@@ -16,7 +31,7 @@ router = APIRouter(prefix="/avatar", tags=["avatar"])
 
 @router.post("/generate-avatar/me")
 async def generate_avatar(
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -119,7 +134,7 @@ async def generate_avatar(
 
 @router.get("/me")
 async def get_user_avatar(
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -136,10 +151,12 @@ async def get_user_avatar(
         user_id = current_user.id
         
         # Récupérer la représentation utilisateur avec avatar
-        user_repr = db.query(UserRepresentation).filter(
-            UserRepresentation.user_id == user_id,
-            UserRepresentation.source == "avatar_generation"
-        ).first()
+        user_repr = await db.userrepresentation.find_first(
+            where={
+                "user_id": user_id,
+                "source": "avatar_generation"
+            }
+        )
         
         if not user_repr or not user_repr.avatar_name:
             return {
@@ -167,7 +184,7 @@ async def get_user_avatar(
             detail=f"Erreur interne lors de la récupération d'avatar: {str(e)}"
         )
 
-async def _collect_user_data(db: Session, user_id: int) -> Dict[str, Any]:
+async def _collect_user_data(db: Prisma, user_id: int) -> Dict[str, Any]:
     """
     Collecte les données utilisateur pour la génération d'avatar.
     
@@ -182,7 +199,10 @@ async def _collect_user_data(db: Session, user_id: int) -> Dict[str, Any]:
     
     try:
         # Récupérer l'utilisateur
-        user = db.query(User).filter(User.id == user_id).first()
+        user = await db.user.find_first(
+            where={"id": user_id},
+            include={"profile": True, "skills": True}
+        )
         if user:
             user_data["email"] = user.email
             
@@ -202,9 +222,9 @@ async def _collect_user_data(db: Session, user_id: int) -> Dict[str, Any]:
                 user_data["skills"] = user.skills
             
             # Récupérer les représentations existantes
-            representations = db.query(UserRepresentation).filter(
-                UserRepresentation.user_id == user_id
-            ).all()
+            representations = await db.userrepresentation.find_many(
+                where={"user_id": user_id}
+            )
             
             if representations:
                 user_data["representations"] = [
@@ -251,7 +271,7 @@ def _generate_avatar_name(user_data: Dict[str, Any]) -> str:
 @router.post("/generate-avatar-test/{user_id}")
 async def generate_avatar_test(
     user_id: int,
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Version de test pour générer un avatar sans authentification.
@@ -259,7 +279,9 @@ async def generate_avatar_test(
     """
     try:
         # Vérifier que l'utilisateur existe
-        user = db.query(User).filter(User.id == user_id).first()
+        user = await db.user.find_first(
+            where={"id": user_id}
+        )
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

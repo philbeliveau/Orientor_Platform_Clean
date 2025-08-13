@@ -6,11 +6,10 @@ import time
 from openai import OpenAI
 from pydantic import BaseModel
 from dotenv import load_dotenv
-from sqlalchemy.orm import Session
+from prisma import Prisma
 
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
-from app.models import User, UserProfile, Conversation, ChatMessage
-from app.utils.database import get_db
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.services.conversation_service import ConversationService
 from app.services.chat_message_service import ChatMessageService
 from app.services.analytics_service import AnalyticsService
@@ -69,22 +68,18 @@ You are a Socratic mentor guiding students in a fast-paced game of discovery. Yo
 Your goal: Make them feel smart, seen, and motivated — by making them figure it out themselves.
 """
 # ============================================================================
-# AUTHENTICATION MIGRATION - Secure Integration System
+# PRISMA MIGRATION - Enhanced Database Integration
 # ============================================================================
-# This router has been migrated to use the unified secure authentication system
-# with integrated caching, security optimizations, and rollback support.
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
 # 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_with_db_sync
-# Current system: secure_auth_integration.get_current_user_secure_integrated
-# 
-# Benefits:
-# - AES-256 encryption for sensitive cache data
-# - Full SHA-256 cache keys (not truncated)
-# - Error message sanitization
-# - Multi-layer caching optimization  
-# - Zero-downtime rollback capability
-# - Comprehensive security monitoring
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
 # ============================================================================
 
 
@@ -92,9 +87,12 @@ Your goal: Make them feel smart, seen, and motivated — by making them figure i
 @router.post("/send", response_model=MessageResponse)
 async def send_message(
     message: MessageRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
+    # Initialize operation logger
+    operation_logger = PrismaOperationLogger("chat")
+    
     try:
         logger.info(f"Received message from user {current_user.id}: {message.text}")
         
@@ -115,8 +113,16 @@ async def send_message(
                 db, current_user.id, message.text
             )
             
-            # Get user's profile information for system prompt
-            profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+            # Get user's profile information for system prompt using Prisma
+            profile = await db.user_profile.find_first(
+                where={"user_id": current_user.id}
+            )
+            
+            operation_logger.log_query_conversion(
+                f"db.query(UserProfile).filter(UserProfile.user_id == {current_user.id}).first()",
+                f"db.user_profile.find_first(where={{\"user_id\": {current_user.id}}})",
+                "profile_lookup_for_system_prompt"
+            )
             
             # Create personalized system message
             system_message = SYSTEM_PROMPT
@@ -255,8 +261,8 @@ async def send_message(
 @router.post("/clear", response_model=ClearHistoryResponse)
 async def clear_history(
     conversation_id: Optional[int] = None,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     try:
         user_id = current_user.id

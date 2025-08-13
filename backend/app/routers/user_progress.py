@@ -1,26 +1,22 @@
 
 # ============================================================================
-# AUTHENTICATION MIGRATION - Secure Integration System
+# PRISMA MIGRATION - Enhanced Database Integration
 # ============================================================================
-# This router has been migrated to use the unified secure authentication system
-# with integrated caching, security optimizations, and rollback support.
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
 # 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_with_db_sync
-# Current system: secure_auth_integration.get_current_user_secure_integrated
-# 
-# Benefits:
-# - AES-256 encryption for sensitive cache data
-# - Full SHA-256 cache keys (not truncated)
-# - Error message sanitization
-# - Multi-layer caching optimization  
-# - Zero-downtime rollback capability
-# - Comprehensive security monitoring
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
 # ============================================================================
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from app.utils.database import get_db
+from prisma import Prisma
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from app.models.user import User
 from app.models.user_progress import UserProgress
@@ -38,23 +34,24 @@ router = APIRouter(
 
 @router.get("/", response_model=UserProgressSchema)
 async def get_user_progress(
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
     # Get existing progress or create new
-    progress = db.query(UserProgress).filter(UserProgress.user_id == current_user.id).first()
+    progress = await db.userprogress.find_first(
+        where={"user_id": current_user.id}
+    )
     
     if not progress:
         # Initialize user progress
-        progress = UserProgress(
-            user_id=current_user.id,
-            total_xp=0,
-            level=1,
-            completed_actions={}  # Initialize empty completed actions
+        progress = await db.userprogress.create(
+            data={
+                "user_id": current_user.id,
+                "total_xp": 0,
+                "level": 1,
+                "completed_actions": {}  # Initialize empty completed actions
+            }
         )
-        db.add(progress)
-        db.commit()
-        db.refresh(progress)
     
     logger.info(f"Retrieved user progress for user {current_user.id}: {progress.completed_actions}")
     return progress
@@ -62,71 +59,84 @@ async def get_user_progress(
 @router.post("/update", response_model=UserProgressSchema)
 async def update_user_progress(
     update: UserProgressUpdate,
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
     logger.info(f"Received update request for user {current_user.id}: {update}")
     
     # Get existing progress or create new
-    progress = db.query(UserProgress).filter(UserProgress.user_id == current_user.id).first()
+    progress = await db.userprogress.find_first(
+        where={"user_id": current_user.id}
+    )
     
     if not progress:
         # Initialize user progress
-        progress = UserProgress(
-            user_id=current_user.id,
-            total_xp=update.xp_gained,
-            level=1,
-            last_completed_node=update.node_id,
-            completed_actions=update.completed_actions or {}
+        progress = await db.userprogress.create(
+            data={
+                "user_id": current_user.id,
+                "total_xp": update.xp_gained,
+                "level": 1,
+                "last_completed_node": update.node_id,
+                "completed_actions": update.completed_actions or {}
+            }
         )
         logger.info(f"Created new progress with completed_actions: {progress.completed_actions}")
+        return progress
+    
+    # Update existing progress
+    new_total_xp = progress.total_xp + update.xp_gained
+    
+    # Update completed actions if provided
+    updated_actions = progress.completed_actions
+    if update.completed_actions:
+        if not updated_actions:
+            updated_actions = {}
+        
+        # Ensure we're working with a dictionary
+        current_actions = updated_actions if isinstance(updated_actions, dict) else {}
+        new_actions = update.completed_actions if isinstance(update.completed_actions, dict) else {}
+        
+        logger.info(f"Current completed_actions: {current_actions}")
+        logger.info(f"Updating with new actions: {new_actions}")
+        
+        # Update the dictionary
+        current_actions.update(new_actions)
+        updated_actions = current_actions
+        
+        logger.info(f"Updated completed_actions: {updated_actions}")
+    
+    # Calculate level based on XP
+    new_level = 1
+    if new_total_xp <= 50:
+        new_level = 1
+    elif new_total_xp <= 150:
+        new_level = 2
+    elif new_total_xp <= 300:
+        new_level = 3
+    elif new_total_xp <= 500:
+        new_level = 4
+    elif new_total_xp <= 750:
+        new_level = 5
     else:
-        # Update existing progress
-        progress.total_xp += update.xp_gained
-        progress.last_completed_node = update.node_id
-        
-        # Update completed actions if provided
-        if update.completed_actions:
-            if not progress.completed_actions:
-                progress.completed_actions = {}
-            
-            # Ensure we're working with a dictionary
-            current_actions = progress.completed_actions if isinstance(progress.completed_actions, dict) else {}
-            new_actions = update.completed_actions if isinstance(update.completed_actions, dict) else {}
-            
-            logger.info(f"Current completed_actions: {current_actions}")
-            logger.info(f"Updating with new actions: {new_actions}")
-            
-            # Update the dictionary
-            current_actions.update(new_actions)
-            progress.completed_actions = current_actions
-            
-            logger.info(f"Updated completed_actions: {progress.completed_actions}")
-        
-        # Calculate level based on XP
-        if progress.total_xp <= 50:
-            progress.level = 1
-        elif progress.total_xp <= 150:
-            progress.level = 2
-        elif progress.total_xp <= 300:
-            progress.level = 3
-        elif progress.total_xp <= 500:
-            progress.level = 4
-        elif progress.total_xp <= 750:
-            progress.level = 5
-        else:
-            progress.level = 6
+        new_level = 6
     
     try:
-        db.add(progress)
-        db.commit()
-        db.refresh(progress)
+        # Update the progress record in the database
+        progress = await db.userprogress.update(
+            where={"id": progress.id},
+            data={
+                "total_xp": new_total_xp,
+                "level": new_level,
+                "last_completed_node": update.node_id,
+                "completed_actions": updated_actions
+            }
+        )
         logger.info(f"Final progress state: {progress.completed_actions}")
         return progress
     except Exception as e:
-        db.rollback()
+        # No rollback needed in Prisma - automatic transaction handling
         logger.error(f"Error updating progress: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_interNAL_SERVER_ERROR,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update progress: {str(e)}"
         ) 

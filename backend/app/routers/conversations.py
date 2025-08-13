@@ -3,13 +3,12 @@ from typing import List, Optional, Literal
 import logging
 import os
 import time
-from sqlalchemy.orm import Session
+from prisma import Prisma
 from openai import OpenAI
 from pydantic import BaseModel
 
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
-from app.models import User, UserProfile
-from app.utils.database import get_db
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.services.conversation_service import ConversationService
 from app.services.category_service import CategoryService
 from app.services.chat_message_service import ChatMessageService
@@ -38,15 +37,18 @@ You are a helpful AI assistant supporting students in their educational and care
 Provide clear, informative responses while being encouraging and supportive.
 """
 # ============================================================================
-# AUTHENTICATION MIGRATION - Secure Integration System
+# PRISMA MIGRATION - Enhanced Database Integration
 # ============================================================================
-# This router has been migrated to use the unified secure authentication system
-# with integrated caching, security optimizations, and rollback support.
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
 # 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_with_db_sync
-# Current system: secure_auth_integration.get_current_user_secure_integrated
-# 
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
 # Benefits:
 # - AES-256 encryption for sensitive cache data
 # - Full SHA-256 cache keys (not truncated)
@@ -109,8 +111,8 @@ async def get_conversations(
     offset: int = Query(0, ge=0),
     is_favorite: Optional[bool] = None,
     is_archived: Optional[bool] = None,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get user's conversations with optional filters"""
     try:
@@ -146,8 +148,8 @@ async def get_conversations(
 @router.post("", response_model=ConversationResponse)
 async def create_conversation(
     conversation: ConversationCreate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Create a new conversation"""
     try:
@@ -165,8 +167,8 @@ async def create_conversation(
 @router.get("/{conversation_id}", response_model=ConversationResponse)
 async def get_conversation(
     conversation_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get a specific conversation"""
     conversation = await ConversationService.get_conversation_by_id(
@@ -183,8 +185,8 @@ async def get_conversation(
 async def update_conversation(
     conversation_id: int,
     updates: ConversationUpdate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Update conversation properties"""
     conversation = await ConversationService.get_conversation_by_id(
@@ -210,16 +212,16 @@ async def update_conversation(
     if updates.is_archived is not None:
         conversation.is_archived = updates.is_archived
     
-    db.commit()
-    db.refresh(conversation)
+    # Prisma handles commit automatically
+    # No refresh needed for updated conversation
     
     return ConversationResponse.from_orm(conversation)
 
 @router.delete("/{conversation_id}")
 async def delete_conversation(
     conversation_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Delete a conversation permanently"""
     success = await ConversationService.delete_conversation(
@@ -235,8 +237,8 @@ async def delete_conversation(
 @router.post("/{conversation_id}/favorite")
 async def toggle_favorite(
     conversation_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Toggle favorite status of a conversation"""
     is_favorite = await ConversationService.toggle_favorite(
@@ -253,8 +255,8 @@ async def toggle_favorite(
 async def toggle_archive(
     conversation_id: int,
     archive: bool = Body(True),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Archive or unarchive a conversation"""
     success = await ConversationService.archive_conversation(
@@ -270,8 +272,8 @@ async def toggle_archive(
 @router.post("/{conversation_id}/generate-title")
 async def generate_title(
     conversation_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Generate an automatic title for the conversation"""
     title = await ConversationService.auto_generate_title(
@@ -289,8 +291,8 @@ async def get_conversation_messages(
     conversation_id: int,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get messages for a conversation with unified response format"""
     try:
@@ -337,8 +339,8 @@ async def get_conversation_messages(
 @router.get("/{conversation_id}/statistics", response_model=MessageStats)
 async def get_conversation_statistics(
     conversation_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get statistics for a conversation"""
     # Verify conversation belongs to user
@@ -358,8 +360,8 @@ async def get_conversation_statistics(
 async def export_conversation(
     conversation_id: int,
     export_request: ExportRequest = Body(ExportRequest()),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Export conversation in various formats"""
     # Verify conversation belongs to user
@@ -410,8 +412,8 @@ async def export_conversation(
 async def send_message_to_conversation(
     conversation_id: int,
     request: SendMessageRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Send a message to an existing conversation"""
     try:

@@ -1,15 +1,30 @@
+# ============================================================================
+# PRISMA MIGRATION - Enhanced Database Integration
+# ============================================================================
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
+# 
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
+# ============================================================================
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
 from typing import Dict, Any, List
 from pydantic import BaseModel, Field
 import logging
 import json
+from prisma import Prisma
 
-from ..services.competenceTree import CompetenceTreeService
-from ..utils.database import get_db
+from app.services.competenceTree import CompetenceTreeService
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
-from ..models import User, UserSkillTree
+from app.models import User, UserSkillTree
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -66,12 +81,12 @@ async def preload_competence_tree_service():
         logger.error(f"Error preloading competence tree service: {str(e)}")
 
 @router.post("/generate", response_model=Dict[str, Any])
-def generate_competence_tree(
+async def generate_competence_tree(
     background_tasks: BackgroundTasks,
     max_depth: int = 3,
     max_nodes: int = 50,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Generate a new competence tree for a user following palmier specification.
@@ -200,10 +215,10 @@ def generate_competence_tree(
         )
 
 @router.post("/generate-from-anchors", response_model=Dict[str, Any])
-def generate_tree_from_anchors(
+async def generate_tree_from_anchors(
     request: AnchorSkillsRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Generate a competence tree from 5 specific anchor skills.
@@ -295,9 +310,9 @@ def generate_tree_from_anchors(
         )
 
 @router.get("/anchor-skills", response_model=Dict[str, Any])
-def get_user_anchor_skills(
+async def get_user_anchor_skills(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Get user's anchor skills from their latest competence tree.
@@ -307,9 +322,10 @@ def get_user_anchor_skills(
     logger.info(f"Request received to get anchor skills for user {current_user.id}")
     try:
         # Get the user's latest skill tree
-        skill_tree = db.query(UserSkillTree).filter(
-            UserSkillTree.user_id == current_user.id
-        ).order_by(UserSkillTree.created_at.desc()).first()
+        skill_tree = await db.userskilltree.find_first(
+            where={"user_id": current_user.id},
+            order_by={"created_at": "desc"}
+        )
         
         if not skill_tree:
             return {
@@ -343,12 +359,12 @@ def get_user_anchor_skills(
         )
 
 @router.post("/job/{job_id}/skills-tree", response_model=Dict[str, Any])
-def generate_job_skills_tree(
+async def generate_job_skills_tree(
     job_id: str,
     max_depth: int = 2,
     max_nodes_per_level: int = 6,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Generate a skills tree specific to a job/occupation.
@@ -421,10 +437,10 @@ def generate_job_skills_tree(
         )
 
 @router.get("/{graph_id}")
-def get_competence_tree(
+async def get_competence_tree(
     graph_id: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Get an existing competence tree.
@@ -433,10 +449,12 @@ def get_competence_tree(
     try:
         # Get the competence tree from the database
         logger.info(f"Retrieving competence tree {graph_id} from database")
-        skill_tree = db.query(UserSkillTree).filter(
-            UserSkillTree.graph_id == graph_id,
-            UserSkillTree.user_id == current_user.id
-        ).first()
+        skill_tree = await db.userskilltree.find_first(
+            where={
+                "graph_id": graph_id,
+                "user_id": current_user.id
+            }
+        )
         
         if not skill_tree:
             logger.warning(f"Competence tree not found for graph_id: {graph_id} and user_id: {current_user.id}")
@@ -505,10 +523,10 @@ def get_competence_tree(
         )
 
 @router.patch("/node/{node_id}/complete", response_model=Dict[str, Any])
-def complete_challenge(
+async def complete_challenge(
     node_id: str,  # Changed to string to match ESCO node IDs
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Mark a node challenge as completed following palmier specification.

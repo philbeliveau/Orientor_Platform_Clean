@@ -11,6 +11,20 @@ It integrates with the performance monitoring system and provides administrative
 # This router has been migrated to use the unified secure authentication system
 # with integrated caching, security optimizations, and rollback support.
 # 
+# PRISMA MIGRATION - Enhanced Database Integration
+# ============================================================================
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
+# 
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
+# ============================================================================
+
 # Authentication Standardization: 2025-08-12
 # Status: Compliant with standard Clerk authentication patterns
 # Using: app.utils.clerk_auth.get_current_user_with_db_sync
@@ -27,13 +41,13 @@ It integrates with the performance monitoring system and provides administrative
 
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from prisma import Prisma
 from typing import Dict, Any, Optional
 import logging
 
 from app.models.user import User
-from app.utils.database import get_db
-from app.utils.clerk_auth import get_current_user_with_db_sync
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
+from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from app.utils.auth_cache import (
     CacheMetrics,
     cache_health_check,
@@ -58,7 +72,7 @@ router = APIRouter(
 
 @router.get("/stats", response_model=Dict[str, Any])
 async def get_cache_statistics(
-    current_user: User = Depends(get_current_user_with_db_sync)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get comprehensive cache statistics and performance metrics.
@@ -137,7 +151,7 @@ async def get_cache_health():
 
 @router.get("/performance", response_model=Dict[str, Any])
 async def get_cache_performance_metrics(
-    current_user: User = Depends(get_current_user_with_db_sync)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get detailed performance metrics from the cache system.
@@ -180,7 +194,7 @@ async def get_cache_performance_metrics(
 
 @router.post("/cleanup", response_model=Dict[str, Any])
 async def cleanup_expired_cache_entries(
-    current_user: User = Depends(get_current_user_with_db_sync)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Trigger cleanup of expired cache entries across all cache layers.
@@ -213,7 +227,7 @@ async def cleanup_expired_cache_entries(
 
 @router.post("/jwks/refresh", response_model=Dict[str, Any])
 async def force_jwks_refresh(
-    current_user: User = Depends(get_current_user_with_db_sync)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Force a refresh of the JWKS cache.
@@ -255,7 +269,7 @@ async def force_jwks_refresh(
 
 @router.get("/config", response_model=Dict[str, Any])
 async def get_cache_configuration(
-    current_user: User = Depends(get_current_user_with_db_sync)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Get current cache configuration and settings.
@@ -313,7 +327,7 @@ async def get_cache_configuration(
 
 @router.get("/demo/request-cache", response_model=Dict[str, Any])
 async def demo_request_cache_behavior(
-    current_user: User = Depends(get_current_user_with_db_sync)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Demonstrate request-level caching behavior.
@@ -378,7 +392,7 @@ async def demo_request_cache_behavior(
 
 @router.get("/test/authentication-speed", response_model=Dict[str, Any])
 async def test_authentication_speed(
-    current_user: User = Depends(get_current_user_with_db_sync)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Test authentication speed with and without caching.

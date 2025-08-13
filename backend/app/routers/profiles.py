@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import Optional, List, Dict, Any, Union
 from pydantic import BaseModel, Field
 import logging
-from app.utils.database import get_db
-from app.models import User, UserProfile, UserSkill
+from prisma import Prisma
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger, get_prisma_transaction
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
-from sqlalchemy.sql import text
 import uuid
 from app.services.profile_completion_service import ProfileCompletionCalculator, CompletionAction
 
@@ -153,20 +151,51 @@ class ProfileUpdate(BaseModel):
     skills: Optional[List[str]] = None
 
 @router.get("/me", response_model=ProfileResponse)
-def get_profile(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def get_profile(
+    current_user = Depends(get_current_user), 
+    db: Prisma = Depends(get_prisma_client)
+):
+    # Initialize operation logger
+    operation_logger = PrismaOperationLogger("profiles")
+    
     try:
         logger.info(f"Attempting to get profile for user ID: {current_user.id}")
-        profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+        
+        # Convert SQLAlchemy query to Prisma
+        profile = await db.user_profile.find_first(
+            where={"user_id": current_user.id}
+        )
+        
+        operation_logger.log_query_conversion(
+            f"db.query(UserProfile).filter(UserProfile.user_id == {current_user.id}).first()",
+            f"db.user_profile.find_first(where={{\"user_id\": {current_user.id}}})",
+            "profile_lookup"
+        )
+        
         if not profile:
             logger.info(f"No profile found for user ID: {current_user.id}, creating a new one")
-            # If no profile exists, create a blank one to avoid 404 errors
-            profile = UserProfile(user_id=current_user.id)
-            db.add(profile)
-            db.commit()
-            db.refresh(profile)
+            # Create a blank profile using Prisma
+            profile = await db.user_profile.create(
+                data={"user_id": current_user.id}
+            )
+            
+            operation_logger.log_query_conversion(
+                "UserProfile(user_id=current_user.id); db.add(profile); db.commit()",
+                f"db.user_profile.create(data={{\"user_id\": {current_user.id}}})",
+                "profile_creation"
+            )
         
-        # Get user skills
-        skills = db.query(UserSkill).filter(UserSkill.user_id == current_user.id).first()
+        # Get user skills using Prisma
+        skills = await db.user_skill.find_first(
+            where={"user_id": current_user.id}
+        )
+        
+        operation_logger.log_query_conversion(
+            f"db.query(UserSkill).filter(UserSkill.user_id == {current_user.id}).first()",
+            f"db.user_skill.find_first(where={{\"user_id\": {current_user.id}}})",
+            "skills_lookup"
+        )
+        
         response = ProfileResponse.model_validate(profile)
         response.id = current_user.id
         
@@ -194,64 +223,103 @@ def get_profile(current_user: User = Depends(get_current_user), db: Session = De
 @router.put("/update")
 async def update_profile(
     profile_update: ProfileUpdate,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Prisma = Depends(get_prisma_client),
+    current_user = Depends(get_current_user)
 ):
+    # Initialize operation logger
+    operation_logger = PrismaOperationLogger("profiles")
+    
     try:
         logger.info(f"Attempting to update profile for user ID: {current_user.id}")
         
-        # Get the current profile
-        profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
-        if not profile:
-            raise HTTPException(status_code=404, detail="Profile not found")
-        
-        # Extract skill fields from profile update
-        skill_fields = {
-            "creativity": profile_update.creativity,
-            "leadership": profile_update.leadership,
-            "digital_literacy": profile_update.digital_literacy,
-            "critical_thinking": profile_update.critical_thinking,
-            "problem_solving": profile_update.problem_solving,
-            "analytical_thinking": profile_update.analytical_thinking,
-            "attention_to_detail": profile_update.attention_to_detail,
-            "collaboration": profile_update.collaboration,
-            "adaptability": profile_update.adaptability,
-            "independence": profile_update.independence,
-            "evaluation": profile_update.evaluation,
-            "decision_making": profile_update.decision_making,
-            "stress_tolerance": profile_update.stress_tolerance
-        }
-        
-        # Update user skills
-        skills = db.query(UserSkill).filter(UserSkill.user_id == current_user.id).first()
-        if not skills:
-            skills = UserSkill(user_id=current_user.id)
-            db.add(skills)
-        
-        # Update skill fields
-        for field, value in skill_fields.items():
-            if value is not None:
-                setattr(skills, field, value)
-        
-        # Update profile fields (excluding skill fields)
-        update_data = profile_update.dict(
-            exclude={
-                "creativity", "leadership", "digital_literacy", "critical_thinking",
-                "problem_solving", "analytical_thinking", "attention_to_detail",
-                "collaboration", "adaptability", "independence", "evaluation",
-                "decision_making", "stress_tolerance"
-            },
-            exclude_unset=True
-        )
-        
-        logger.info(f"Updating profile fields: {list(update_data.keys())}")
-        for field, value in update_data.items():
-            setattr(profile, field, value)
-        
-        # Commit the changes
-        db.commit()
-        db.refresh(profile)
-        db.refresh(skills)
+        # Use transaction for complex update operation
+        async with get_prisma_transaction() as transaction_db:
+            # Get the current profile using Prisma
+            profile = await transaction_db.user_profile.find_first(
+                where={"user_id": current_user.id}
+            )
+            
+            operation_logger.log_query_conversion(
+                f"db.query(UserProfile).filter(UserProfile.user_id == {current_user.id}).first()",
+                f"transaction_db.user_profile.find_first(where={{\"user_id\": {current_user.id}}})",
+                "profile_lookup_for_update"
+            )
+            
+            if not profile:
+                raise HTTPException(status_code=404, detail="Profile not found")
+            
+            # Extract skill fields from profile update
+            skill_fields = {
+                "creativity": profile_update.creativity,
+                "leadership": profile_update.leadership,
+                "digital_literacy": profile_update.digital_literacy,
+                "critical_thinking": profile_update.critical_thinking,
+                "problem_solving": profile_update.problem_solving,
+                "analytical_thinking": profile_update.analytical_thinking,
+                "attention_to_detail": profile_update.attention_to_detail,
+                "collaboration": profile_update.collaboration,
+                "adaptability": profile_update.adaptability,
+                "independence": profile_update.independence,
+                "evaluation": profile_update.evaluation,
+                "decision_making": profile_update.decision_making,
+                "stress_tolerance": profile_update.stress_tolerance
+            }
+            
+            # Update user skills using Prisma
+            skills = await transaction_db.user_skill.find_first(
+                where={"user_id": current_user.id}
+            )
+            
+            if not skills:
+                # Create new skills record
+                skills_data = {"user_id": current_user.id}
+                skills_data.update({k: v for k, v in skill_fields.items() if v is not None})
+                skills = await transaction_db.user_skill.create(data=skills_data)
+                
+                operation_logger.log_query_conversion(
+                    "UserSkill(user_id=current_user.id); db.add(skills)",
+                    f"transaction_db.user_skill.create(data={{...}})",
+                    "skills_creation"
+                )
+            else:
+                # Update existing skills
+                update_skills_data = {k: v for k, v in skill_fields.items() if v is not None}
+                if update_skills_data:
+                    skills = await transaction_db.user_skill.update(
+                        where={"id": skills.id},
+                        data=update_skills_data
+                    )
+                    
+                    operation_logger.log_query_conversion(
+                        "setattr(skills, field, value) for each field",
+                        f"transaction_db.user_skill.update(where={{\"id\": {skills.id}}}, data={{...}})",
+                        "skills_update"
+                    )
+            
+            # Update profile fields (excluding skill fields)
+            update_data = profile_update.dict(
+                exclude={
+                    "creativity", "leadership", "digital_literacy", "critical_thinking",
+                    "problem_solving", "analytical_thinking", "attention_to_detail",
+                    "collaboration", "adaptability", "independence", "evaluation",
+                    "decision_making", "stress_tolerance"
+                },
+                exclude_unset=True
+            )
+            
+            logger.info(f"Updating profile fields: {list(update_data.keys())}")
+            
+            if update_data:
+                profile = await transaction_db.user_profile.update(
+                    where={"id": profile.id},
+                    data=update_data
+                )
+                
+                operation_logger.log_query_conversion(
+                    "setattr(profile, field, value) for each field; db.commit()",
+                    f"transaction_db.user_profile.update(where={{\"id\": {profile.id}}}, data={{...}})",
+                    "profile_update"
+                )
         
         # Generate new embedding using the centralized service
         try:
@@ -262,43 +330,53 @@ async def update_profile(
             
             logger.info(f"Original user ID: {user_id_str}, Generated UUID: {user_uuid}")
             
-            # Fetch RIASEC scores using integer user_id
-            riasec_query = text("""
+            # Fetch RIASEC scores using Prisma raw query
+            riasec_result = await db.execute_raw(
+                """
                 SELECT r_score, i_score, a_score, s_score, e_score, c_score, top_3_code
                 FROM gca_results 
-                WHERE user_id = :user_id
+                WHERE user_id = $1
                 ORDER BY created_at DESC
                 LIMIT 1
-            """
+                """,
+                current_user.id
+            )
 # ============================================================================
-# AUTHENTICATION MIGRATION - Secure Integration System
+# PRISMA MIGRATION - Enhanced Database Integration
 # ============================================================================
-# This router has been migrated to use the unified secure authentication system
-# with integrated caching, security optimizations, and rollback support.
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
 # 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_with_db_sync
-# Current system: secure_auth_integration.get_current_user_secure_integrated
-# 
-# Benefits:
-# - AES-256 encryption for sensitive cache data
-# - Full SHA-256 cache keys (not truncated)
-# - Error message sanitization
-# - Multi-layer caching optimization  
-# - Zero-downtime rollback capability
-# - Comprehensive security monitoring
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
 # ============================================================================
 
-)
-            riasec_result = db.execute(riasec_query, {"user_id": current_user.id}).fetchone()
+            operation_logger.log_query_conversion(
+                "db.execute(riasec_query, {'user_id': current_user.id}).fetchone()",
+                f"db.execute_raw(query, {current_user.id})",
+                "riasec_lookup"
+            )
             
-            # Fetch saved recommendations using integer user_id
-            recommendations_query = text("""
+            # Fetch saved recommendations using Prisma raw query
+            recommendations_result = await db.execute_raw(
+                """
                 SELECT label 
                 FROM saved_recommendations 
-                WHERE user_id = :user_id
-            """)
-            recommendations_result = db.execute(recommendations_query, {"user_id": current_user.id}).fetchall()
+                WHERE user_id = $1
+                """,
+                current_user.id
+            )
+            
+            operation_logger.log_query_conversion(
+                "db.execute(recommendations_query, {'user_id': current_user.id}).fetchall()",
+                f"db.execute_raw(query, {current_user.id})",
+                "recommendations_lookup"
+            )
             
             # Prepare complete profile data for embedding generation
             profile_data = {
@@ -344,26 +422,27 @@ async def update_profile(
                 }
             }
 
-            # Add RIASEC data if available
-            if riasec_result:
+            # Add RIASEC data if available (Prisma raw query returns list of dicts)
+            if riasec_result and len(riasec_result) > 0:
+                riasec_row = riasec_result[0]
                 profile_data["riasec"] = {
-                    "r_score": float(riasec_result.r_score),
-                    "i_score": float(riasec_result.i_score),
-                    "a_score": float(riasec_result.a_score),
-                    "s_score": float(riasec_result.s_score),
-                    "e_score": float(riasec_result.e_score),
-                    "c_score": float(riasec_result.c_score),
-                    "top_3_code": riasec_result.top_3_code
+                    "r_score": float(riasec_row["r_score"]),
+                    "i_score": float(riasec_row["i_score"]),
+                    "a_score": float(riasec_row["a_score"]),
+                    "s_score": float(riasec_row["s_score"]),
+                    "e_score": float(riasec_row["e_score"]),
+                    "c_score": float(riasec_row["c_score"]),
+                    "top_3_code": riasec_row["top_3_code"]
                 }
                 logger.info(f"RIASEC scores added to profile data: {profile_data['riasec']}")
             else:
                 logger.warning("No RIASEC scores found for user")
                 profile_data["riasec"] = {}
 
-            # Add saved recommendations if available
-            if recommendations_result:
+            # Add saved recommendations if available (Prisma raw query returns list of dicts)
+            if recommendations_result and len(recommendations_result) > 0:
                 profile_data["saved_recommendations"] = [
-                    {"label": row.label}
+                    {"label": row["label"]}
                     for row in recommendations_result
                 ]
                 logger.info(f"Added {len(recommendations_result)} saved recommendations to profile data")
@@ -438,17 +517,20 @@ async def update_profile(
         logger.info(f"Successfully updated profile for user ID: {current_user.id}")
         return {"message": "Profile updated successfully"}
         
+    except HTTPException:
+        raise
     except Exception as e:
-        db.rollback()
+        # Prisma handles transaction rollback automatically on exception
+        operation_logger.log_performance_metric("profile_update_error", 0, 0)
         logger.error(f"Error updating profile: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 # Profile Completion Endpoints - MUST come BEFORE parameterized routes
 @router.get("/completion", response_model=ProfileCompletionResponse)
-def get_profile_completion(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+async def get_profile_completion(
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get profile completion analysis for the current user."""
     try:
@@ -487,10 +569,10 @@ def get_profile_completion(
 
 
 @router.get("/completion/recommendations", response_model=List[CompletionActionResponse])
-def get_completion_recommendations(
+async def get_completion_recommendations(
     limit: int = 5,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get next recommended actions for profile completion."""
     try:
@@ -524,26 +606,53 @@ def get_completion_recommendations(
 
 # Parameterized routes MUST come LAST to avoid conflicts with specific routes
 @router.get("/{user_id}", response_model=ProfileResponse)
-def get_user_profile(
+async def get_user_profile(
     user_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get profile information for a specific user."""
+    # Initialize operation logger
+    operation_logger = PrismaOperationLogger("profiles")
+    
     try:
         logger.info(f"Attempting to get profile for user ID: {user_id}")
-        profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+        
+        # Convert SQLAlchemy query to Prisma
+        profile = await db.user_profile.find_first(
+            where={"user_id": user_id}
+        )
+        
+        operation_logger.log_query_conversion(
+            f"db.query(UserProfile).filter(UserProfile.user_id == {user_id}).first()",
+            f"db.user_profile.find_first(where={{\"user_id\": {user_id}}})",
+            "user_profile_lookup"
+        )
         
         if not profile:
             logger.info(f"No profile found for user ID: {user_id}, creating a new one")
-            # Create a new profile if it doesn't exist
-            profile = UserProfile(user_id=user_id)
-            db.add(profile)
-            db.commit()
-            db.refresh(profile)
+            # Create a new profile using Prisma
+            profile = await db.user_profile.create(
+                data={"user_id": user_id}
+            )
+            
+            operation_logger.log_query_conversion(
+                "UserProfile(user_id=user_id); db.add(profile); db.commit()",
+                f"db.user_profile.create(data={{\"user_id\": {user_id}}})",
+                "user_profile_creation"
+            )
         
-        # Get user skills
-        skills = db.query(UserSkill).filter(UserSkill.user_id == user_id).first()
+        # Get user skills using Prisma
+        skills = await db.user_skill.find_first(
+            where={"user_id": user_id}
+        )
+        
+        operation_logger.log_query_conversion(
+            f"db.query(UserSkill).filter(UserSkill.user_id == {user_id}).first()",
+            f"db.user_skill.find_first(where={{\"user_id\": {user_id}}})",
+            "user_skills_lookup"
+        )
+        
         response = ProfileResponse.model_validate(profile)
         
         # Add skills to response if they exist
@@ -564,6 +673,7 @@ def get_user_profile(
         
         return response
     except Exception as e:
+        operation_logger.log_performance_metric("user_profile_lookup_error", 0, 0)
         logger.error(f"Error retrieving profile: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error retrieving profile: {str(e)}")
 

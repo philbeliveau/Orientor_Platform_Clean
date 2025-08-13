@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Header
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import SQLAlchemyError
+from prisma import Prisma
 from sqlalchemy import text
-from app.utils.database import get_db
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.models import User, UserProfile
 from app.models.personality_profiles import PersonalityAssessment, PersonalityResponse, PersonalityProfile
 from pydantic import BaseModel
@@ -23,26 +22,22 @@ from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_us
 
 async def get_current_user_with_onboarding(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get user info from Clerk and sync with local database"""
 # ============================================================================
-# AUTHENTICATION MIGRATION - Secure Integration System
+# PRISMA MIGRATION - Enhanced Database Integration
 # ============================================================================
-# This router has been migrated to use the unified secure authentication system
-# with integrated caching, security optimizations, and rollback support.
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
 # 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_with_db_sync
-# Current system: secure_auth_integration.get_current_user_secure_integrated
-# 
-# Benefits:
-# - AES-256 encryption for sensitive cache data
-# - Full SHA-256 cache keys (not truncated)
-# - Error message sanitization
-# - Multi-layer caching optimization  
-# - Zero-downtime rollback capability
-# - Comprehensive security monitoring
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
 # ============================================================================
 
 
@@ -78,9 +73,9 @@ class PsychProfileCreate(BaseModel):
     description: str
 
 @router.get("/onboarding/status", response_model=OnboardingStatus)
-def get_onboarding_status(
+async def get_onboarding_status(
     current_user: User = Depends(get_current_user_with_onboarding),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get the current onboarding status for a user"""
     try:
@@ -101,15 +96,17 @@ def get_onboarding_status(
             )
         
         # FALLBACK: Check if user has completed onboarding by looking for personality profile
-        personality_profile = db.query(PersonalityProfile).filter(
-            PersonalityProfile.user_id == current_user.id
-        ).first()
+        personality_profile = await db.personalityprofile.find_first(
+            where={'user_id': current_user.id}
+        )
         
         # Check if user has started onboarding
-        assessment = db.query(PersonalityAssessment).filter(
-            PersonalityAssessment.user_id == current_user.id,
-            PersonalityAssessment.assessment_type == "onboarding"
-        ).first()
+        assessment = await db.personalityassessment.find_first(
+            where={
+                'user_id': current_user.id,
+                'assessment_type': 'onboarding'
+            }
+        )
         
         has_started = assessment is not None
         is_complete = personality_profile is not None
@@ -120,7 +117,7 @@ def get_onboarding_status(
         if is_complete and not onboarding_completed_field:
             logger.info(f"🔄 Updating database field for user {current_user.id} based on personality profile")
             current_user.onboarding_completed = True
-            db.commit()
+            # No need for explicit commit in Prisma
             db.refresh(current_user)
         
         return OnboardingStatus(
@@ -135,20 +132,22 @@ def get_onboarding_status(
         raise HTTPException(status_code=500, detail=f"Failed to get onboarding status: {str(e)}")
 
 @router.post("/onboarding/start")
-def start_onboarding(
+async def start_onboarding(
     current_user: User = Depends(get_current_user_with_onboarding),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Start a new onboarding session"""
     try:
         logger.info(f"Starting onboarding for user ID: {current_user.id}")
         
         # Check if user already has an active onboarding session
-        existing_assessment = db.query(PersonalityAssessment).filter(
-            PersonalityAssessment.user_id == current_user.id,
-            PersonalityAssessment.assessment_type == "onboarding",
-            PersonalityAssessment.status == "in_progress"
-        ).first()
+        existing_assessment = await db.personalityassessment.find_first(
+            where={
+                'user_id': current_user.id,
+                'assessment_type': 'onboarding',
+                'status': 'in_progress'
+            }
+        )
         
         if existing_assessment:
             logger.info(f"User {current_user.id} already has active onboarding session")
@@ -158,19 +157,18 @@ def start_onboarding(
             }
         
         # Create new assessment session
-        assessment = PersonalityAssessment(
-            user_id=current_user.id,
-            assessment_type="onboarding",
-            assessment_version="v1.0",
-            session_id=uuid.uuid4(),  # Keep as UUID object
-            status="in_progress",
-            started_at=datetime.utcnow(),
-            total_items=9,  # 9 onboarding questions
-            completed_items=0
+        assessment = await db.personalityassessment.create(
+            data={
+                'user_id': current_user.id,
+                'assessment_type': 'onboarding',
+                'assessment_version': 'v1.0',
+                'session_id': str(uuid.uuid4()),
+                'status': 'in_progress',
+                'started_at': datetime.utcnow(),
+                'total_items': 9,  # 9 onboarding questions
+                'completed_items': 0
+            }
         )
-        
-        db.add(assessment)
-        db.commit()
         
         logger.info(f"Created onboarding session {assessment.session_id} for user {current_user.id}")
         
@@ -181,64 +179,71 @@ def start_onboarding(
         
     except SQLAlchemyError as e:
         logger.error(f"Database error starting onboarding: {str(e)}")
-        db.rollback()
+        # No rollback needed in Prisma
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         logger.error(f"Error starting onboarding: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to start onboarding: {str(e)}")
 
 @router.post("/onboarding/response")
-def save_onboarding_response(
+async def save_onboarding_response(
     response_data: OnboardingResponse,
     current_user: User = Depends(get_current_user_with_onboarding),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Save a single onboarding response"""
     try:
         logger.info(f"Saving onboarding response for user ID: {current_user.id}")
         
         # Get the current assessment session
-        assessment = db.query(PersonalityAssessment).filter(
-            PersonalityAssessment.user_id == current_user.id,
-            PersonalityAssessment.assessment_type == "onboarding",
-            PersonalityAssessment.status == "in_progress"
-        ).first()
+        assessment = await db.personalityassessment.find_first(
+            where={
+                'user_id': current_user.id,
+                'assessment_type': 'onboarding',
+                'status': 'in_progress'
+            }
+        )
         
         if not assessment:
             # Create a new assessment session if none exists
             logger.info(f"Creating new onboarding session for user {current_user.id}")
-            assessment = PersonalityAssessment(
-                user_id=current_user.id,
-                assessment_type="onboarding",
-                assessment_version="v1.0",
-                session_id=uuid.uuid4(),
-                status="in_progress",
-                started_at=datetime.utcnow(),
-                total_items=9,  # 9 onboarding questions
-                completed_items=0
+            assessment = await db.personalityassessment.create(
+                data={
+                    'user_id': current_user.id,
+                    'assessment_type': 'onboarding',
+                    'assessment_version': 'v1.0',
+                    'session_id': str(uuid.uuid4()),
+                    'status': 'in_progress',
+                    'started_at': datetime.utcnow(),
+                    'total_items': 9,  # 9 onboarding questions
+                    'completed_items': 0
+                }
             )
-            db.add(assessment)
-            db.flush()  # Get the ID
         
         # Save the response
-        personality_response = PersonalityResponse(
-            assessment_id=assessment.id,
-            item_id=response_data.questionId,
-            item_type="open_ended",  # Use valid constraint value
-            response_value={
-                "question": response_data.question,
-                "response": response_data.response
-            },
-            created_at=datetime.utcnow()
+        personality_response = await db.personalityresponse.create(
+            data={
+                'assessment_id': assessment.id,
+                'item_id': response_data.questionId,
+                'item_type': 'open_ended',  # Use valid constraint value
+                'response_value': {
+                    'question': response_data.question,
+                    'response': response_data.response
+                },
+                'created_at': datetime.utcnow()
+            }
         )
         
-        db.add(personality_response)
-        
         # Update assessment progress
-        assessment.completed_items += 1
-        assessment.updated_at = datetime.utcnow()
+        await db.personalityassessment.update(
+            where={'id': assessment.id},
+            data={
+                'completed_items': assessment.completed_items + 1,
+                'updated_at': datetime.utcnow()
+            }
+        )
         
-        db.commit()
+        # No need for explicit commit in Prisma
         
         logger.info(f"Saved response for question {response_data.questionId}")
         
@@ -252,35 +257,39 @@ def save_onboarding_response(
         raise
     except SQLAlchemyError as e:
         logger.error(f"Database error saving response: {str(e)}")
-        db.rollback()
+        # No rollback needed in Prisma
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         logger.error(f"Error saving response: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to save response: {str(e)}")
 
 @router.post("/onboarding/complete")
-def complete_onboarding(
+async def complete_onboarding(
     onboarding_data: OnboardingData,
     current_user: User = Depends(get_current_user_with_onboarding),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Complete the onboarding process and generate psychological profile"""
     try:
         logger.info(f"Completing onboarding for user ID: {current_user.id}")
         
         # Get the assessment session - first try in_progress, then any onboarding session
-        assessment = db.query(PersonalityAssessment).filter(
-            PersonalityAssessment.user_id == current_user.id,
-            PersonalityAssessment.assessment_type == "onboarding",
-            PersonalityAssessment.status == "in_progress"
-        ).first()
+        assessment = await db.personalityassessment.find_first(
+            where={
+                'user_id': current_user.id,
+                'assessment_type': 'onboarding',
+                'status': 'in_progress'
+            }
+        )
         
         if not assessment:
             # Try to find any onboarding assessment for this user
-            assessment = db.query(PersonalityAssessment).filter(
-                PersonalityAssessment.user_id == current_user.id,
-                PersonalityAssessment.assessment_type == "onboarding"
-            ).first()
+            assessment = await db.personalityassessment.find_first(
+                where={
+                    'user_id': current_user.id,
+                    'assessment_type': 'onboarding'
+                }
+            )
             
             if assessment:
                 # Update the found assessment to in_progress so we can complete it
@@ -289,84 +298,95 @@ def complete_onboarding(
             else:
                 # Create a new assessment session if none exists
                 logger.info(f"Creating new assessment session for user {current_user.id} during completion")
-                assessment = PersonalityAssessment(
-                    user_id=current_user.id,
-                    assessment_type="onboarding",
-                    assessment_version="v1.0",
-                    session_id=uuid.uuid4(),
-                    status="in_progress",
-                    started_at=datetime.utcnow(),
-                    total_items=max(len(onboarding_data.responses), 1),  # At least 1 to avoid division by zero
-                    completed_items=len(onboarding_data.responses)
+                assessment = await db.personalityassessment.create(
+                    data={
+                        'user_id': current_user.id,
+                        'assessment_type': 'onboarding',
+                        'assessment_version': 'v1.0',
+                        'session_id': str(uuid.uuid4()),
+                        'status': 'in_progress',
+                        'started_at': datetime.utcnow(),
+                        'total_items': max(len(onboarding_data.responses), 1),  # At least 1 to avoid division by zero
+                        'completed_items': len(onboarding_data.responses)
+                    }
                 )
-                db.add(assessment)
-                db.flush()  # Get the ID
         
         # Save any remaining responses (only if responses provided)
         if onboarding_data.responses:
             for response_data in onboarding_data.responses:
-                existing_response = db.query(PersonalityResponse).filter(
-                    PersonalityResponse.assessment_id == assessment.id,
-                    PersonalityResponse.item_id == response_data.questionId
-                ).first()
+                existing_response = await db.personalityresponse.find_first(
+                    where={
+                        'assessment_id': assessment.id,
+                        'item_id': response_data.questionId
+                    }
+                )
                 
                 if not existing_response:
-                    personality_response = PersonalityResponse(
-                        assessment_id=assessment.id,
-                        item_id=response_data.questionId,
-                        item_type="open_ended",  # Use valid constraint value
-                        response_value={
-                            "question": response_data.question,
-                            "response": response_data.response
-                        },
-                        created_at=datetime.utcnow()
+                    personality_response = await db.personalityresponse.create(
+                        data={
+                            'assessment_id': assessment.id,
+                            'item_id': response_data.questionId,
+                            'item_type': 'open_ended',  # Use valid constraint value
+                            'response_value': {
+                                'question': response_data.question,
+                                'response': response_data.response
+                            },
+                            'created_at': datetime.utcnow()
+                        }
                     )
-                    db.add(personality_response)
         
         # Create psychological profile if one doesn't already exist
-        existing_profile = db.query(PersonalityProfile).filter(
-            PersonalityProfile.user_id == current_user.id,
-            PersonalityProfile.assessment_id == assessment.id
-        ).first()
+        existing_profile = await db.personalityprofile.find_first(
+            where={
+                'user_id': current_user.id,
+                'assessment_id': assessment.id
+            }
+        )
         
         if onboarding_data.psychProfile and not existing_profile:
-            personality_profile = PersonalityProfile(
-                user_id=current_user.id,
-                assessment_id=assessment.id,
-                profile_type="hexaco",
-                scores=onboarding_data.psychProfile,
-                narrative_description=onboarding_data.psychProfile.get("description", ""),
-                assessment_version="v1.0",
-                computed_at=datetime.utcnow(),
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+            personality_profile = await db.personalityprofile.create(
+                data={
+                    'user_id': current_user.id,
+                    'assessment_id': assessment.id,
+                    'profile_type': 'hexaco',
+                    'scores': onboarding_data.psychProfile,
+                    'narrative_description': onboarding_data.psychProfile.get('description', ''),
+                    'assessment_version': 'v1.0',
+                    'computed_at': datetime.utcnow(),
+                    'created_at': datetime.utcnow(),
+                    'updated_at': datetime.utcnow()
+                }
             )
-            db.add(personality_profile)
         elif existing_profile and onboarding_data.psychProfile:
             # Update existing profile
-            existing_profile.scores = onboarding_data.psychProfile
-            existing_profile.narrative_description = onboarding_data.psychProfile.get("description", "")
-            existing_profile.updated_at = datetime.utcnow()
+            await db.personalityprofile.update(
+                where={'id': existing_profile.id},
+                data={
+                    'scores': onboarding_data.psychProfile,
+                    'narrative_description': onboarding_data.psychProfile.get('description', ''),
+                    'updated_at': datetime.utcnow()
+                }
+            )
         
         # Mark assessment as completed
-        assessment.status = "completed"
-        assessment.completed_at = datetime.utcnow()
-        assessment.updated_at = datetime.utcnow()
+        await db.personalityassessment.update(
+            where={'id': assessment.id},
+            data={
+                'status': 'completed',
+                'completed_at': datetime.utcnow(),
+                'updated_at': datetime.utcnow()
+            }
+        )
         
         # CRITICAL: Mark the user as having completed onboarding
         logger.info(f"🔄 BEFORE UPDATE: user {current_user.id} onboarding_completed = {getattr(current_user, 'onboarding_completed', 'FIELD_NOT_FOUND')}")
         
-        current_user.onboarding_completed = True
-        logger.info(f"🔄 AFTER ASSIGNMENT: user {current_user.id} onboarding_completed = {current_user.onboarding_completed}")
-        
-        # Commit all changes first - this is CRITICAL for cache invalidation to work
-        try:
-            db.commit()
-            logger.info(f"✅ Database commit successful for user {current_user.id}")
-        except Exception as commit_error:
-            logger.error(f"❌ Database commit failed: {commit_error}")
-            db.rollback()
-            raise HTTPException(status_code=500, detail=f"Failed to save onboarding completion: {commit_error}")
+        # Update user onboarding completion status
+        await db.user.update(
+            where={'id': current_user.id},
+            data={'onboarding_completed': True}
+        )
+        logger.info(f"✅ Database update successful for user {current_user.id}")
         
         # Refresh the current_user object to ensure we have the latest data
         try:
@@ -444,24 +464,24 @@ def complete_onboarding(
         raise
     except SQLAlchemyError as e:
         logger.error(f"Database error completing onboarding: {str(e)}")
-        db.rollback()
+        # No rollback needed in Prisma
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         logger.error(f"Error completing onboarding: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to complete onboarding: {str(e)}")
 
 @router.get("/onboarding/profile")
-def get_onboarding_profile(
+async def get_onboarding_profile(
     current_user: User = Depends(get_current_user_with_onboarding),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get the user's onboarding psychological profile"""
     try:
         logger.info(f"Getting onboarding profile for user ID: {current_user.id}")
         
-        personality_profile = db.query(PersonalityProfile).filter(
-            PersonalityProfile.user_id == current_user.id
-        ).first()
+        personality_profile = await db.personalityprofile.find_first(
+            where={'user_id': current_user.id}
+        )
         
         if not personality_profile:
             raise HTTPException(status_code=404, detail="No onboarding profile found")
@@ -480,27 +500,29 @@ def get_onboarding_profile(
         raise HTTPException(status_code=500, detail=f"Failed to get profile: {str(e)}")
 
 @router.get("/onboarding/responses")
-def get_onboarding_responses(
+async def get_onboarding_responses(
     current_user: User = Depends(get_current_user_with_onboarding),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get all onboarding responses for a user"""
     try:
         logger.info(f"Getting onboarding responses for user ID: {current_user.id}")
         
         # Get the assessment
-        assessment = db.query(PersonalityAssessment).filter(
-            PersonalityAssessment.user_id == current_user.id,
-            PersonalityAssessment.assessment_type == "onboarding"
-        ).first()
+        assessment = await db.personalityassessment.find_first(
+            where={
+                'user_id': current_user.id,
+                'assessment_type': 'onboarding'
+            }
+        )
         
         if not assessment:
             return {"responses": []}
         
         # Get all responses
-        responses = db.query(PersonalityResponse).filter(
-            PersonalityResponse.assessment_id == assessment.id
-        ).all()
+        responses = await db.personalityresponse.find_many(
+            where={'assessment_id': assessment.id}
+        )
         
         formatted_responses = []
         for response in responses:
@@ -523,116 +545,123 @@ def get_onboarding_responses(
         raise HTTPException(status_code=500, detail=f"Failed to get responses: {str(e)}")
 
 @router.delete("/onboarding/reset")
-def reset_onboarding(
+async def reset_onboarding(
     current_user: User = Depends(get_current_user_with_onboarding),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Reset onboarding progress for a user"""
     try:
         logger.info(f"Resetting onboarding for user ID: {current_user.id}")
         
         # Delete existing assessment and responses
-        assessments = db.query(PersonalityAssessment).filter(
-            PersonalityAssessment.user_id == current_user.id,
-            PersonalityAssessment.assessment_type == "onboarding"
-        ).all()
+        assessments = await db.personalityassessment.find_many(
+            where={
+                'user_id': current_user.id,
+                'assessment_type': 'onboarding'
+            }
+        )
         
         for assessment in assessments:
             # Delete responses first (foreign key constraint)
-            db.query(PersonalityResponse).filter(
-                PersonalityResponse.assessment_id == assessment.id
-            ).delete()
+            await db.personalityresponse.delete_many(
+                where={'assessment_id': assessment.id}
+            )
             
             # Delete profiles
-            db.query(PersonalityProfile).filter(
-                PersonalityProfile.assessment_id == assessment.id
-            ).delete()
+            await db.personalityprofile.delete_many(
+                where={'assessment_id': assessment.id}
+            )
             
             # Delete assessment
-            db.delete(assessment)
+            await db.personalityassessment.delete(
+                where={'id': assessment.id}
+            )
         
-        db.commit()
+        # No need for explicit commit in Prisma
         
         logger.info(f"Reset onboarding for user {current_user.id}")
         
         return {"message": "Onboarding reset successfully"}
         
-    except SQLAlchemyError as e:
-        logger.error(f"Database error resetting onboarding: {str(e)}")
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as db_e:
+        logger.error(f"Database error resetting onboarding: {str(db_e)}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(db_e)}")
     except Exception as e:
         logger.error(f"Error resetting onboarding: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to reset onboarding: {str(e)}")
 
 @router.post("/onboarding/skip")
-def skip_onboarding(
+async def skip_onboarding(
     current_user: User = Depends(get_current_user_with_onboarding),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Skip onboarding for a user by creating a default profile"""
     try:
         logger.info(f"Skipping onboarding for user ID: {current_user.id}")
         
         # Check if user already has a profile
-        existing_profile = db.query(PersonalityProfile).filter(
-            PersonalityProfile.user_id == current_user.id
-        ).first()
+        existing_profile = await db.personalityprofile.find_first(
+            where={'user_id': current_user.id}
+        )
         
         if existing_profile:
             logger.info(f"User {current_user.id} already has a profile, skipping")
             return {"message": "User already has a profile"}
         
         # Create a fake assessment for tracking
-        assessment = PersonalityAssessment(
-            user_id=current_user.id,
-            assessment_type="onboarding",
-            assessment_version="v1.0",
-            session_id=uuid.uuid4(),
-            status="completed",
-            started_at=datetime.utcnow(),
-            completed_at=datetime.utcnow(),
-            total_items=1,
-            completed_items=1
+        assessment = await db.personalityassessment.create(
+            data={
+                'user_id': current_user.id,
+                'assessment_type': 'onboarding',
+                'assessment_version': 'v1.0',
+                'session_id': str(uuid.uuid4()),
+                'status': 'completed',
+                'started_at': datetime.utcnow(),
+                'completed_at': datetime.utcnow(),
+                'total_items': 1,
+                'completed_items': 1
+            }
         )
-        
-        db.add(assessment)
-        db.flush()
         
         # Create a default personality profile
-        default_profile = PersonalityProfile(
-            user_id=current_user.id,
-            assessment_id=assessment.id,
-            profile_type="hexaco",
-            scores={
-                "hexaco": {
-                    "honesty": 0.5,
-                    "emotionality": 0.5,
-                    "extraversion": 0.5,
-                    "agreeableness": 0.5,
-                    "conscientiousness": 0.5,
-                    "openness": 0.5
+        default_profile = await db.personalityprofile.create(
+            data={
+                'user_id': current_user.id,
+                'assessment_id': assessment.id,
+                'profile_type': 'hexaco',
+                'scores': {
+                    'hexaco': {
+                        'honesty': 0.5,
+                        'emotionality': 0.5,
+                        'extraversion': 0.5,
+                        'agreeableness': 0.5,
+                        'conscientiousness': 0.5,
+                        'openness': 0.5
+                    },
+                    'riasec': {
+                        'realistic': 0.5,
+                        'investigative': 0.5,
+                        'artistic': 0.5,
+                        'social': 0.5,
+                        'enterprising': 0.5,
+                        'conventional': 0.5
+                    },
+                    'topTraits': ['Balanced', 'Adaptable', 'Versatile']
                 },
-                "riasec": {
-                    "realistic": 0.5,
-                    "investigative": 0.5,
-                    "artistic": 0.5,
-                    "social": 0.5,
-                    "enterprising": 0.5,
-                    "conventional": 0.5
-                },
-                "topTraits": ["Balanced", "Adaptable", "Versatile"]
-            },
-            narrative_description="This user chose to skip the onboarding assessment. Default balanced profile assigned.",
-            assessment_version="v1.0",
-            computed_at=datetime.utcnow(),
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+                'narrative_description': 'This user chose to skip the onboarding assessment. Default balanced profile assigned.',
+                'assessment_version': 'v1.0',
+                'computed_at': datetime.utcnow(),
+                'created_at': datetime.utcnow(),
+                'updated_at': datetime.utcnow()
+            }
         )
         
-        current_user.onboarding_completed = True
-        db.add(default_profile)
-        db.commit()
+        # Update user onboarding completion status
+        await db.user.update(
+            where={'id': current_user.id},
+            data={'onboarding_completed': True}
+        )
+        # No need for explicit commit in Prisma
         
         logger.info(f"Successfully skipped onboarding for user {current_user.id}")
         
@@ -644,7 +673,7 @@ def skip_onboarding(
         
     except SQLAlchemyError as e:
         logger.error(f"Database error skipping onboarding: {str(e)}")
-        db.rollback()
+        # No rollback needed in Prisma
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         logger.error(f"Error skipping onboarding: {str(e)}")

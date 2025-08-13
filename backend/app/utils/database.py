@@ -1,19 +1,40 @@
 import logging
-from sqlalchemy import create_engine, text, Column, Integer, String, DateTime, ForeignKey
-from sqlalchemy.exc import SQLAlchemyError, OperationalError
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.dialects.postgresql import UUID
-from uuid import uuid4
 from typing import Optional, Dict, Any
 from fastapi import HTTPException
 from ..core.config import settings
 
+# ============================================================================
+# LEGACY DATABASE UTILITIES - For Backward Compatibility
+# ============================================================================
+# This file maintains some legacy database utilities for backward compatibility
+# while the system transitions to Prisma ORM.
+# Most functionality is now handled by Prisma client.
+# ============================================================================
+
+try:
+    from sqlalchemy import create_engine, text, Column, Integer, String, DateTime, ForeignKey
+    from sqlalchemy.exc import SQLAlchemyError, OperationalError
+    from sqlalchemy.ext.declarative import declarative_base
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.dialects.postgresql import UUID
+    from uuid import uuid4
+    SQLALCHEMY_AVAILABLE = True
+except ImportError:
+    # Gracefully handle missing SQLAlchemy for Prisma-only environments
+    SQLALCHEMY_AVAILABLE = False
+    SQLAlchemyError = Exception
+    OperationalError = Exception
+    logger = logging.getLogger(__name__)
+    logger.warning("SQLAlchemy not available - using Prisma-only mode")
+
 # Set up logging
 logger = logging.getLogger(__name__)
 
-# Create Base class for models
-Base = declarative_base()
+# Create Base class for models (only if SQLAlchemy available)
+if SQLALCHEMY_AVAILABLE:
+    Base = declarative_base()
+else:
+    Base = None
 
 # Global variables for database connection
 engine: Optional[object] = None

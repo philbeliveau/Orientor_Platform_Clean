@@ -22,6 +22,20 @@ Monitoring Endpoints:
 # This router has been migrated to use the unified secure authentication system
 # with integrated caching, security optimizations, and rollback support.
 # 
+# PRISMA MIGRATION - Enhanced Database Integration
+# ============================================================================
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
+# 
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
+# ============================================================================
+
 # Migration date: 2025-08-07 13:44:03
 # Previous system: clerk_auth.get_current_user_with_db_sync
 # Current system: secure_auth_integration.get_current_user_secure_integrated
@@ -44,9 +58,10 @@ from typing import Dict, Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 # Removed HTTPAuthorizationCredentials - not needed for standard endpoints
-from sqlalchemy.orm import Session
+from prisma import Prisma
 
-from ..utils.database import get_db, get_connection_pool_stats, optimize_database_for_caching
+from ..utils.prisma_client import get_prisma_client, PrismaOperationLogger
+from ..utils.database import get_connection_pool_stats, optimize_database_for_caching
 from ..utils.database_session_cache import database_session_manager
 from ..utils.optimized_clerk_auth import (
     get_authentication_performance_stats,
@@ -406,7 +421,7 @@ async def get_smart_sync_statistics():
 @router.post("/invalidate-user-cache", response_model=Dict[str, Any])
 async def invalidate_user_cache_endpoint(
     clerk_user_id: str,
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Manually invalidate a specific user's session cache.
@@ -455,7 +470,7 @@ async def invalidate_user_cache_endpoint(
 async def refresh_user_cache_endpoint(
     clerk_user_id: str,
     force_database_sync: bool = Query(True, description="Force database synchronization"),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Force refresh a specific user's session cache with latest data from Clerk.
@@ -517,7 +532,7 @@ async def refresh_user_cache_endpoint(
 async def preload_multiple_users_endpoint(
     clerk_user_ids: List[str],
     max_concurrent: int = Query(5, ge=1, le=20, description="Maximum concurrent operations"),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Preload multiple user sessions for bulk operations.
@@ -585,7 +600,7 @@ async def run_database_optimization_benchmark(
     num_operations: int = Query(100, ge=10, le=1000, description="Number of operations to benchmark"),
     concurrent_operations: int = Query(10, ge=1, le=50, description="Concurrent operations"),
     include_database_sync: bool = Query(True, description="Include database sync in benchmark"),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Run performance benchmark for database optimization system.

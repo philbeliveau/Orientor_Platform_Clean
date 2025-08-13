@@ -1,27 +1,23 @@
 
 # ============================================================================
-# AUTHENTICATION MIGRATION - Secure Integration System
+# PRISMA MIGRATION - Enhanced Database Integration
 # ============================================================================
-# This router has been migrated to use the unified secure authentication system
-# with integrated caching, security optimizations, and rollback support.
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
 # 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_with_db_sync
-# Current system: secure_auth_integration.get_current_user_secure_integrated
-# 
-# Benefits:
-# - AES-256 encryption for sensitive cache data
-# - Full SHA-256 cache keys (not truncated)
-# - Error message sanitization
-# - Multi-layer caching optimization  
-# - Zero-downtime rollback capability
-# - Comprehensive security monitoring
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
 # ============================================================================
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
-from sqlalchemy.orm import Session
-from app.utils.database import get_db
+from prisma import Prisma
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from app.models.user import User
 from app.models.tree_path import TreePath
@@ -37,36 +33,39 @@ router = APIRouter(
 @router.post("/", response_model=TreePathSchema)
 async def create_tree_path(
     tree_path: TreePathCreate, 
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
-    db_tree_path = TreePath(
-        user_id=current_user.id,
-        tree_type=tree_path.tree_type,
-        tree_json=tree_path.tree_json
+    db_tree_path = await db.treepath.create(
+        data={
+            "user_id": current_user.id,
+            "tree_type": tree_path.tree_type,
+            "tree_json": tree_path.tree_json
+        }
     )
-    db.add(db_tree_path)
-    db.commit()
-    db.refresh(db_tree_path)
     return db_tree_path
 
 @router.get("/", response_model=List[TreePathSchema])
 async def get_user_tree_paths(
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
-    return db.query(TreePath).filter(TreePath.user_id == current_user.id).all()
+    return await db.treepath.find_many(
+        where={"user_id": current_user.id}
+    )
 
 @router.get("/{tree_path_id}", response_model=TreePathSchema)
 async def get_tree_path(
     tree_path_id: UUID,
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
-    tree_path = db.query(TreePath).filter(
-        TreePath.id == tree_path_id, 
-        TreePath.user_id == current_user.id
-    ).first()
+    tree_path = await db.treepath.find_first(
+        where={
+            "id": str(tree_path_id),
+            "user_id": current_user.id
+        }
+    )
     
     if not tree_path:
         raise HTTPException(
@@ -79,13 +78,15 @@ async def get_tree_path(
 @router.delete("/{tree_path_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_tree_path(
     tree_path_id: UUID,
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
-    tree_path = db.query(TreePath).filter(
-        TreePath.id == tree_path_id, 
-        TreePath.user_id == current_user.id
-    ).first()
+    tree_path = await db.treepath.find_first(
+        where={
+            "id": str(tree_path_id),
+            "user_id": current_user.id
+        }
+    )
     
     if not tree_path:
         raise HTTPException(
@@ -93,6 +94,7 @@ async def delete_tree_path(
             detail="Tree path not found"
         )
     
-    db.delete(tree_path)
-    db.commit()
+    await db.treepath.delete(
+        where={"id": tree_path.id}
+    )
     return None 

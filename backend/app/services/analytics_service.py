@@ -2,7 +2,10 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, date, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, extract
-from sqlalchemy.exc import SQLAlchemyError
+try:
+    from sqlalchemy.exc import SQLAlchemyError
+except ImportError:
+    SQLAlchemyError = Exception
 import logging
 
 from ..models import (

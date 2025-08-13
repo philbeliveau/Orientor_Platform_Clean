@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
-from ..utils.database import get_db
-from ..models import User, UserProfile
+from prisma import Prisma
+from ..utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 
 router = APIRouter(
@@ -31,40 +30,55 @@ class ProfileResponse(BaseModel):
         from_attributes = True
 
 @router.get("/me", response_model=UserResponse)
-def read_current_user(current_user: User = Depends(get_current_user)):
+async def read_current_user(
+    current_user = Depends(get_current_user)
+):
     """Get current user information."""
 # ============================================================================
-# AUTHENTICATION MIGRATION - Secure Integration System
+# PRISMA MIGRATION - Enhanced Database Integration
 # ============================================================================
-# This router has been migrated to use the unified secure authentication system
-# with integrated caching, security optimizations, and rollback support.
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
 # 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_with_db_sync
-# Current system: secure_auth_integration.get_current_user_secure_integrated
-# 
-# Benefits:
-# - AES-256 encryption for sensitive cache data
-# - Full SHA-256 cache keys (not truncated)
-# - Error message sanitization
-# - Multi-layer caching optimization  
-# - Zero-downtime rollback capability
-# - Comprehensive security monitoring
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
 # ============================================================================
-
 
     return current_user
 
 @router.get("/{user_id}/profile", response_model=ProfileResponse)
-def read_user_profile(
+async def read_user_profile(
     user_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    current_user = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get profile information for a specific user."""
-    profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+    # Initialize operation logger
+    logger = PrismaOperationLogger("users")
     
-    if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
-    
-    return profile
+    try:
+        # Convert SQLAlchemy query to Prisma query
+        profile = await db.user_profile.find_first(
+            where={"user_id": user_id}
+        )
+        
+        logger.log_query_conversion(
+            f"db.query(UserProfile).filter(UserProfile.user_id == {user_id}).first()",
+            f"db.user_profile.find_first(where={{\"user_id\": {user_id}}})",
+            "profile_lookup"
+        )
+        
+        if not profile:
+            raise HTTPException(status_code=404, detail="Profile not found")
+        
+        return profile
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.log_performance_metric("profile_lookup_error", 0, 0)
+        raise HTTPException(status_code=500, detail="Internal server error")

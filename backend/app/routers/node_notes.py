@@ -1,27 +1,23 @@
 
 # ============================================================================
-# AUTHENTICATION MIGRATION - Secure Integration System
+# PRISMA MIGRATION - Enhanced Database Integration
 # ============================================================================
-# This router has been migrated to use the unified secure authentication system
-# with integrated caching, security optimizations, and rollback support.
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
 # 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_with_db_sync
-# Current system: secure_auth_integration.get_current_user_secure_integrated
-# 
-# Benefits:
-# - AES-256 encryption for sensitive cache data
-# - Full SHA-256 cache keys (not truncated)
-# - Error message sanitization
-# - Multi-layer caching optimization  
-# - Zero-downtime rollback capability
-# - Comprehensive security monitoring
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
 # ============================================================================
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
-from sqlalchemy.orm import Session
-from app.utils.database import get_db
+from prisma import Prisma
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from app.models.user import User
 from app.models.node_note import NodeNote
@@ -36,63 +32,71 @@ router = APIRouter(
 @router.post("/", response_model=NodeNoteSchema)
 async def create_node_note(
     note: NodeNoteCreate, 
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
     # Check if note already exists
-    existing_note = db.query(NodeNote).filter(
-        NodeNote.user_id == current_user.id,
-        NodeNote.node_id == note.node_id,
-        NodeNote.action_index == note.action_index
-    ).first()
+    existing_note = await db.nodenote.find_first(
+        where={
+            "user_id": current_user.id,
+            "node_id": note.node_id,
+            "action_index": note.action_index
+        }
+    )
     
     if existing_note:
         # Update existing note
-        existing_note.note_text = note.note_text
-        db.commit()
-        db.refresh(existing_note)
+        existing_note = await db.nodenote.update(
+            where={"id": existing_note.id},
+            data={"note_text": note.note_text}
+        )
         return existing_note
     
     # Create new note
-    db_note = NodeNote(
-        user_id=current_user.id,
-        node_id=note.node_id,
-        action_index=note.action_index,
-        note_text=note.note_text
+    db_note = await db.nodenote.create(
+        data={
+            "user_id": current_user.id,
+            "node_id": note.node_id,
+            "action_index": note.action_index,
+            "note_text": note.note_text
+        }
     )
-    db.add(db_note)
-    db.commit()
-    db.refresh(db_note)
     return db_note
 
 @router.get("/", response_model=List[NodeNoteSchema])
 async def get_user_notes(
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
-    return db.query(NodeNote).filter(NodeNote.user_id == current_user.id).all()
+    return await db.nodenote.find_many(
+        where={"user_id": current_user.id}
+    )
 
 @router.get("/node/{node_id}", response_model=List[NodeNoteSchema])
 async def get_node_notes(
     node_id: str,
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
-    return db.query(NodeNote).filter(
-        NodeNote.node_id == node_id,
-        NodeNote.user_id == current_user.id
-    ).all()
+    return await db.nodenote.find_many(
+        where={
+            "node_id": node_id,
+            "user_id": current_user.id
+        }
+    )
 
 @router.get("/{note_id}", response_model=NodeNoteSchema)
 async def get_note(
     note_id: int,
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
-    note = db.query(NodeNote).filter(
-        NodeNote.id == note_id, 
-        NodeNote.user_id == current_user.id
-    ).first()
+    note = await db.nodenote.find_first(
+        where={
+            "id": note_id,
+            "user_id": current_user.id
+        }
+    )
     
     if not note:
         raise HTTPException(
@@ -105,13 +109,15 @@ async def get_note(
 @router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_note(
     note_id: int,
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
-    note = db.query(NodeNote).filter(
-        NodeNote.id == note_id, 
-        NodeNote.user_id == current_user.id
-    ).first()
+    note = await db.nodenote.find_first(
+        where={
+            "id": note_id,
+            "user_id": current_user.id
+        }
+    )
     
     if not note:
         raise HTTPException(
@@ -119,6 +125,7 @@ async def delete_note(
             detail="Note not found"
         )
     
-    db.delete(note)
-    db.commit()
+    await db.nodenote.delete(
+        where={"id": note.id}
+    )
     return None 

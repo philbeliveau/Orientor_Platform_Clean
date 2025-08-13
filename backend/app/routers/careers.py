@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from prisma import Prisma
 from typing import List, Dict, Any, Optional, Tuple
-from ..utils.database import get_db
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..models import User
 from ..services.Swipe_career_recommendation_service import (
@@ -20,22 +20,18 @@ def extract_job_skills_graphsage_sync(job_id: str, job_title: str, job_descripti
     Synchronous version of GraphSAGE skill extraction for use in sync endpoints.
     """
 # ============================================================================
-# AUTHENTICATION MIGRATION - Secure Integration System
+# PRISMA MIGRATION - Enhanced Database Integration
 # ============================================================================
-# This router has been migrated to use the unified secure authentication system
-# with integrated caching, security optimizations, and rollback support.
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
 # 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_with_db_sync
-# Current system: secure_auth_integration.get_current_user_secure_integrated
-# 
-# Benefits:
-# - AES-256 encryption for sensitive cache data
-# - Full SHA-256 cache keys (not truncated)
-# - Error message sanitization
-# - Multi-layer caching optimization  
-# - Zero-downtime rollback capability
-# - Comprehensive security monitoring
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
 # ============================================================================
 
 
@@ -133,7 +129,7 @@ async def extract_job_skills_graphsage(oasis_code: str, job_title: str, job_desc
 def read_career_recommendations(
     limit: int = Query(30, gt=0, le=30),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Get personalized career recommendations for the current user.
@@ -153,7 +149,7 @@ def read_career_recommendations(
 def save_career(
     career_id: str,  # Changed from int to str to handle ESCO occupation codes
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Save a career recommendation for the current user.
@@ -237,7 +233,7 @@ def save_career(
 @router.get("/saved", response_model=List[Dict[str, Any]])
 def read_saved_careers(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Get saved career recommendations for the current user.
@@ -353,7 +349,7 @@ class CareerFitResponse(BaseModel):
 async def analyze_career_fit(
     request: CareerFitRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Calculate career fit based on user profile and job requirements.
@@ -561,7 +557,7 @@ async def analyze_career_fit(
 @router.delete("/cleanup-test-jobs")
 async def cleanup_test_jobs(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """
     Cleanup fake test jobs that start with 'occupation::key_' from saved_recommendations.

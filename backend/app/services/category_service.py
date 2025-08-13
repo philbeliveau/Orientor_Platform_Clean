@@ -1,10 +1,20 @@
 from typing import List, Optional, Dict
-from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import logging
 
-from ..models import ConversationCategory, Conversation
+# Legacy service - consider migrating to Prisma
+try:
+    from sqlalchemy.orm import Session
+    from sqlalchemy import func, and_
+    from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+    from ..models import ConversationCategory, Conversation
+    SQLALCHEMY_AVAILABLE = True
+except ImportError:
+    SQLALCHEMY_AVAILABLE = False
+    SQLAlchemyError = Exception
+    IntegrityError = Exception
+    Session = None
+    ConversationCategory = None
+    Conversation = None
 
 logger = logging.getLogger(__name__)
 

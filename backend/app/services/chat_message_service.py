@@ -3,7 +3,10 @@ from datetime import datetime
 import time
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, text
-from sqlalchemy.exc import SQLAlchemyError
+try:
+    from sqlalchemy.exc import SQLAlchemyError
+except ImportError:
+    SQLAlchemyError = Exception
 import logging
 import json
 from io import BytesIO

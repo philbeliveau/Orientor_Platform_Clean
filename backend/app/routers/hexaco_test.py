@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-from sqlalchemy.orm import Session
-from ..utils.database import get_db
+from prisma import Prisma
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..services.hexaco_service import HexacoService
 from ..services.hexaco_scoring_service import HexacoScoringService
@@ -80,22 +80,18 @@ async def get_hexaco_metadata():
     Retourne les métadonnées générales du test HEXACO-PI-R.
     """
 # ============================================================================
-# AUTHENTICATION MIGRATION - Secure Integration System
+# PRISMA MIGRATION - Enhanced Database Integration
 # ============================================================================
-# This router has been migrated to use the unified secure authentication system
-# with integrated caching, security optimizations, and rollback support.
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
 # 
-# Migration date: 2025-08-07 13:44:03
-# Previous system: clerk_auth.get_current_user_with_db_sync
-# Current system: secure_auth_integration.get_current_user_secure_integrated
-# 
-# Benefits:
-# - AES-256 encryption for sensitive cache data
-# - Full SHA-256 cache keys (not truncated)
-# - Error message sanitization
-# - Multi-layer caching optimization  
-# - Zero-downtime rollback capability
-# - Comprehensive security monitoring
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
 # ============================================================================
 
 
@@ -157,7 +153,7 @@ async def get_available_versions(language: Optional[str] = Query(None)):
 @router.post("/start", response_model=SessionResponse)
 async def start_hexaco_test(
     request: StartTestRequest,
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user = Depends(get_current_user)
 ):
     """
@@ -201,7 +197,7 @@ async def start_hexaco_test(
 @router.get("/questions", response_model=List[HexacoQuestion])
 async def get_hexaco_questions(
     version_id: str,
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user = Depends(get_current_user)
 ):
     """
@@ -234,7 +230,7 @@ async def get_hexaco_questions(
 @router.post("/answer", status_code=status.HTTP_201_CREATED)
 async def save_hexaco_answer(
     answer: HexacoAnswerRequest,
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user = Depends(get_current_user)
 ):
     """
@@ -275,7 +271,7 @@ async def save_hexaco_answer(
 @router.get("/progress/{session_id}", response_model=ProgressResponse)
 async def get_test_progress(
     session_id: str,
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user = Depends(get_current_user)
 ):
     """
@@ -304,7 +300,7 @@ async def get_test_progress(
 async def get_hexaco_score(
     session_id: str,
     include_description: bool = Query(False),
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user = Depends(get_current_user)
 ):
     """
@@ -393,7 +389,7 @@ async def get_hexaco_score(
 async def get_user_hexaco_profile(
     user_id: int,
     assessment_version: Optional[str] = Query(None),
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user = Depends(get_current_user)
 ):
     """
@@ -439,7 +435,7 @@ async def get_user_hexaco_profile(
 @router.get("/my-profile", response_model=Optional[HexacoScoreResponse])
 async def get_my_hexaco_profile(
     assessment_version: Optional[str] = Query(None),
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user = Depends(get_current_user)
 ):
     """
@@ -452,7 +448,7 @@ async def get_hexaco_analysis(
     user_id: int,
     assessment_version: Optional[str] = Query(None),
     force_regenerate: bool = Query(False),
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user = Depends(get_current_user)
 ):
     """
@@ -527,7 +523,7 @@ async def get_hexaco_analysis(
 async def get_my_hexaco_analysis(
     assessment_version: Optional[str] = Query(None),
     force_regenerate: bool = Query(False),
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user = Depends(get_current_user)
 ):
     """

@@ -10,8 +10,8 @@ import logging
 from ..models import SavedRecommendation, User
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..schemas.space import SavedRecommendationCreate
-from ..utils.database import get_db
-from sqlalchemy.orm import Session
+from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
+from prisma import Prisma
 import re
 from typing import List, Optional, Dict
 from sqlalchemy import text
@@ -41,6 +41,20 @@ def get_pinecone_index():
 # with integrated caching, security optimizations, and rollback support.
 # 
 # Migration date: 2025-08-07 13:44:03
+# PRISMA MIGRATION - Enhanced Database Integration
+# ============================================================================
+# This router has been migrated to use Prisma ORM with enhanced features:
+# - Type-safe database operations
+# - Improved error handling and retry logic
+# - Performance monitoring
+# - Enhanced logging
+# - Transaction support for complex operations
+# 
+# Migration date: 2025-01-13
+# Previous system: SQLAlchemy ORM
+# Current system: Prisma ORM with enhanced client
+# ============================================================================
+
 # Previous system: clerk_auth.get_current_user_with_db_sync
 # Current system: secure_auth_integration.get_current_user_secure_integrated
 # 
@@ -283,7 +297,7 @@ async def search_embeddings(request: SearchRequest, background_tasks: Background
 @router.post("/search/save", status_code=status.HTTP_201_CREATED)
 async def save_search_result(
     recommendation: SavedRecommendationCreate,
-    db: Session = Depends(get_db),
+    db: Prisma = Depends(get_prisma_client),
     current_user = Depends(get_current_user)
 ):
     """
@@ -412,7 +426,7 @@ async def health_check():
 @router.get("/suggested-peers", response_model=SuggestedPeersResponse)
 async def get_suggested_peers(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Prisma = Depends(get_prisma_client)
 ):
     """Get suggested peers for the current user"""
     try:
