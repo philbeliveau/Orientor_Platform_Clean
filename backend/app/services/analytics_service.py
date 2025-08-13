@@ -2,10 +2,7 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime, date, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, extract
-try:
-    from sqlalchemy.exc import SQLAlchemyError
-except ImportError:
-    SQLAlchemyError = Exception
+from app.utils.error_handling import handle_prisma_error, log_database_operation
 import logging
 
 from ..models import (
@@ -64,7 +61,7 @@ class AnalyticsService:
             
             db.commit()
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error recording message analytics: {str(e)}")
             db.rollback()
     
@@ -99,7 +96,7 @@ class AnalyticsService:
             
             db.commit()
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error recording conversation start: {str(e)}")
             db.rollback()
     
@@ -195,7 +192,7 @@ class AnalyticsService:
                 ]
             )
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error getting user analytics: {str(e)}")
             # Return empty analytics on error
             return UserAnalytics(
@@ -289,7 +286,7 @@ class AnalyticsService:
                 growth_rate_percent=growth_rate
             )
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error getting usage trends: {str(e)}")
             return UsageTrends(
                 period_days=days,
@@ -344,6 +341,6 @@ class AnalyticsService:
                 for word, count in sorted_topics
             ]
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error getting popular topics: {str(e)}")
             return []

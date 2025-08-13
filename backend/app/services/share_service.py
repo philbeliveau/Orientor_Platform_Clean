@@ -5,10 +5,7 @@ import os
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-try:
-    from sqlalchemy.exc import SQLAlchemyError
-except ImportError:
-    SQLAlchemyError = Exception
+from app.utils.error_handling import handle_prisma_error, log_database_operation
 import logging
 
 from ..models import ConversationShare, Conversation, ChatMessage, User
@@ -70,7 +67,7 @@ class ShareService:
             
             return share_link
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error creating share link: {str(e)}")
             db.rollback()
             return None
@@ -147,7 +144,7 @@ class ShareService:
                 }
             }
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error getting shared conversation: {str(e)}")
             return None
     
@@ -184,7 +181,7 @@ class ShareService:
             db.commit()
             return True
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error updating share settings: {str(e)}")
             db.rollback()
             return False
@@ -212,7 +209,7 @@ class ShareService:
             db.commit()
             return True
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error revoking share: {str(e)}")
             db.rollback()
             return False
@@ -249,7 +246,7 @@ class ShareService:
             
             return share_list
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error getting user shares: {str(e)}")
             return []
     
@@ -281,6 +278,6 @@ class ShareService:
                 is_active=not (share.expires_at and share.expires_at < datetime.utcnow())
             )
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error getting share analytics: {str(e)}")
             return None

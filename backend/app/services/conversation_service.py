@@ -2,10 +2,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, text
-try:
-    from sqlalchemy.exc import SQLAlchemyError
-except ImportError:
-    SQLAlchemyError = Exception
+from app.utils.error_handling import handle_prisma_error, log_database_operation
 import logging
 
 from ..models import Conversation, ChatMessage, User
@@ -59,10 +56,8 @@ class ConversationService:
             
             return conversation
             
-        except SQLAlchemyError as e:
-            logger.error(f"Error creating conversation: {str(e)}")
-            db.rollback()
-            raise
+        except Exception as e:
+            raise handle_prisma_error(e, "conversation operation")
     
     @staticmethod
     async def get_user_conversations(
@@ -135,7 +130,7 @@ class ConversationService:
         try:
             db.commit()
             return True
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error updating conversation title: {str(e)}")
             db.rollback()
             return False
@@ -183,7 +178,7 @@ class ConversationService:
         try:
             db.commit()
             return generated_title
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error auto-generating title: {str(e)}")
             db.rollback()
             return None
@@ -208,7 +203,7 @@ class ConversationService:
         try:
             db.commit()
             return True
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error archiving conversation: {str(e)}")
             db.rollback()
             return False
@@ -230,7 +225,7 @@ class ConversationService:
             db.delete(conversation)
             db.commit()
             return True
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error deleting conversation: {str(e)}")
             db.rollback()
             return False
@@ -254,7 +249,7 @@ class ConversationService:
         try:
             db.commit()
             return conversation.is_favorite
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error toggling favorite: {str(e)}")
             db.rollback()
             return None
@@ -279,7 +274,7 @@ class ConversationService:
         try:
             db.commit()
             return True
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error setting category: {str(e)}")
             db.rollback()
             return False
@@ -328,7 +323,7 @@ class ConversationService:
             db.commit()
             return True
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error updating conversation stats: {str(e)}")
             db.rollback()
             return False

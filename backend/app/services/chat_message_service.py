@@ -3,10 +3,7 @@ from datetime import datetime
 import time
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, text
-try:
-    from sqlalchemy.exc import SQLAlchemyError
-except ImportError:
-    SQLAlchemyError = Exception
+from app.utils.error_handling import handle_prisma_error, log_database_operation
 import logging
 import json
 from io import BytesIO
@@ -70,7 +67,7 @@ class ChatMessageService:
             
             return message
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error adding message: {str(e)}")
             db.rollback()
             raise
@@ -154,7 +151,7 @@ class ChatMessageService:
             
             return [dict(row._mapping) for row in result]
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error searching messages: {str(e)}")
             return []
     
@@ -202,7 +199,7 @@ class ChatMessageService:
                 last_message_at=last_message.created_at if last_message else None
             )
             
-        except SQLAlchemyError as e:
+        except Exception as e:
             logger.error(f"Error getting message statistics: {str(e)}")
             raise
     

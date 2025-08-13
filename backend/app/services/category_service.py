@@ -5,16 +5,15 @@ import logging
 try:
     from sqlalchemy.orm import Session
     from sqlalchemy import func, and_
-    from sqlalchemy.exc import SQLAlchemyError, IntegrityError
     from ..models import ConversationCategory, Conversation
     SQLALCHEMY_AVAILABLE = True
 except ImportError:
     SQLALCHEMY_AVAILABLE = False
-    SQLAlchemyError = Exception
-    IntegrityError = Exception
     Session = None
     ConversationCategory = None
     Conversation = None
+
+from app.utils.error_handling import handle_prisma_error, log_database_operation
 
 logger = logging.getLogger(__name__)
 
@@ -44,14 +43,13 @@ class CategoryService:
             
             return category
             
-        except IntegrityError:
+        except Exception as integrity_error:
             logger.error(f"Category with name '{name}' already exists for user {user_id}")
             db.rollback()
             return None
-        except SQLAlchemyError as e:
-            logger.error(f"Error creating category: {str(e)}")
+        except Exception as e:
             db.rollback()
-            raise
+            raise handle_prisma_error(e, "creating category")
     
     @staticmethod
     async def get_user_categories(
@@ -100,13 +98,13 @@ class CategoryService:
         try:
             db.commit()
             return True
-        except IntegrityError:
+        except Exception as integrity_error:
             logger.error(f"Category name '{updates.get('name')}' already exists")
             db.rollback()
             return False
-        except SQLAlchemyError as e:
-            logger.error(f"Error updating category: {str(e)}")
+        except Exception as e:
             db.rollback()
+            logger.error(f"Error updating category: {str(e)}")
             return False
     
     @staticmethod
@@ -136,9 +134,9 @@ class CategoryService:
             db.commit()
             return True
             
-        except SQLAlchemyError as e:
-            logger.error(f"Error deleting category: {str(e)}")
+        except Exception as e:
             db.rollback()
+            logger.error(f"Error deleting category: {str(e)}")
             return False
     
     @staticmethod
