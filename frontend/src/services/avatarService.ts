@@ -38,7 +38,7 @@ class AvatarService {
 
       console.log('🔍 Fetching avatar for authenticated user');
       
-      const data = await apiService.get<AvatarData>('/avatar/me');
+      const data = await apiService.get<AvatarData>('/api/v1/avatar/me');
 
       // Update cache
       this.avatarCache = {
@@ -66,7 +66,7 @@ class AvatarService {
     try {
       console.log('🎨 Generating avatar for authenticated user');
       
-      const data = await apiService.post<GenerateAvatarResponse>('/avatar/generate-avatar/me');
+      const data = await apiService.post<GenerateAvatarResponse>('/api/v1/avatar/generate-avatar/me');
       
       // Clear cache since we just generated a new avatar
       this.avatarCache = { data: null, timestamp: 0 };
