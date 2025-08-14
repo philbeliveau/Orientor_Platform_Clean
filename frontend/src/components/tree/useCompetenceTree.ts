@@ -3,6 +3,9 @@ import { useAuth } from '@clerk/nextjs';
 import { CompetenceTreeData, CompetenceNode, PositionedNode } from './types';
 import { calculateNodePositions } from './layoutAlgorithm';
 import { getCompetenceTree, completeChallenge, generateCompetenceTree } from '../../services/competenceTreeService';
+import axios from 'axios';
+
+const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 
 export const useCompetenceTree = (graphId: string) => {
   const { getToken } = useAuth();
@@ -14,12 +17,24 @@ export const useCompetenceTree = (graphId: string) => {
   const [savedNodes, setSavedNodes] = useState<string[]>([]);
   const [userId, setUserId] = useState<number | null>(null);
 
+  // Get user ID from backend using Clerk authentication
   useEffect(() => {
-    const storedUserId = localStorage.getItem('user_id');
-    if (storedUserId) {
-      setUserId(parseInt(storedUserId, 10));
-    }
-  }, []);
+    const fetchUserId = async () => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+        
+        const response = await axios.get(`${API_URL}/api/v1/profiles/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        setUserId(response.data.id);
+      } catch (error) {
+        console.warn('Failed to fetch user ID:', error);
+      }
+    };
+    
+    fetchUserId();
+  }, [getToken]);
 
   // Load tree data
   const loadTreeData = useCallback(async () => {
@@ -115,7 +130,7 @@ export const useCompetenceTree = (graphId: string) => {
       console.error('Failed to complete challenge:', err);
       throw err;
     }
-  }, [loadTreeData]);
+  }, [loadTreeData, userId]);
 
   // Save/unsave a node
   const toggleSaveNode = useCallback((nodeId: string) => {

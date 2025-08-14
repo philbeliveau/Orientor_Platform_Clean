@@ -1,4 +1,299 @@
-# Orientor Frontend - Next.js AI Career Platform
+# 🚨 FRONTEND BUG RESOLUTION AGENT GUIDE
+
+## CRITICAL: AGENTS MUST USE CONTEXT7 FOR UP-TO-DATE DOCUMENTATION
+Always use the sub-agent playwright tester after completing (will be trigger by the hooks). The goal is for the agent to actually make sur the change you made work. 
+
+**BEFORE ANY FIXES, ALWAYS FETCH LATEST DOCS:**
+```bash
+# Use Context7 MCP for current patterns and best practices
+mcp__context7__get-library-docs /clerk/clerk-docs "authentication"
+mcp__context7__get-library-docs /context7/clerk "React integration" 
+mcp__context7__get-library-docs /clerk/javascript "useAuth hooks"
+```
+
+## 🔐 MANDATORY AUTHENTICATION PATTERNS - NO EXCEPTIONS
+
+### ✅ REQUIRED IMPORTS (Verify with Context7)
+```typescript
+import { useAuth, useUser } from '@clerk/nextjs';
+```
+
+### ✅ CORRECT TOKEN RETRIEVAL
+```typescript
+// ✅ ALWAYS USE THIS PATTERN
+const { getToken } = useAuth();
+const token = await getToken();
+
+// ❌ NEVER USE THESE PATTERNS
+const token = localStorage.getItem('access_token');
+const token = sessionStorage.getItem('token');
+```
+
+### ✅ CORRECT AUTHENTICATION CHECKS
+```typescript
+const { isLoaded, isSignedIn } = useAuth();
+
+if (!isLoaded) return <div>Loading...</div>;
+if (!isSignedIn) {
+  router.push('/sign-in'); // ALWAYS /sign-in, NOT /login
+  return;
+}
+```
+
+## 🐛 CRITICAL BUG PATTERNS FROM TESTING
+
+### 1. **CHAT REDIRECT BUG** (High Priority)
+**Symptom**: Chat redirects to dashboard instead of sending messages
+**Root Cause**: Using `localStorage.getItem('access_token')` instead of Clerk
+**Fix Pattern**:
+```typescript
+// ❌ BROKEN PATTERN
+const handleSendMessage = async () => {
+  const token = localStorage.getItem('access_token');
+  if (!token) {
+    router.push('/dashboard');
+    return;
+  }
+};
+
+// ✅ CORRECT PATTERN
+const handleSendMessage = async () => {
+  const { getToken } = useAuth();
+  const token = await getToken();
+  if (!token) {
+    router.push('/sign-in');
+    return;
+  }
+};
+```
+
+### 2. **PROFILE COMPLETION NaN% BUG** (High Priority)
+**Symptom**: Shows "NaN%" completion percentage
+**Root Cause**: API returns `{percentage: undefined}`
+**Fix Pattern**:
+```typescript
+// ✅ DEFENSIVE DATA HANDLING
+const displayPercentage = completion?.percentage ?? 0;
+const formattedPercentage = isNaN(displayPercentage) ? 0 : displayPercentage;
+```
+
+### 3. **CAREER RECOMMENDATIONS "NO DATA" BUG** (High Priority)
+**Symptom**: API returns data but UI shows "No more career suggestions"
+**Root Cause**: Data structure mismatch between API and frontend
+**Fix Pattern**:
+```typescript
+// ✅ VALIDATE API RESPONSE STRUCTURE
+const processRecommendations = (apiData) => {
+  if (!apiData || !Array.isArray(apiData.recommendations)) {
+    console.warn('Invalid recommendations data structure:', apiData);
+    return [];
+  }
+  return apiData.recommendations;
+};
+```
+
+### 4. **AUTHENTICATION HEADER BUGS** (High Priority)
+**Symptom**: 401 Unauthorized errors despite being signed in
+**Root Cause**: Incorrect header format or missing token
+**Fix Pattern**:
+```typescript
+// ✅ CORRECT API CALL PATTERN
+const makeAuthenticatedRequest = async (url, data) => {
+  const { getToken } = useAuth();
+  const token = await getToken();
+  
+  if (!token) {
+    router.push('/sign-in');
+    throw new Error('No authentication token');
+  }
+
+  return axios.post(url, data, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    }
+  });
+};
+```
+
+## 📡 API INTEGRATION GUIDELINES
+
+### Error Handling Pattern
+```typescript
+// ✅ STANDARD ERROR HANDLING
+const handleApiError = (error, router) => {
+  if (error.response?.status === 401) {
+    router.push('/sign-in');
+    return;
+  }
+  if (error.response?.status === 500) {
+    toast.error('Server error. Please try again later.');
+    return;
+  }
+  // Handle other errors...
+};
+```
+
+### Data Validation Pattern
+```typescript
+// ✅ VALIDATE API RESPONSES
+const validateApiResponse = (response, expectedFields) => {
+  if (!response?.data) return false;
+  return expectedFields.every(field => response.data[field] !== undefined);
+};
+```
+
+## 🔍 DEBUGGING COMMANDS FOR AGENTS
+
+### 1. **Find Authentication Issues**
+```bash
+# Search for problematic patterns
+grep -r "localStorage.getItem('access_token')" src/
+grep -r "router.push('/login')" src/
+grep -r "window.location.*login" src/
+
+# Find components missing Clerk imports
+grep -r "getToken\|useAuth\|useUser" src/ | grep -v "@clerk/nextjs"
+```
+
+### 2. **Find Data Processing Issues**
+```bash
+# Find NaN handling issues
+grep -r "NaN\|isNaN" src/
+grep -r "percentage.*undefined" src/
+
+# Find API response handling
+grep -r "\.data\." src/ | grep -v "response.data"
+```
+
+### 3. **Validate Fixes**
+```bash
+# After fixes, run these validations
+npm run lint
+npm run typecheck
+npm run build
+
+# Test authentication flow
+curl -H "Authorization: Bearer invalid" http://localhost:3000/api/test
+```
+
+## ✅ AGENT VALIDATION CHECKLIST
+
+Before marking any frontend bug as "FIXED", agents MUST verify:
+
+### Authentication Fixes
+- [ ] All components use `const { getToken } = useAuth();`
+- [ ] No `localStorage.getItem('access_token')` calls remain
+- [ ] All redirects go to `/sign-in` (not `/login`)
+- [ ] All components import `useAuth` from `@clerk/nextjs`
+- [ ] API calls include proper `Authorization: Bearer ${token}` headers
+
+### Data Processing Fixes
+- [ ] All API responses are validated before use
+- [ ] NaN values are handled with fallbacks
+- [ ] Undefined values have default handling
+- [ ] Error states are properly displayed to users
+- [ ] Loading states are implemented for async operations
+
+### Error Handling Fixes
+- [ ] 401 errors redirect to `/sign-in`
+- [ ] 500 errors show user-friendly messages
+- [ ] Network errors are handled gracefully
+- [ ] All async operations have try/catch blocks
+
+### UI/UX Fixes
+- [ ] Loading spinners during API calls
+- [ ] Error messages are user-friendly
+- [ ] Success feedback for user actions
+- [ ] Proper form validation and feedback
+
+## 🚨 CONTEXT7 VERIFICATION COMMANDS
+
+**Before implementing any fix, check latest patterns:**
+
+### Clerk Authentication
+```bash
+# Verify current Clerk patterns
+mcp__context7__get-library-docs /clerk/clerk-docs "useAuth hook examples"
+mcp__context7__get-library-docs /clerk/javascript "error handling"
+```
+
+### React Error Handling
+```bash
+# Check modern React patterns
+mcp__context7__get-library-docs /facebook/react "error boundaries"
+mcp__context7__get-library-docs /context7/react "hooks best practices"
+```
+
+### API Integration
+```bash
+# Verify axios/fetch patterns
+mcp__context7__get-library-docs /axios/axios "interceptors"
+```
+
+## 📋 COMMON FRONTEND ISSUES PRIORITY
+
+### P0 CRITICAL (Fix immediately)
+1. **Authentication token retrieval** - Replace localStorage with Clerk
+2. **API authentication headers** - Fix 401 errors
+3. **Route redirects** - Change `/login` to `/sign-in`
+
+### P1 HIGH (Fix same session)
+1. **Data validation** - Handle undefined/NaN values
+2. **Error handling** - Proper user feedback
+3. **Loading states** - UX improvements
+
+### P2 MEDIUM (Fix in follow-up)
+1. **Performance optimization** - Reduce API calls
+2. **Code cleanup** - Remove unused imports
+3. **Type safety** - Add missing TypeScript types
+
+## 🎯 AGENT SUCCESS CRITERIA
+
+A frontend bug fix is COMPLETE when:
+1. **Context7 documentation consulted** for current best practices
+2. **All authentication uses Clerk patterns** (no localStorage)
+3. **All API calls include proper headers** (Bearer token)
+4. **Data validation handles edge cases** (undefined, NaN)
+5. **Error handling provides user feedback** (401 → sign-in redirect)
+6. **Code passes linting and type checking**
+7. **Manual testing confirms fix works**
+
+## 🚫 FORBIDDEN PATTERNS - NEVER USE THESE
+
+```typescript
+// ❌ FORBIDDEN - Custom JWT storage
+localStorage.setItem('access_token', token);
+localStorage.getItem('access_token');
+sessionStorage.getItem('token');
+
+// ❌ FORBIDDEN - Old auth routes
+router.push('/login');
+window.location.href = '/login';
+
+// ❌ FORBIDDEN - Unsafe API calls
+fetch('/api/endpoint', { headers: {} }); // No auth header
+
+// ❌ FORBIDDEN - Unhandled data
+const percentage = apiResponse.percentage; // Could be undefined
+
+// ❌ FORBIDDEN - Missing error handling
+const response = await api.call(); // No try/catch
+```
+
+## 📞 WHEN TO ESCALATE
+
+Escalate to senior developer if:
+- Context7 documentation conflicts with existing patterns
+- Multiple authentication systems are discovered
+- Database schema changes are required
+- Backend API changes are needed for frontend fixes
+
+**Remember: Frontend bugs often have backend root causes. Fix frontend defensively while backend issues are resolved.**
+
+---
+
+# 📋 ORIGINAL FRONTEND DOCUMENTATION (For Reference)
 
 ## 🚀 Frontend Overview
 

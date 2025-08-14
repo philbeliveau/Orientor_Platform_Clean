@@ -3,8 +3,7 @@ import json
 import logging
 from typing import Dict, List, Optional, Any
 from pathlib import Path
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+
 from uuid import uuid4
 import uuid
 from ..models.reflection import HexacoQuestion
@@ -55,17 +54,19 @@ class HexacoService:
         versions = self.get_available_versions()
         return versions.get(version_id)
     
-    def _load_questions_from_db(self, db: Session, version_id: str) -> List[Dict[str, Any]]:
+    async def _load_questions_from_db(self, prisma, version_id: str) -> List[Dict[str, Any]]:
         """Load questions from database for a specific version."""
         cache_key = f"db_{version_id}"
         if cache_key in self._questions_cache:
             return self._questions_cache[cache_key]
         
         try:
-            # Query questions from database
-            questions_orm = db.query(HexacoQuestion).filter(
-                HexacoQuestion.version == version_id
-            ).order_by(HexacoQuestion.item_id).all()
+            # Query questions from database using Prisma
+            questions_orm = await prisma.hexaco_questions.find_many(
+                where={
+                    "version": version_id
+                }
+            )
             
             # Convert to the format expected by the service
             questions = []
@@ -91,15 +92,15 @@ class HexacoService:
             logger.error(f"Error loading questions from database for version {version_id}: {e}")
             raise
     
-    def get_questions_for_version(self, version_id: str, db: Session) -> List[Dict[str, Any]]:
+    async def get_questions_for_version(self, version_id: str, prisma) -> List[Dict[str, Any]]:
         """Retourne les questions pour une version spécifique du test depuis la base de données."""
         version_metadata = self.get_version_metadata(version_id)
         if not version_metadata:
             raise ValueError(f"Version non trouvée: {version_id}")
         
-        return self._load_questions_from_db(db, version_id)
+        return await self._load_questions_from_db(prisma, version_id)
     
-    def create_assessment_session(self, db: Session, user_id: int, version_id: str) -> str:
+    async def create_assessment_session(self, prisma, user_id: int, version_id: str) -> str:
         """Crée une nouvelle session d'évaluation HEXACO."""
         try:
             version_metadata = self.get_version_metadata(version_id)
@@ -108,43 +109,34 @@ class HexacoService:
             
             session_id = str(uuid4())
             
-            # Insérer dans personality_assessments
-            insert_query = text("""
-                INSERT INTO personality_assessments (
-                    user_id, assessment_type, assessment_version, session_id,
-                    status, total_items, completed_items, metadata
-                ) VALUES (
-                    :user_id, 'hexaco', :assessment_version, :session_id,
-                    'in_progress', :total_items, 0, :metadata
-                ) RETURNING id
-            """)
-            
             metadata = {
                 "language": version_metadata["language"],
                 "estimated_duration": version_metadata["estimated_duration"],
                 "title": version_metadata["title"]
             }
             
-            result = db.execute(insert_query, {
-                "user_id": user_id,
-                "assessment_version": version_id,
-                "session_id": session_id,
-                "total_items": version_metadata["item_count"],
-                "metadata": json.dumps(metadata)
-            })
-            
-            assessment_id = result.fetchone()[0]
-            db.commit()
+            # Create assessment using Prisma with proper JSON handling
+            assessment = await prisma.personality_assessments.create(
+                data={
+                    "user_id": user_id,
+                    "assessment_type": "hexaco",
+                    "assessment_version": version_id,
+                    "session_id": session_id,
+                    "status": "in_progress",
+                    "total_items": version_metadata["item_count"],
+                    "completed_items": 0,
+                    "metadata": json.dumps(metadata)  # Convert to JSON string
+                }
+            )
             
             logger.info(f"Session d'évaluation HEXACO créée: {session_id} pour l'utilisateur {user_id}")
             return session_id
             
         except Exception as e:
-            db.rollback()
             logger.error(f"Erreur lors de la création de la session d'évaluation: {e}")
             raise
     
-    def save_response(self, db: Session, session_id: str, item_id: int, response_value: int, 
+    def save_response(self, db, session_id: str, item_id: int, response_value: int, 
                      response_time_ms: Optional[int] = None) -> bool:
         """Sauvegarde une réponse individuelle."""
         try:
@@ -230,7 +222,7 @@ class HexacoService:
             logger.error(f"Erreur lors de la sauvegarde de la réponse: {e}")
             return False
     
-    def get_assessment_progress(self, db: Session, session_id: str) -> Optional[Dict[str, Any]]:
+    def get_assessment_progress(self, db, session_id: str) -> Optional[Dict[str, Any]]:
         """Retourne le progrès d'une évaluation."""
         try:
             query = text("""
@@ -255,7 +247,7 @@ class HexacoService:
             logger.error(f"Erreur lors de la récupération du progrès: {e}")
             return None
     
-    def complete_assessment(self, db: Session, session_id: str) -> bool:
+    def complete_assessment(self, db, session_id: str) -> bool:
         """Marque une évaluation comme complétée."""
         try:
             update_query = text("""
@@ -279,7 +271,7 @@ class HexacoService:
             logger.error(f"Erreur lors de la finalisation de l'évaluation: {e}")
             return False
     
-    def get_user_responses(self, db: Session, session_id: str) -> Dict[int, int]:
+    def get_user_responses(self, db, session_id: str) -> Dict[int, int]:
         """Récupère toutes les réponses d'un utilisateur pour une session."""
         try:
             query = text("""

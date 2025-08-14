@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import AvatarCard from './AvatarCard';
 import AvatarService, { AvatarData } from '@/services/avatarService';
+import { useClerkApi } from '@/services/clerkApi';
 import styles from './AvatarPanel.module.css';
 import LoadingScreen from '@/components/ui/LoadingScreen';
 import { useAuth } from '@clerk/nextjs';
@@ -11,7 +12,8 @@ interface AvatarPanelProps {
 }
 
 const AvatarPanel: React.FC<AvatarPanelProps> = ({ className = '' }) => {
-  const { getToken } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
+  const apiService = useClerkApi();
   const [avatarData, setAvatarData] = useState<AvatarData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -21,15 +23,19 @@ const AvatarPanel: React.FC<AvatarPanelProps> = ({ className = '' }) => {
   useEffect(() => {
     let isCancelled = false;
     
-    const loadAvatar = async () => {      
+    const loadAvatar = async () => {
+      if (!isLoaded || !isSignedIn) {
+        setIsLoading(false);
+        return;
+      }
+      
       try {
         setIsLoading(true);
         setError(null);
-        const token = await getToken();
-        if (!token || isCancelled) {
+        if (isCancelled) {
           return;
         }
-        const data = await AvatarService.getUserAvatar(token);
+        const data = await AvatarService.getUserAvatar(apiService);
         if (!isCancelled) {
           setAvatarData(data);
         }
@@ -51,18 +57,18 @@ const AvatarPanel: React.FC<AvatarPanelProps> = ({ className = '' }) => {
     return () => {
       isCancelled = true;
     };
-  }, []); // Load only once on mount
+  }, [isLoaded, isSignedIn, apiService]); // Load when auth state changes
 
   const loadUserAvatar = async () => {
+    if (!isSignedIn) {
+      setError('Authentication required');
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
-      const token = await getToken();
-      if (!token) {
-        setError('Authentication required');
-        return;
-      }
-      const data = await AvatarService.getUserAvatar(token);
+      const data = await AvatarService.getUserAvatar(apiService);
       setAvatarData(data);
     } catch (err: any) {
       console.log('Aucun avatar existant trouvé');
@@ -74,17 +80,16 @@ const AvatarPanel: React.FC<AvatarPanelProps> = ({ className = '' }) => {
   };
 
   const handleGenerateAvatar = async () => {
+    if (!isSignedIn) {
+      setError('Authentication required');
+      return;
+    }
+
     try {
       setIsGenerating(true);
       setError(null);
       
-      const token = await getToken();
-      if (!token) {
-        setError('Authentication required');
-        return;
-      }
-      
-      const response = await AvatarService.generateAvatar(token);
+      const response = await AvatarService.generateAvatar(apiService);
       
       // Mettre à jour les données d'avatar avec la réponse
       setAvatarData({

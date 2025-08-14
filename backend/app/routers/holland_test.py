@@ -5,6 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from ..utils.database import get_db
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
+from app.models import User
 from ..services.LLMholland_service import LLMService
 from uuid import uuid4
 import uuid  # Ajout de l'import complet du module uuid
@@ -268,7 +269,7 @@ async def get_test_questions(db: Session = Depends(get_db)):
 async def save_answer(
     answer: AnswerRequest,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Sauvegarde une réponse individuelle au test Holland Code (RIASEC).
@@ -358,7 +359,7 @@ async def get_test_score(
     attempt_id: str,
     include_description: bool = False,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Calcule et retourne le score RIASEC pour une tentative de test spécifique.
@@ -591,7 +592,7 @@ async def get_test_score(
 @router.get("/user-results", response_model=ScoreResponse)
 async def get_user_latest_results(
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Récupère les résultats les plus récents du test Holland Code (RIASEC) pour l'utilisateur connecté.
@@ -663,7 +664,7 @@ async def get_user_latest_results(
 @router.get("/profile-description", response_model=Dict[str, str])
 async def get_profile_description(
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Génère une description personnalisée du profil RIASEC de l'utilisateur
@@ -679,7 +680,7 @@ async def get_user_profile_description(
     user_id: str,
     regenerate: bool = False,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Génère une description personnalisée du profil RIASEC de l'utilisateur

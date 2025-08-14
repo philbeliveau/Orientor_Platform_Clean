@@ -8,6 +8,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
+from app.models import User
 from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.services.conversation_service import ConversationService
 from app.services.category_service import CategoryService
@@ -111,7 +112,7 @@ async def get_conversations(
     offset: int = Query(0, ge=0),
     is_favorite: Optional[bool] = None,
     is_archived: Optional[bool] = None,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Get user's conversations with optional filters"""
@@ -148,7 +149,7 @@ async def get_conversations(
 @router.post("", response_model=ConversationResponse)
 async def create_conversation(
     conversation: ConversationCreate,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Create a new conversation"""
@@ -167,7 +168,7 @@ async def create_conversation(
 @router.get("/{conversation_id}", response_model=ConversationResponse)
 async def get_conversation(
     conversation_id: int,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Get a specific conversation"""
@@ -185,7 +186,7 @@ async def get_conversation(
 async def update_conversation(
     conversation_id: int,
     updates: ConversationUpdate,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Update conversation properties"""
@@ -220,7 +221,7 @@ async def update_conversation(
 @router.delete("/{conversation_id}")
 async def delete_conversation(
     conversation_id: int,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Delete a conversation permanently"""
@@ -237,7 +238,7 @@ async def delete_conversation(
 @router.post("/{conversation_id}/favorite")
 async def toggle_favorite(
     conversation_id: int,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Toggle favorite status of a conversation"""
@@ -255,7 +256,7 @@ async def toggle_favorite(
 async def toggle_archive(
     conversation_id: int,
     archive: bool = Body(True),
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Archive or unarchive a conversation"""
@@ -272,7 +273,7 @@ async def toggle_archive(
 @router.post("/{conversation_id}/generate-title")
 async def generate_title(
     conversation_id: int,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Generate an automatic title for the conversation"""
@@ -291,7 +292,7 @@ async def get_conversation_messages(
     conversation_id: int,
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Get messages for a conversation with unified response format"""
@@ -339,7 +340,7 @@ async def get_conversation_messages(
 @router.get("/{conversation_id}/statistics", response_model=MessageStats)
 async def get_conversation_statistics(
     conversation_id: int,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Get statistics for a conversation"""
@@ -360,7 +361,7 @@ async def get_conversation_statistics(
 async def export_conversation(
     conversation_id: int,
     export_request: ExportRequest = Body(ExportRequest()),
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Export conversation in various formats"""
@@ -412,7 +413,7 @@ async def export_conversation(
 async def send_message_to_conversation(
     conversation_id: int,
     request: SendMessageRequest,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Send a message to an existing conversation"""

@@ -1,4 +1,5 @@
 import { clerkApiService } from './api';
+import { extractResponseData } from '../utils/validation';
 
 export interface Course {
   id: number;
@@ -132,7 +133,7 @@ class CourseAnalysisService {
       method: 'GET',
       token
     });
-    return response;
+    return extractResponseData(response);
   }
 
   async getCourse(courseId: number, token: string): Promise<Course> {
@@ -140,7 +141,7 @@ class CourseAnalysisService {
       method: 'GET',
       token
     });
-    return response;
+    return extractResponseData(response);
   }
 
   async createCourse(courseData: CourseCreate, token: string): Promise<Course> {
@@ -149,7 +150,7 @@ class CourseAnalysisService {
       body: JSON.stringify(courseData),
       token
     });
-    return response;
+    return extractResponseData(response);
   }
 
   async updateCourse(courseId: number, updateData: Partial<CourseCreate>, token: string): Promise<Course> {
@@ -158,7 +159,7 @@ class CourseAnalysisService {
       body: JSON.stringify(updateData),
       token
     });
-    return response;
+    return extractResponseData(response);
   }
 
   async deleteCourse(courseId: number, token: string): Promise<void> {
@@ -183,7 +184,7 @@ class CourseAnalysisService {
       }),
       token
     });
-    return response;
+    return extractResponseData(response);
   }
 
   async respondToQuestion(
@@ -200,7 +201,7 @@ class CourseAnalysisService {
       }),
       token
     });
-    return response;
+    return extractResponseData(response);
   }
 
   // Psychological Profile
@@ -209,7 +210,7 @@ class CourseAnalysisService {
       method: 'GET',
       token
     });
-    return response;
+    return extractResponseData(response);
   }
 
   async getCareerSignals(userId: number, token: string): Promise<CareerSignalsData> {
@@ -217,7 +218,7 @@ class CourseAnalysisService {
       method: 'GET',
       token
     });
-    return response;
+    return extractResponseData(response);
   }
 
   // Course Insights
@@ -226,7 +227,7 @@ class CourseAnalysisService {
       method: 'GET',
       token
     });
-    return response;
+    return extractResponseData(response);
   }
 
   // Session Management
@@ -235,7 +236,7 @@ class CourseAnalysisService {
       method: 'GET',
       token
     });
-    return response;
+    return extractResponseData(response);
   }
 
   // Utility Methods

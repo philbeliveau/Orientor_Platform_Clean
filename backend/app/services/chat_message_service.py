@@ -1,8 +1,11 @@
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, TYPE_CHECKING
 from datetime import datetime
 import time
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, text
+
+if TYPE_CHECKING:
+    from prisma import Prisma
 from app.utils.error_handling import handle_prisma_error, log_database_operation
 import logging
 import json
@@ -29,7 +32,7 @@ class ChatMessageService:
     
     @staticmethod
     async def add_message(
-        db: Session,
+        db: 'Prisma',
         conversation_id: int,
         role: str,
         content: str,
@@ -37,119 +40,147 @@ class ChatMessageService:
         tokens_used: Optional[int] = None,
         model_used: Optional[str] = None,
         response_time_ms: Optional[int] = None
-    ) -> ChatMessage:
+    ) -> 'ChatMessage':
         """Add a new message to a conversation"""
         try:
-            message = ChatMessage(
-                conversation_id=conversation_id,
-                role=role,
-                content=content,
-                message_metadata=metadata or {},
-                tokens_used=tokens_used,
-                model_used=model_used,
-                response_time_ms=response_time_ms
-            )
-            db.add(message)
+            from datetime import datetime
+            
+            # Create message data
+            message_data = {
+                "conversation_id": conversation_id,
+                "role": role,
+                "content": content,
+                "message_metadata": metadata or {},
+                "tokens_used": tokens_used,
+                "model_used": model_used,
+                "response_time_ms": response_time_ms,
+                "created_at": datetime.utcnow()
+            }
+            
+            # Create the message
+            message = await db.chatmessage.create(data=message_data)
             
             # Update conversation statistics
-            conversation = db.query(Conversation).filter(
-                Conversation.id == conversation_id
-            ).first()
+            conversation = await db.conversation.find_first(
+                where={"id": conversation_id}
+            )
             
             if conversation:
-                conversation.last_message_at = datetime.utcnow()
-                conversation.message_count += 1
+                update_data = {
+                    "last_message_at": datetime.utcnow(),
+                    "message_count": conversation.message_count + 1
+                }
                 if tokens_used:
-                    conversation.total_tokens_used += tokens_used
-            
-            db.commit()
-            db.refresh(message)
+                    update_data["total_tokens_used"] = (conversation.total_tokens_used or 0) + tokens_used
+                
+                await db.conversation.update(
+                    where={"id": conversation_id},
+                    data=update_data
+                )
             
             return message
             
         except Exception as e:
             logger.error(f"Error adding message: {str(e)}")
-            db.rollback()
             raise
     
     @staticmethod
     async def get_conversation_messages(
-        db: Session,
+        db: 'Prisma',
         conversation_id: int,
         limit: int = 50,
         offset: int = 0,
         include_system: bool = True
-    ) -> List[ChatMessage]:
+    ) -> List['ChatMessage']:
         """Get messages for a conversation with pagination"""
-        query = db.query(ChatMessage).filter(
-            ChatMessage.conversation_id == conversation_id
-        )
-        
-        if not include_system:
-            query = query.filter(ChatMessage.role != "system")
-        
-        return query.order_by(
-            ChatMessage.created_at.asc()
-        ).offset(offset).limit(limit).all()
+        try:
+            # Build where clause
+            where_clause = {"conversation_id": conversation_id}
+            
+            if not include_system:
+                where_clause["role"] = {"not": "system"}
+            
+            # Use Prisma syntax for querying (order_by can be added later if needed)
+            messages = await db.chatmessage.find_many(
+                where=where_clause,
+                skip=offset,
+                take=limit
+            )
+            
+            # Sort messages by creation time manually for now
+            if messages:
+                messages.sort(key=lambda x: x.created_at if hasattr(x, 'created_at') else x.id)
+            
+            return messages
+        except Exception as e:
+            logger.error(f"Error getting conversation messages: {str(e)}")
+            return []
     
     @staticmethod
     async def search_messages(
-        db: Session,
+        db: 'Prisma',
         user_id: int,
         query: str,
         filters: Optional[SearchFilters] = None
     ) -> List[Dict[str, Any]]:
         """Search messages across user's conversations using full-text search"""
         try:
-            # Base query with full-text search
-            search_query = text("""
-                SELECT 
-                    cm.id,
-                    cm.conversation_id,
-                    cm.role,
-                    cm.content,
-                    cm.created_at,
-                    c.title as conversation_title,
-                    ts_headline('english', cm.content, plainto_tsquery('english', :query),
-                        'MaxWords=50, MinWords=20, StartSel=<mark>, StopSel=</mark>') as highlighted_content,
-                    ts_rank(to_tsvector('english', cm.content), 
-                        plainto_tsquery('english', :query)) as rank
-                FROM chat_messages cm
-                JOIN conversations c ON cm.conversation_id = c.id
-                WHERE c.user_id = :user_id
-                AND to_tsvector('english', cm.content) @@ plainto_tsquery('english', :query)
-            """)
+            # For now, implement basic search without full-text until we can use raw SQL
+            # Get user's conversations first
+            conversations = await db.conversation.find_many(
+                where={"user_id": user_id}
+            )
             
-            params = {"user_id": user_id, "query": query}
+            conversation_ids = [conv.id for conv in conversations]
+            
+            if not conversation_ids:
+                return []
+            
+            # Build where clause for messages
+            where_clause = {
+                "conversation_id": {"in": conversation_ids},
+                "content": {"contains": query, "mode": "insensitive"}
+            }
             
             # Add filters
-            filter_conditions = []
             if filters:
                 if filters.conversation_id:
-                    filter_conditions.append("cm.conversation_id = :conversation_id")
-                    params["conversation_id"] = filters.conversation_id
+                    where_clause["conversation_id"] = filters.conversation_id
                 if filters.role:
-                    filter_conditions.append("cm.role = :role")
-                    params["role"] = filters.role
+                    where_clause["role"] = filters.role
                 if filters.date_from:
-                    filter_conditions.append("cm.created_at >= :date_from")
-                    params["date_from"] = filters.date_from
+                    where_clause["created_at"] = {"gte": filters.date_from}
                 if filters.date_to:
-                    filter_conditions.append("cm.created_at <= :date_to")
-                    params["date_to"] = filters.date_to
-                if filters.category_id:
-                    filter_conditions.append("c.category_id = :category_id")
-                    params["category_id"] = filters.category_id
+                    if "created_at" in where_clause:
+                        where_clause["created_at"]["lte"] = filters.date_to
+                    else:
+                        where_clause["created_at"] = {"lte": filters.date_to}
             
-            if filter_conditions:
-                search_query = text(str(search_query) + " AND " + " AND ".join(filter_conditions))
+            # Find matching messages
+            messages = await db.chatmessage.find_many(
+                where=where_clause,
+                take=100,
+                order_by={"created_at": "desc"}
+            )
             
-            # Order by relevance and limit results
-            search_query = text(str(search_query) + " ORDER BY rank DESC, cm.created_at DESC LIMIT 100")
+            # Convert to search result format
+            results = []
+            for msg in messages:
+                # Find conversation title
+                conversation = next((c for c in conversations if c.id == msg.conversation_id), None)
+                
+                results.append({
+                    "id": msg.id,
+                    "conversation_id": msg.conversation_id,
+                    "role": msg.role,
+                    "content": msg.content,
+                    "created_at": msg.created_at,
+                    "conversation_title": conversation.title if conversation else "Unknown",
+                    "highlighted_content": msg.content,  # Basic content for now
+                    "rank": 1.0  # Basic ranking for now
+                })
             
-            result = db.execute(search_query, params)
-            
-            return [dict(row._mapping) for row in result]
+            return results
             
         except Exception as e:
             logger.error(f"Error searching messages: {str(e)}")
@@ -157,46 +188,58 @@ class ChatMessageService:
     
     @staticmethod
     async def get_message_statistics(
-        db: Session,
+        db: 'Prisma',
         conversation_id: int
     ) -> MessageStats:
         """Get statistics for messages in a conversation"""
         try:
-            # Get message counts by role
-            role_counts = db.query(
-                ChatMessage.role,
-                func.count(ChatMessage.id).label("count")
-            ).filter(
-                ChatMessage.conversation_id == conversation_id
-            ).group_by(ChatMessage.role).all()
+            # Get all messages for the conversation
+            messages = await db.chatmessage.find_many(
+                where={"conversation_id": conversation_id}
+            )
             
-            # Get total tokens and average response time
-            stats = db.query(
-                func.sum(ChatMessage.tokens_used).label("total_tokens"),
-                func.avg(ChatMessage.response_time_ms).label("avg_response_time")
-            ).filter(
-                and_(
-                    ChatMessage.conversation_id == conversation_id,
-                    ChatMessage.role == "assistant"
+            if not messages:
+                return MessageStats(
+                    total_messages=0,
+                    messages_by_role={},
+                    total_tokens=0,
+                    avg_response_time_ms=0,
+                    first_message_at=None,
+                    last_message_at=None
                 )
-            ).first()
             
-            # Get message timeline
-            first_message = db.query(ChatMessage).filter(
-                ChatMessage.conversation_id == conversation_id
-            ).order_by(ChatMessage.created_at).first()
+            # Calculate role counts
+            messages_by_role = {}
+            total_tokens = 0
+            assistant_messages = []
             
-            last_message = db.query(ChatMessage).filter(
-                ChatMessage.conversation_id == conversation_id
-            ).order_by(ChatMessage.created_at.desc()).first()
+            for msg in messages:
+                role = msg.role
+                messages_by_role[role] = messages_by_role.get(role, 0) + 1
+                
+                if msg.tokens_used:
+                    total_tokens += msg.tokens_used
+                
+                if role == "assistant" and msg.response_time_ms:
+                    assistant_messages.append(msg.response_time_ms)
+            
+            # Calculate average response time
+            avg_response_time = 0
+            if assistant_messages:
+                avg_response_time = sum(assistant_messages) / len(assistant_messages)
+            
+            # Get first and last message timestamps
+            sorted_messages = sorted(messages, key=lambda x: x.created_at)
+            first_message_at = sorted_messages[0].created_at
+            last_message_at = sorted_messages[-1].created_at
             
             return MessageStats(
-                total_messages=sum(count for _, count in role_counts),
-                messages_by_role={role: count for role, count in role_counts},
-                total_tokens=stats.total_tokens or 0,
-                avg_response_time_ms=stats.avg_response_time or 0,
-                first_message_at=first_message.created_at if first_message else None,
-                last_message_at=last_message.created_at if last_message else None
+                total_messages=len(messages),
+                messages_by_role=messages_by_role,
+                total_tokens=total_tokens,
+                avg_response_time_ms=avg_response_time,
+                first_message_at=first_message_at,
+                last_message_at=last_message_at
             )
             
         except Exception as e:
@@ -205,23 +248,24 @@ class ChatMessageService:
     
     @staticmethod
     async def export_conversation(
-        db: Session,
+        db: 'Prisma',
         conversation_id: int,
         format: str = "json"
     ) -> bytes:
         """Export conversation in various formats"""
         try:
             # Get conversation and messages
-            conversation = db.query(Conversation).filter(
-                Conversation.id == conversation_id
-            ).first()
+            conversation = await db.conversation.find_first(
+                where={"id": conversation_id}
+            )
             
             if not conversation:
                 raise ValueError("Conversation not found")
             
-            messages = db.query(ChatMessage).filter(
-                ChatMessage.conversation_id == conversation_id
-            ).order_by(ChatMessage.created_at).all()
+            messages = await db.chatmessage.find_many(
+                where={"conversation_id": conversation_id},
+                order_by={"created_at": "asc"}
+            )
             
             if format == "json":
                 return ChatMessageService._export_as_json(conversation, messages)

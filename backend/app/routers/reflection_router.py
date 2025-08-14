@@ -37,7 +37,7 @@ async def load_questions_from_db(db: Prisma) -> List[ReflectionQuestionBase]:
     """Load questions from database."""
     try:
         questions = await db.reflectionquestion.find_many(
-            order_by={"id": "asc"}
+            order={"id": "asc"}
         )
         return [
             ReflectionQuestionBase(

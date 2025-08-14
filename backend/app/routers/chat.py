@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from prisma import Prisma
 
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
+from app.models import User
 from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.services.conversation_service import ConversationService
 from app.services.chat_message_service import ChatMessageService
@@ -87,7 +88,7 @@ Your goal: Make them feel smart, seen, and motivated — by making them figure i
 @router.post("/send", response_model=MessageResponse)
 async def send_message(
     message: MessageRequest,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     # Initialize operation logger
@@ -263,7 +264,7 @@ async def send_message(
 @router.post("/conversations", response_model=ConversationResponse)
 async def create_conversation(
     conversation_data: ConversationCreate,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Create a new conversation"""
@@ -282,7 +283,7 @@ async def create_conversation(
 
 @router.get("/conversations", response_model=ConversationListResponse)
 async def get_conversations(
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -308,7 +309,7 @@ async def get_conversations(
 @router.get("/conversations/{conversation_id}/messages")
 async def get_conversation_messages(
     conversation_id: int,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client),
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0)
@@ -341,7 +342,7 @@ async def get_conversation_messages(
 @router.post("/clear", response_model=ClearHistoryResponse)
 async def clear_history(
     conversation_id: Optional[int] = None,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     try:

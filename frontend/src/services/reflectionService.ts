@@ -165,9 +165,12 @@ class ReflectionService {
         this.getCurrentUserResponses(getToken)
       ]);
 
+      // Vérifier que responses est bien un tableau
+      const responseArray = Array.isArray(responses) ? responses : [];
+
       // Créer un map des réponses par question_id
       const responsesMap = new Map<number, ReflectionResponse>();
-      responses.forEach(response => {
+      responseArray.forEach(response => {
         responsesMap.set(response.question_id, response);
       });
 

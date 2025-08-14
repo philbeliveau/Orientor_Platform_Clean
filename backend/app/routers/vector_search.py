@@ -298,7 +298,7 @@ async def search_embeddings(request: SearchRequest, background_tasks: Background
 async def save_search_result(
     recommendation: SavedRecommendationCreate,
     db: Prisma = Depends(get_prisma_client),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Save a search result as a recommendation in the user's space

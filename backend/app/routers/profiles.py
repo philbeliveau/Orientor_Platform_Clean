@@ -5,6 +5,7 @@ import logging
 from prisma import Prisma
 from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger, get_prisma_transaction
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
+from app.models import User
 import uuid
 from app.services.profile_completion_service import ProfileCompletionCalculator, CompletionAction
 
@@ -152,7 +153,7 @@ class ProfileUpdate(BaseModel):
 
 @router.get("/me", response_model=ProfileResponse)
 async def get_profile(
-    current_user = Depends(get_current_user), 
+    current_user: User = Depends(get_current_user), 
     db: Prisma = Depends(get_prisma_client)
 ):
     # Initialize operation logger
@@ -224,7 +225,7 @@ async def get_profile(
 async def update_profile(
     profile_update: ProfileUpdate,
     db: Prisma = Depends(get_prisma_client),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     # Initialize operation logger
     operation_logger = PrismaOperationLogger("profiles")
@@ -529,7 +530,7 @@ async def update_profile(
 # Profile Completion Endpoints - MUST come BEFORE parameterized routes
 @router.get("/completion", response_model=ProfileCompletionResponse)
 async def get_profile_completion(
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Get profile completion analysis for the current user."""
@@ -571,7 +572,7 @@ async def get_profile_completion(
 @router.get("/completion/recommendations", response_model=List[CompletionActionResponse])
 async def get_completion_recommendations(
     limit: int = 5,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Get next recommended actions for profile completion."""
@@ -608,7 +609,7 @@ async def get_completion_recommendations(
 @router.get("/{user_id}", response_model=ProfileResponse)
 async def get_user_profile(
     user_id: int,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """Get profile information for a specific user."""

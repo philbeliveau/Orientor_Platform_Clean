@@ -1,5 +1,200 @@
 ## ALWAYS WORK IN THE ORIENTOR_PLATFORM_CLEAN REPO.
 
+# 🚨 POST-PRISMA MIGRATION BUG RESOLUTION
+
+## CRITICAL TRIAGE SYSTEM
+- **P0 CRITICAL**: Authentication failures, database connection errors  
+- **P1 HIGH**: API endpoint failures, data model mismatches
+- **P2 MEDIUM**: Performance degradation, import issues
+- **P3 LOW**: Documentation, cleanup tasks
+
+## SPARC BUG RESOLUTION WORKFLOW
+- `npx claude-flow sparc run bug-triage "<issue>"` - Classify and prioritize
+- `npx claude-flow sparc run prisma-debug "<error>"` - Prisma-specific debugging
+- `npx claude-flow sparc batch bug-fix,test,validate "<issue>"` - Full resolution pipeline
+
+## 🗃️ PRISMA MIGRATION STATUS TRACKER
+
+### COMPLETED MIGRATIONS ✅
+- Schema generation: Prisma Client Python + JS
+- Model definitions: 65+ tables migrated
+- Database connection: PostgreSQL configured
+- Authentication system: 85% Clerk standardization complete
+
+### PENDING CRITICAL FIXES 🚨 (UPDATED PRIORITIES)
+- [ ] **P0 CRITICAL**: Fix function signature mismatches (Pattern #1) - ~27 service files
+- [ ] **P0 CRITICAL**: Convert `db.execute()` to `prisma.query_raw()` - All affected services  
+- [ ] **P1 HIGH**: Add missing `useAuth` imports to frontend components
+- [ ] **P1 HIGH**: Fix redirect routes from `/login` to `/sign-in`
+- [ ] **P2 MEDIUM**: `from_orm()` pattern elimination across codebase
+- [ ] **P2 MEDIUM**: Transaction handling migration to `prisma.$transaction()`
+- [ ] **P3 LOW**: Foreign key relationship optimizations
+
+## 🛠️ BUG RESOLUTION TOOLKIT
+
+### Prisma Debugging Commands
+- `npx prisma db pull` - Sync schema with database
+- `npx prisma generate` - Regenerate Prisma client
+- `PYTHONPATH=. python -c "from prisma import Prisma; print('✅ Prisma import OK')"` - Test imports
+
+### Issue Scanning Commands  
+- `grep -r "from_orm(" backend/app/` - Find SQLAlchemy remnants
+- `grep -r "db\.query\|db\.add\|db\.commit" backend/app/` - Find old session patterns
+- `grep -r "Session\|sessionmaker" backend/app/` - Find SQLAlchemy sessions
+
+### Migration Validation
+- `npm run test:prisma` - Run Prisma-specific tests
+- `npm run migrate:validate` - Validate all migrations
+
+## 🔍 COMMON PRISMA MIGRATION ERRORS
+
+### Error: "'Prisma' object has no attribute 'execute'"
+**Cause**: SQLAlchemy `db.execute()` pattern used on Prisma client
+**Root Pattern**: 
+```python
+# ❌ BROKEN PATTERN:
+def get_saved_careers(db: Session, user_id: int):  # Expects SQLAlchemy
+    result = db.execute(text(query), params)       # SQLAlchemy method
+    
+# Router injects Prisma client:
+esco_careers = get_saved_careers(db, current_user.id)  # db = Prisma client
+```
+**Fix**: Convert to Prisma operations
+```python
+# ✅ CORRECT PATTERN:
+async def get_saved_careers(prisma: Prisma, user_id: int):
+    return await prisma.query_raw("SELECT * FROM saved_recommendations WHERE user_id = $1", user_id)
+    # OR use Prisma client methods:
+    return await prisma.savedrecommendation.find_many(where={"user_id": user_id})
+```
+
+### Error: "AttributeError: 'NoneType' object has no attribute 'from_orm'"
+**Cause**: SQLAlchemy pattern still in use
+**Fix**: Replace `Model.from_orm(data)` with `Model(**data.dict())`
+
+### Error: "ImportError: cannot import name 'Session'"
+**Cause**: SQLAlchemy Session import
+**Fix**: Replace with `from prisma import Prisma` and dependency injection
+
+### Error: "'Prisma' object has no attribute 'savedcareers'"
+**Cause**: Incorrect Prisma model name (should be `savedrecommendation`)
+**Fix**: Use correct model name from schema.prisma
+
+### Error: "Field 'id' is required"  
+**Cause**: Prisma model requires explicit ID handling
+**Fix**: Use `prisma.model.create(data={...})` with proper field mapping
+
+### Error: "Cannot resolve field on Prisma model"
+**Cause**: Schema mismatch between Prisma and database
+**Fix**: Run `npx prisma db push` to sync schema
+
+### Error: "'async' object has no method 'commit'"
+**Cause**: Trying to use SQLAlchemy transaction methods on Prisma
+**Fix**: Use `await prisma.$transaction([...])` for Prisma transactions
+
+## 🔧 CRITICAL BROKEN PATTERNS IDENTIFIED
+
+### Pattern #1: Function Signature Mismatch (Most Common)
+**Problem**: Routers inject Prisma clients, but services expect SQLAlchemy Sessions
+
+**Where Found**: `backend/app/routers/careers.py:250` → `backend/app/services/Swipe_career_recommendation_service.py:1035`
+
+**Broken Code**:
+```python
+# Router (careers.py:250):
+@router.get("/saved")
+def read_saved_careers(
+    current_user: User = Depends(get_current_user),
+    db: Prisma = Depends(get_prisma_client)  # ← PRISMA CLIENT injected
+):
+    esco_careers = get_saved_careers(db, current_user.id)  # ← PASSES PRISMA CLIENT
+
+# Service (service.py:1035):
+def get_saved_careers(db: Session, user_id: int):  # ← EXPECTS SQLAlchemy Session
+    result = db.execute(text(query), {"user_id": user_id})  # ← CALLS .execute() on PRISMA
+```
+
+**Standard Fix Pattern**:
+```python
+# ✅ CORRECT - Update service signature and method calls:
+async def get_saved_careers(prisma: Prisma, user_id: int):  # ← Prisma client parameter
+    result = await prisma.query_raw(  # ← Use Prisma's query_raw method
+        "SELECT * FROM saved_recommendations WHERE user_id = $1", 
+        user_id
+    )
+    return result
+
+# ✅ CORRECT - Update router to async:
+@router.get("/saved")
+async def read_saved_careers(  # ← Add async
+    current_user: User = Depends(get_current_user),
+    prisma: Prisma = Depends(get_prisma_client)  # ← Use consistent naming
+):
+    esco_careers = await get_saved_careers(prisma, current_user.id)  # ← Add await
+```
+
+### Pattern #2: Missing useAuth Imports (Frontend)
+**Problem**: Components use `getToken()` without importing from `@clerk/nextjs`
+
+**Broken Code**:
+```typescript
+// ❌ BROKEN:
+const token = await getToken();  // ← getToken is not defined
+if (error.status === 401) router.push('/login');  // ← Wrong route
+```
+
+**Standard Fix Pattern**:
+```typescript
+// ✅ CORRECT:
+import { useAuth } from '@clerk/nextjs';  // ← Add import
+
+const { getToken } = useAuth();  // ← Extract from hook
+const token = await getToken();
+if (error.status === 401) router.push('/sign-in');  // ← Correct route
+```
+
+### Pattern #3: Model Name Mismatches
+**Problem**: Using incorrect Prisma model names that don't match schema.prisma
+
+**Examples Found**:
+- `prisma.savedcareers` (wrong) → `prisma.savedrecommendation` (correct)
+- `prisma.hexaco_test` (wrong) → `prisma.hexacoquestion` (correct)
+
+**Standard Fix**: Always check `schema.prisma` for exact model names
+
+## 🛠️ STANDARDIZED DEBUGGING WORKFLOW
+
+### Step 1: Identify the Broken Pattern
+```bash
+# Find Prisma execution errors:
+grep -r "db\.execute\|\.execute(" backend/app/services/
+
+# Find function signature mismatches:
+grep -r "def.*db: Session" backend/app/services/
+grep -r "Depends(get_prisma" backend/app/routers/
+
+# Find frontend auth issues:
+grep -r "getToken.*not.*function" frontend/src/
+grep -r "localStorage.getItem.*access_token" frontend/src/
+```
+
+### Step 2: Apply Standard Fix Pattern
+1. **Service Layer**: Change `Session` to `Prisma`, `db.execute()` to `prisma.query_raw()`
+2. **Router Layer**: Add `async/await` for service calls
+3. **Frontend**: Add `useAuth` imports, fix redirect routes
+
+### Step 3: Validate the Fix
+```bash
+# Test Prisma connection:
+python -c "from prisma import Prisma; print('✅ Prisma import OK')"
+
+# Test specific service:
+grep -n "async def get_saved_careers" backend/app/services/
+
+# Test frontend auth:
+grep -n "useAuth.*@clerk/nextjs" frontend/src/app/space/
+```
+
 # authentication-critical-reminders
 🔐 CLERK AUTHENTICATION ONLY - NO EXCEPTIONS
 ✅ Always use: const { getToken } = useAuth(); const token = await getToken();
@@ -25,6 +220,12 @@
 - **File operations**: ALWAYS batch ALL reads/writes/edits in ONE message
 - **Bash commands**: ALWAYS batch ALL terminal operations in ONE message
 - **Memory operations**: ALWAYS batch ALL memory store/retrieve in ONE message
+
+### 🔄 PRISMA-SPECIFIC BATCHING
+- **Schema updates**: Generate + migrate + test in single operation
+- **Model fixes**: Update all related models simultaneously
+- **Import cleanup**: Fix all imports across entire module together
+- **Database operations**: Convert ALL queries in related files together
 
 ### 📁 File Organization Rules
 
@@ -67,7 +268,30 @@ This project uses SPARC (Specification, Pseudocode, Architecture, Refinement, Co
 4. **Refinement** - TDD implementation (`sparc tdd`)
 5. **Completion** - Integration (`sparc run integration`)
 
-## 🔐 CRITICAL: AUTHENTICATION STANDARDIZATION
+## 📋 SYSTEMATIC BUG RESOLUTION PHASES
+
+### Phase 1: Critical Database Operations (Week 1)
+- [ ] Convert all `db.query()` to `prisma.model.find()`
+- [ ] Replace `db.add()` with `prisma.model.create()`
+- [ ] Update all `db.commit()` to `await prisma.$transaction()`
+- [ ] Fix foreign key relationships and constraints
+
+### Phase 2: Authentication Integration (Week 1)
+- [ ] Standardize all routers to use `get_current_user_with_db_sync`
+- [ ] Update frontend token handling for Prisma compatibility
+- [ ] Test all authentication flows end-to-end
+
+### Phase 3: Data Model Synchronization (Week 2)
+- [ ] Validate all Pydantic models match Prisma schema
+- [ ] Update response serialization (remove `from_orm()`)
+- [ ] Fix type mismatches and validation errors
+
+### Phase 4: Performance & Testing (Week 2)
+- [ ] Optimize Prisma queries for performance
+- [ ] Create comprehensive test suite
+- [ ] Load testing and validation
+
+## 🔐 CRITICAL: AUTHENTICATION + PRISMA INTEGRATION
 
 ### ⚠️ MANDATORY CLERK AUTHENTICATION ONLY
 
@@ -77,6 +301,7 @@ This project uses SPARC (Specification, Pseudocode, Architecture, Refinement, Co
 2. **ALWAYS use Clerk authentication hooks and methods**
 3. **STANDARDIZE all authentication across frontend and backend**
 4. **NO mixing of authentication systems**
+5. **ALWAYS use Prisma for all database operations**
 
 ### 🚨 Frontend Authentication Rules
 
@@ -149,11 +374,12 @@ if (error.response?.status === 401) {
 router.push('/login'); // Never use this
 ```
 
-### 🚨 Backend Authentication Rules
+### 🚨 Backend Authentication + Prisma Rules
 
-**REQUIRED IMPORT:**
+**REQUIRED IMPORTS:**
 ```python
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
+from prisma import Prisma
 ```
 
 **MANDATORY PATTERN:**
@@ -161,10 +387,15 @@ from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_us
 @router.post("/endpoint")
 async def my_endpoint(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma)
 ):
-    # Use current_user.id for all operations
-    return {"user_id": current_user.id}
+    # ✅ CORRECT - Use Prisma client for all database operations
+    result = await prisma.model.find_first(where={"user_id": current_user.id})
+    return result
+
+# ❌ WRONG - Never use SQLAlchemy sessions
+# db: Session = Depends(get_db)
+# result = db.query(Model).filter(Model.user_id == current_user.id).first()
 ```
 
 ### 🔍 Authentication Audit Checklist
@@ -176,6 +407,7 @@ Before any authentication work, ALWAYS audit:
 3. **Error Handling**: Check all redirect to `/sign-in`
 4. **Route Protection**: Verify `useAuth()` hooks used correctly
 5. **Backend Endpoints**: Confirm `get_current_user` dependency used
+6. **Database Operations**: Ensure all use Prisma client, not SQLAlchemy
 
 ### 🚫 FORBIDDEN PATTERNS
 
@@ -197,16 +429,29 @@ window.location.href = '/login';
 const decoded = jwt.decode(token);
 ```
 
+```python
+# ❌ FORBIDDEN - SQLAlchemy patterns
+from sqlalchemy.orm import Session
+db: Session = Depends(get_db)
+result = db.query(Model).first()
+db.add(instance)
+db.commit()
+
+# ❌ FORBIDDEN - from_orm usage
+return Model.from_orm(result)
+```
+
 ### ✅ REQUIRED STANDARDIZATION
 
 **When working on ANY component with authentication:**
 
 1. **AUDIT FIRST**: Search component for authentication patterns
-2. **STANDARDIZE IMPORTS**: Use only Clerk hooks
+2. **STANDARDIZE IMPORTS**: Use only Clerk hooks and Prisma client
 3. **REPLACE TOKENS**: Convert all localStorage calls to `getToken()`
 4. **UPDATE ROUTES**: Change `/login` to `/sign-in`
-5. **TEST FLOW**: Verify authentication works end-to-end
-6. **DOCUMENT CHANGES**: Update any authentication-related documentation
+5. **MIGRATE DATABASE**: Convert all SQLAlchemy to Prisma operations
+6. **TEST FLOW**: Verify authentication works end-to-end
+7. **DOCUMENT CHANGES**: Update any authentication-related documentation
 
 ### 🔧 Authentication Migration Template
 
@@ -232,9 +477,29 @@ const handleAction = async () => {
 };
 ```
 
+```python
+# BEFORE (❌ Wrong)
+@router.post("/endpoint")
+async def my_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    result = db.query(Model).filter(Model.user_id == current_user.id).first()
+    return Model.from_orm(result)
+
+# AFTER (✅ Correct)
+@router.post("/endpoint")
+async def my_endpoint(
+    current_user: User = Depends(get_current_user),
+    prisma: Prisma = Depends(get_prisma)
+):
+    result = await prisma.model.find_first(where={"user_id": current_user.id})
+    return result
+```
+
 ### 🎯 Key Reminder
 
-**The Orientor Platform uses CLERK AUTHENTICATION exclusively. Any component, service, or API endpoint that doesn't follow these patterns is BROKEN and must be immediately updated to use Clerk authentication.**
+**The Orientor Platform uses CLERK AUTHENTICATION + PRISMA exclusively. Any component, service, or API endpoint that doesn't follow these patterns is BROKEN and must be immediately updated to use Clerk authentication and Prisma database operations.**
 
 ### 🐛 COMMON AUTHENTICATION ISSUES TO PREVENT
 
@@ -258,6 +523,11 @@ const handleAction = async () => {
 **Root Cause**: Not importing required Clerk hooks
 **Solution**: Always import `useAuth` and `useUser` from `@clerk/nextjs`
 
+#### Issue #5: SQLAlchemy + Prisma Mix
+**Problem**: Some endpoints still use SQLAlchemy sessions
+**Root Cause**: Incomplete migration from SQLAlchemy to Prisma
+**Solution**: Convert all database operations to use Prisma client
+
 ### 🔧 AUTHENTICATION DEBUGGING COMMANDS
 
 When debugging authentication issues:
@@ -273,6 +543,10 @@ grep -r "getToken\|useAuth\|useUser" frontend/src/ | grep -v "@clerk/nextjs"
 
 # 3. Validate backend authentication
 grep -r "get_current_user" backend/app/routers/
+
+# 4. Find SQLAlchemy remnants
+grep -r "Session\|sessionmaker\|from_orm" backend/app/
+grep -r "db\.query\|db\.add\|db\.commit" backend/app/
 ```
 
 ### 📋 AUTHENTICATION TESTING CHECKLIST
@@ -284,13 +558,15 @@ Before deploying any authentication-related changes:
 - [ ] No `localStorage.getItem('access_token')` calls
 - [ ] All components import `useAuth` from `@clerk/nextjs`
 - [ ] Backend endpoints use `get_current_user` dependency
+- [ ] All database operations use Prisma client
+- [ ] No SQLAlchemy Session dependencies remain
 - [ ] Error handling redirects to correct Clerk routes
 - [ ] Chat functionality works without redirects
 - [ ] All protected pages check `isSignedIn` properly
 
 ### 🎯 FINAL AUTHENTICATION RULE
 
-**IF YOU SEE ANY AUTHENTICATION CODE THAT DOESN'T USE CLERK, STOP IMMEDIATELY AND FIX IT. NO EXCEPTIONS. NO MIXED SYSTEMS. CLERK ONLY.**
+**IF YOU SEE ANY AUTHENTICATION CODE THAT DOESN'T USE CLERK, OR ANY DATABASE CODE THAT DOESN'T USE PRISMA, STOP IMMEDIATELY AND FIX IT. NO EXCEPTIONS. NO MIXED SYSTEMS. CLERK + PRISMA ONLY.**
 
 ## Code Style & Best Practices
 
@@ -300,3 +576,62 @@ Before deploying any authentication-related changes:
 - **Clean Architecture**: Separate concerns
 - **Documentation**: Keep updated
 - **Clerk Authentication**: MANDATORY - no exceptions
+- **Prisma Database**: MANDATORY - no SQLAlchemy
+
+## 🚀 QUICK REFERENCE: ORIENTOR PLATFORM PATTERNS
+
+### Critical Errors & Instant Fixes
+```bash
+# ERROR: 'Prisma' object has no attribute 'execute'
+# LOCATION: Any service file using db.execute()
+# FIX: Replace with await prisma.query_raw()
+
+# ERROR: 'Prisma' object has no attribute 'savedcareers'  
+# LOCATION: careers.py, space page
+# FIX: Use correct model name: prisma.savedrecommendation
+
+# ERROR: getToken is not a function
+# LOCATION: Frontend auth components
+# FIX: import { useAuth } from '@clerk/nextjs'
+```
+
+### 30-Second Pattern Check
+```bash
+# Is service broken? (Should return 0 matches)
+grep -c "def.*db: Session" backend/app/services/
+
+# Is frontend auth broken? (Should find imports)  
+grep -c "useAuth.*@clerk/nextjs" frontend/src/app/space/page.tsx
+
+# Are redirects correct? (Should return 0 matches for /login)
+grep -c "router.push('/login')" frontend/src/
+```
+
+### Emergency Rollback Commands
+```bash
+# If service fixes break anything:
+git checkout HEAD~1 -- backend/app/services/Swipe_career_recommendation_service.py
+npx prisma generate
+
+# If schema changes break anything:
+git checkout HEAD~1 -- backend/prisma/schema.prisma
+npx prisma migrate reset --force
+```
+
+### Success Validation (All Should Work)
+```bash
+# ✅ Space page shows data (not NaN%)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/careers/saved
+
+# ✅ HEXACO loads questions  
+curl http://localhost:8000/api/v1/hexaco-test/questions
+
+# ✅ No auth console errors
+# Visit http://localhost:3000/space and check browser console
+```
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

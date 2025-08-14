@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 from prisma import Prisma
 from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
+from app.models import User
 from ..services.hexaco_service import HexacoService
 from ..services.hexaco_scoring_service import HexacoScoringService
 from ..services.LLMhexaco_service import LLMHexacoService
@@ -153,8 +154,8 @@ async def get_available_versions(language: Optional[str] = Query(None)):
 @router.post("/start", response_model=SessionResponse)
 async def start_hexaco_test(
     request: StartTestRequest,
-    db: Prisma = Depends(get_prisma_client),
-    current_user = Depends(get_current_user)
+    prisma: Prisma = Depends(get_prisma_client),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Démarre une nouvelle session de test HEXACO.
@@ -174,9 +175,9 @@ async def start_hexaco_test(
                 detail=f"Version de test inactive: {request.version_id}"
             )
         
-        # Créer la session d'évaluation
-        session_id = hexaco_service.create_assessment_session(
-            db, current_user.id, request.version_id
+        # Créer la session d'évaluation avec Prisma
+        session_id = await hexaco_service.create_assessment_session(
+            prisma, current_user.id, request.version_id
         )
         
         logger.info(f"Session HEXACO démarrée: {session_id} pour utilisateur {current_user.id}")
@@ -197,8 +198,8 @@ async def start_hexaco_test(
 @router.get("/questions", response_model=List[HexacoQuestion])
 async def get_hexaco_questions(
     version_id: str,
-    db: Prisma = Depends(get_prisma_client),
-    current_user = Depends(get_current_user)
+    prisma = Depends(get_prisma_client),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Retourne les questions pour une version spécifique du test HEXACO.
@@ -213,7 +214,7 @@ async def get_hexaco_questions(
             )
         
         # Récupérer les questions
-        questions = hexaco_service.get_questions_for_version(version_id, db)
+        questions = await hexaco_service.get_questions_for_version(version_id, prisma)
         
         logger.info(f"Questions HEXACO récupérées: {len(questions)} pour version {version_id}")
         return [HexacoQuestion(**question) for question in questions]
@@ -231,7 +232,7 @@ async def get_hexaco_questions(
 async def save_hexaco_answer(
     answer: HexacoAnswerRequest,
     db: Prisma = Depends(get_prisma_client),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Sauvegarde une réponse individuelle au test HEXACO.
@@ -272,7 +273,7 @@ async def save_hexaco_answer(
 async def get_test_progress(
     session_id: str,
     db: Prisma = Depends(get_prisma_client),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Retourne le progrès d'une session de test HEXACO.
@@ -301,7 +302,7 @@ async def get_hexaco_score(
     session_id: str,
     include_description: bool = Query(False),
     db: Prisma = Depends(get_prisma_client),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Calcule et retourne les scores HEXACO pour une session de test.
@@ -390,7 +391,7 @@ async def get_user_hexaco_profile(
     user_id: int,
     assessment_version: Optional[str] = Query(None),
     db: Prisma = Depends(get_prisma_client),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Retourne le profil HEXACO d'un utilisateur.
@@ -436,7 +437,7 @@ async def get_user_hexaco_profile(
 async def get_my_hexaco_profile(
     assessment_version: Optional[str] = Query(None),
     db: Prisma = Depends(get_prisma_client),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Retourne le profil HEXACO de l'utilisateur connecté.
@@ -449,7 +450,7 @@ async def get_hexaco_analysis(
     assessment_version: Optional[str] = Query(None),
     force_regenerate: bool = Query(False),
     db: Prisma = Depends(get_prisma_client),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Retourne l'analyse LLM du profil HEXACO d'un utilisateur.
@@ -524,7 +525,7 @@ async def get_my_hexaco_analysis(
     assessment_version: Optional[str] = Query(None),
     force_regenerate: bool = Query(False),
     db: Prisma = Depends(get_prisma_client),
-    current_user = Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     """
     Retourne l'analyse LLM du profil HEXACO de l'utilisateur connecté.

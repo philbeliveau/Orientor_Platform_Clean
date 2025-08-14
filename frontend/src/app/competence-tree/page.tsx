@@ -83,8 +83,8 @@ const CompetenceTreePage: React.FC = () => {
       console.log('✅ Response received:', response.status, response.data);
       
       const userId = response.data.id;
-      console.log('💾 Saving userId to localStorage:', userId);
-      localStorage.setItem('user_id', userId.toString());
+      console.log('🆔 User ID obtained from profile:', userId);
+      // Note: No longer storing userId in localStorage - use Clerk authentication instead
       
       console.log('🌳 Generating competence tree for userId:', userId);
       const result = await generateCompetenceTree(token, userId);

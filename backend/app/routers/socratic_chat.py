@@ -159,8 +159,8 @@ async def get_chat_status(
     return {
         "success": True,
         "services_available": {
-            "socratic_mode": bool(socratic_chat_service.openai_client.api_key),
-            "claude_mode": bool(socratic_chat_service.claude_client.api_key),
+            "socratic_mode": bool(socratic_chat_service.openai_client and socratic_chat_service.openai_client.api_key),
+            "claude_mode": bool(socratic_chat_service.claude_client and socratic_chat_service.claude_client.api_key),
         },
         "user_id": current_user.id
     }

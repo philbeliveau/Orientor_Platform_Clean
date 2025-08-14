@@ -91,7 +91,7 @@ career_progression_service = CareerProgressionService()
 @router.post("/", response_model=dict)
 async def create_career_goal(
     goal_data: CareerGoalCreate,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """
@@ -186,7 +186,7 @@ async def create_career_goal(
 
 @router.get("/active", response_model=dict)
 async def get_active_career_goal(
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """
@@ -263,7 +263,7 @@ async def get_active_career_goal(
 @router.get("/", response_model=List[CareerGoalResponse])
 async def get_all_career_goals(
     include_inactive: bool = False,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """
@@ -298,7 +298,7 @@ async def get_all_career_goals(
 async def update_career_goal(
     goal_id: int,
     goal_update: CareerGoalUpdate,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """
@@ -350,7 +350,7 @@ async def update_career_goal(
 @router.delete("/{goal_id}")
 async def delete_career_goal(
     goal_id: int,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """
@@ -379,7 +379,7 @@ async def delete_career_goal(
 async def complete_milestone(
     goal_id: int,
     milestone_id: int,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """
@@ -459,7 +459,7 @@ async def get_goal_milestones(
     goal_id: int,
     tier_level: Optional[int] = None,
     completed_only: bool = False,
-    current_user = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Prisma = Depends(get_prisma_client)
 ):
     """

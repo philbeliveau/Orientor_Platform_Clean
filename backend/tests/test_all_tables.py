@@ -20,16 +20,16 @@ async def test_all_tables():
         
         # Test various tables to confirm they're accessible
         test_queries = [
-            ("users", lambda: client.user.count()),
-            ("user_profiles", lambda: client.userprofile.count()),
-            ("hexaco_questions", lambda: client.hexacoquestion.count()),
+            ("users", lambda: client.users.count()),
+            ("user_profiles", lambda: client.user_profile.count()),
+            ("hexaco_questions", lambda: client.hexaco_questions.count()),
             ("conversations", lambda: client.conversation.count()),
             ("chat_messages", lambda: client.chatmessage.count()),
             ("career_goals", lambda: client.careergoal.count()),
-            ("personality_assessments", lambda: client.personalityassessment.count()),
-            ("user_skills", lambda: client.userskill.count()),
+            ("personality_assessments", lambda: client.personality_assessments.count()),
+            ("user_skills", lambda: client.user_skill.count()),
             ("suggested_peers", lambda: client.suggestedpeers.count()),
-            ("gca_questions", lambda: client.gcaquestion.count()),
+            ("gca_questions", lambda: client.gca_questions.count()),
         ]
         
         accessible_tables = []
