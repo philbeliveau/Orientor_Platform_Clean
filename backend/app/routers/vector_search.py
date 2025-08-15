@@ -304,11 +304,13 @@ async def save_search_result(
     Save a search result as a recommendation in the user's space
     """
     try:
-        # Check if this recommendation is already saved
-        existing = db.query(SavedRecommendation).filter(
-            SavedRecommendation.user_id == current_user.id,
-            SavedRecommendation.oasis_code == recommendation.oasis_code
-        ).first()
+        # Check if this recommendation is already saved using Prisma
+        existing = await db.savedrecommendation.find_first(
+            where={
+                "user_id": current_user.id,
+                "oasis_code": recommendation.oasis_code
+            }
+        )
         
         if existing:
             return {"message": "This recommendation is already saved", "id": existing.id}
@@ -395,11 +397,32 @@ async def save_search_result(
             stress_tolerance=recommendation.stress_tolerance,
             all_fields=recommendation.all_fields
         )
-        db.add(new_recommendation)
-        db.commit()
-        db.refresh(new_recommendation)
+        # Create the recommendation using Prisma
+        new_recommendation_data = {
+            "user_id": current_user.id,
+            "oasis_code": recommendation.oasis_code,
+            "label": recommendation.label,
+            "description": recommendation.description,
+            "main_duties": recommendation.main_duties,
+            "role_creativity": recommendation.role_creativity,
+            "role_leadership": recommendation.role_leadership,
+            "role_digital_literacy": recommendation.role_digital_literacy,
+            "role_critical_thinking": recommendation.role_critical_thinking,
+            "role_problem_solving": recommendation.role_problem_solving,
+            "analytical_thinking": recommendation.analytical_thinking,
+            "attention_to_detail": recommendation.attention_to_detail,
+            "collaboration": recommendation.collaboration,
+            "adaptability": recommendation.adaptability,
+            "independence": recommendation.independence,
+            "evaluation": recommendation.evaluation,
+            "decision_making": recommendation.decision_making,
+            "stress_tolerance": recommendation.stress_tolerance,
+            "all_fields": recommendation.all_fields
+        }
         
-        return {"message": "Recommendation saved successfully", "id": new_recommendation.id}
+        saved_recommendation = await db.savedrecommendation.create(data=new_recommendation_data)
+        
+        return {"message": "Recommendation saved successfully", "id": saved_recommendation.id}
         
     except Exception as e:
         logger.error(f"Error saving recommendation: {str(e)}", exc_info=True)
@@ -431,15 +454,15 @@ async def get_suggested_peers(
     """Get suggested peers for the current user"""
     try:
         # Get suggested peers from database
-        query = text("""
+        query = """
             SELECT sp.suggested_id, sp.similarity,
                    up.name, up.major, up.year, up.hobbies
             FROM suggested_peers sp
             JOIN user_profiles up ON sp.suggested_id = up.user_id
-            WHERE sp.user_id = :user_id
+            WHERE sp.user_id = $1
             ORDER BY sp.similarity DESC
-        """)
-        results = db.execute(query, {"user_id": current_user.id}).fetchall()
+        """
+        results = await db.query_raw(query, current_user.id)
         
         # Format response
         peers = []

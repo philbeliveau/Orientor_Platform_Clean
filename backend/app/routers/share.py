@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from typing import List, Dict, Any
 import logging
-from sqlalchemy.orm import Session
 
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from app.models import User
-from app.utils.database import get_db
+from prisma import Prisma
+from app.utils.database import get_prisma as get_prisma_client
 from app.services.share_service import ShareService
 from app.schemas.share import (
     ShareOptions, ShareLink, ShareAnalytics, SharedConversationRequest
@@ -23,7 +23,7 @@ async def create_share_link(
     conversation_id: int,
     options: ShareOptions = Body(ShareOptions()),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """Create a share link for a conversation"""
 # ============================================================================
@@ -47,7 +47,7 @@ async def create_share_link(
 
 
     share_link = await ShareService.create_share_link(
-        db, conversation_id, current_user.id, options
+        prisma, conversation_id, current_user.id, options
     )
     
     if not share_link:
@@ -62,11 +62,11 @@ async def create_share_link(
 async def get_shared_conversation(
     share_token: str,
     request: SharedConversationRequest = Body(SharedConversationRequest()),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """Access a shared conversation"""
     result = await ShareService.get_shared_conversation(
-        db, share_token, request.password
+        prisma, share_token, request.password
     )
     
     if not result:
@@ -89,11 +89,11 @@ async def update_share_settings(
     share_id: int,
     options: ShareOptions,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """Update share settings"""
     success = await ShareService.update_share_settings(
-        db, share_id, current_user.id, options
+        prisma, share_id, current_user.id, options
     )
     
     if not success:
@@ -108,11 +108,11 @@ async def update_share_settings(
 async def revoke_share(
     share_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """Revoke a share link"""
     success = await ShareService.revoke_share(
-        db, share_id, current_user.id
+        prisma, share_id, current_user.id
     )
     
     if not success:
@@ -126,20 +126,20 @@ async def revoke_share(
 @router.get("/user/shares", response_model=List[Dict[str, Any]])
 async def get_user_shares(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """Get all shares created by the current user"""
-    return await ShareService.get_user_shares(db, current_user.id)
+    return await ShareService.get_user_shares(prisma, current_user.id)
 
 @router.get("/shares/{share_id}/analytics", response_model=ShareAnalytics)
 async def get_share_analytics(
     share_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """Get analytics for a share"""
     analytics = await ShareService.get_share_analytics(
-        db, share_id, current_user.id
+        prisma, share_id, current_user.id
     )
     
     if not analytics:

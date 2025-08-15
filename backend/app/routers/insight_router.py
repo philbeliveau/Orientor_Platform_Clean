@@ -222,10 +222,20 @@ async def get_user_data(db: Prisma, user_id: int) -> Dict[str, Any]:
             ]
         }
         
-        # Compter les champs non vides dans le profil
-        non_empty_fields = sum(1 for value in user_data["profile"].values() if value not in [None, "", 0])
-        total_fields = len(user_data["profile"])
-        completion_percentage = (non_empty_fields / total_fields) * 100
+        # ✅ DEFENSIVE PROGRAMMING: Safe profile completion calculation with NaN protection
+        profile_values = user_data["profile"].values() if user_data.get("profile") else []
+        non_empty_fields = sum(1 for value in profile_values if value not in [None, "", 0, "null", "undefined"])
+        total_fields = len(user_data["profile"]) if user_data.get("profile") else 0
+        
+        # Prevent division by zero and ensure valid numeric result
+        if total_fields > 0 and isinstance(non_empty_fields, (int, float)) and isinstance(total_fields, (int, float)):
+            completion_percentage = max(0, min(100, (non_empty_fields / total_fields) * 100))
+        else:
+            completion_percentage = 0.0
+        
+        # Ensure completion_percentage is a valid number (not NaN or infinity)
+        if not isinstance(completion_percentage, (int, float)) or completion_percentage != completion_percentage:  # NaN check
+            completion_percentage = 0.0
         
         logger.info(f"Profil utilisateur {user_id} complété à {completion_percentage:.2f}% ({non_empty_fields}/{total_fields} champs)")
         
@@ -278,8 +288,13 @@ def format_philosophical_prompt(user_data: Dict[str, Any]) -> str:
     reflection_responses = user_data["reflection_responses"]
     metadata = user_data["metadata"]
     
-    # Vérifier si nous avons suffisamment de données pour personnaliser l'insight
-    has_sufficient_data = (metadata["profile_completion"] > 30 and
+    # ✅ DEFENSIVE PROGRAMMING: Safe data sufficiency check with NaN protection
+    profile_completion = metadata.get("profile_completion", 0)
+    # Ensure profile_completion is a valid number (not NaN)
+    if not isinstance(profile_completion, (int, float)) or profile_completion != profile_completion:
+        profile_completion = 0
+    
+    has_sufficient_data = (profile_completion > 30 and
                           (metadata["has_recommendations"] or metadata["has_riasec"] or
                            metadata["has_hexaco"] or metadata["has_reflection_responses"]))
     
@@ -409,7 +424,7 @@ Comparez leurs compétences actuelles avec celles requises par leurs choix de ca
     
     # Ajouter des métadonnées pour aider le modèle
     prompt += f"\n## MÉTADONNÉES\n"
-    prompt += f"Profil complété à: {metadata['profile_completion']:.2f}%\n"
+    prompt += f"Profil complété à: {profile_completion:.2f}%\n"
     prompt += f"Nombre de recommandations sauvegardées: {metadata['recommendation_count']}\n"
     prompt += f"Compétences évaluées: {'Oui' if metadata['has_skills'] else 'Non'}\n"
     
@@ -574,14 +589,19 @@ async def generate_insight(
         # Récupérer les données utilisateur
         user_data = await get_user_data(db, user_id)
         
-        # Vérifier si nous avons suffisamment de données pour personnaliser l'insight
-        has_sufficient_data = (user_data["metadata"]["profile_completion"] > 30 and
+        # ✅ DEFENSIVE PROGRAMMING: Safe data sufficiency check with NaN protection
+        profile_completion = user_data["metadata"].get("profile_completion", 0)
+        # Ensure profile_completion is a valid number (not NaN)
+        if not isinstance(profile_completion, (int, float)) or profile_completion != profile_completion:
+            profile_completion = 0
+            
+        has_sufficient_data = (profile_completion > 30 and
                               (user_data["metadata"]["has_recommendations"] or user_data["metadata"]["has_riasec"] or
                                user_data["metadata"]["has_hexaco"] or user_data["metadata"]["has_reflection_responses"]))
         
         if not has_sufficient_data:
             logger.warning(f"Données insuffisantes pour l'utilisateur {user_id}: "
-                          f"profil complété à {user_data['metadata']['profile_completion']:.2f}%, "
+                          f"profil complété à {profile_completion:.2f}%, "
                           f"{user_data['metadata']['recommendation_count']} recommandations")
         
         # Formater le prompt pour le LLM
@@ -674,14 +694,19 @@ async def regenerate_insight(
         # Récupérer les données utilisateur
         user_data = await get_user_data(db, user_id)
         
-        # Vérifier si nous avons suffisamment de données pour personnaliser l'insight
-        has_sufficient_data = (user_data["metadata"]["profile_completion"] > 30 and
+        # ✅ DEFENSIVE PROGRAMMING: Safe data sufficiency check with NaN protection
+        profile_completion = user_data["metadata"].get("profile_completion", 0)
+        # Ensure profile_completion is a valid number (not NaN)
+        if not isinstance(profile_completion, (int, float)) or profile_completion != profile_completion:
+            profile_completion = 0
+            
+        has_sufficient_data = (profile_completion > 30 and
                               (user_data["metadata"]["has_recommendations"] or user_data["metadata"]["has_riasec"] or
                                user_data["metadata"]["has_hexaco"] or user_data["metadata"]["has_reflection_responses"]))
         
         if not has_sufficient_data:
             logger.warning(f"Données insuffisantes pour l'utilisateur {user_id}: "
-                          f"profil complété à {user_data['metadata']['profile_completion']:.2f}%")
+                          f"profil complété à {profile_completion:.2f}%")
         
         # Formater le prompt pour le LLM
         prompt = format_philosophical_prompt(user_data)

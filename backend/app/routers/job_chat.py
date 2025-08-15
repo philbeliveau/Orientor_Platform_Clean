@@ -23,11 +23,11 @@ Job Chat Router - API endpoints for LLM-powered job card conversations.
 
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
 from typing import Dict, Any, List, Optional
 import logging
 
-from ..database import get_db
+from prisma import Prisma
+from app.utils.database import get_prisma as get_prisma_client
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..services.job_card_llm_service import JobCardLLMService, get_preset_queries
 from ..models import User
@@ -42,8 +42,8 @@ llm_service = JobCardLLMService()
 @router.post("/query")
 async def process_job_query(
     request: Dict[str, Any],
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    prisma: Prisma = Depends(get_prisma_client)
 ) -> Dict[str, Any]:
     """
     Process a user query about a specific job.
@@ -78,7 +78,7 @@ async def process_job_query(
             user_id=current_user.clerk_user_id,
             job_data=job_data,
             user_query=user_query,
-            db=db
+            db=prisma
         )
         
         # Add session context if provided
@@ -124,8 +124,8 @@ async def get_preset_job_queries(
 @router.post("/batch-query")
 async def process_batch_job_queries(
     request: Dict[str, Any],
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    prisma: Prisma = Depends(get_prisma_client)
 ) -> Dict[str, Any]:
     """
     Process multiple queries about a job in batch.
@@ -151,7 +151,7 @@ async def process_batch_job_queries(
                 user_id=current_user.clerk_user_id,
                 job_data=job_data,
                 user_query=query,
-                db=db
+                db=prisma
             )
             responses.append({
                 "query": query,
@@ -173,8 +173,8 @@ async def process_batch_job_queries(
 async def get_job_conversation_history(
     job_id: str,
     limit: int = Query(10, description="Number of messages to retrieve"),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    prisma: Prisma = Depends(get_prisma_client)
 ) -> Dict[str, Any]:
     """
     Get conversation history for a specific job.

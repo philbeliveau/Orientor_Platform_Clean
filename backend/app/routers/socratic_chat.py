@@ -23,11 +23,11 @@ Socratic Chat Router - API endpoints for dual-mode chat functionality
 
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional, Literal
 from pydantic import BaseModel, Field
 
-from ..utils.database import get_db
+from prisma import Prisma
+from app.utils.database import get_prisma as get_prisma_client
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from app.models import User
 from ..services.socratic_chat_service import socratic_chat_service, ChatMode
@@ -46,7 +46,7 @@ class GetIntroductionRequest(BaseModel):
 async def send_message(
     request: SendMessageRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma_client)
 ) -> Dict[str, Any]:
     """
     Send a message in the selected chat mode.
@@ -61,7 +61,7 @@ async def send_message(
             message_text=request.text,
             mode=request.mode,
             conversation_id=request.conversation_id,
-            db=db
+            prisma=prisma
         )
         
         return {
@@ -84,7 +84,7 @@ async def send_message(
 async def get_mode_introduction(
     request: GetIntroductionRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma_client)
 ) -> Dict[str, Any]:
     """
     Get an introduction message for the selected chat mode.
@@ -93,7 +93,7 @@ async def get_mode_introduction(
         introduction = await socratic_chat_service.get_mode_introduction(
             mode=request.mode,
             user_id=current_user.id,
-            db=db
+            prisma=prisma
         )
         
         characteristics = socratic_chat_service._get_mode_characteristics(request.mode)

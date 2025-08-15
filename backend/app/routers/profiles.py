@@ -501,7 +501,7 @@ async def update_profile(
             if ESCO_EMBEDDING_AVAILABLE:
                 try:
                     logger.info(f"Generating ESCO embeddings for user ID: {current_user.id}")
-                    esco_success = process_user_esco_embeddings(db, current_user.id)
+                    esco_success = await process_user_esco_embeddings(db, current_user.id)
                     if esco_success:
                         logger.info(f"ESCO embeddings generated and stored successfully for user ID: {current_user.id}")
                     else:
@@ -537,32 +537,67 @@ async def get_profile_completion(
     try:
         logger.info(f"Getting profile completion for user {current_user.clerk_user_id}")
         
-        # Calculate profile completion
-        completion_result = ProfileCompletionCalculator.calculate_completion(
+        # Calculate profile completion - FIXED: Use await for async method
+        completion_result = await ProfileCompletionCalculator.calculate_completion(
             db, current_user.clerk_user_id
         )
         
-        # Convert CompletionAction objects to response models
-        next_actions = [
-            CompletionActionResponse(
-                id=action.id,
-                title=action.title,
-                description=action.description,
-                url=action.url,
-                category=action.category,
-                weight=action.weight,
-                estimated_time=action.estimated_time
-            )
-            for action in completion_result.next_actions
-        ]
+        # CRITICAL: Validate completion_result to prevent NaN values
+        import math
         
-        return ProfileCompletionResponse(
-            overall_percentage=completion_result.overall_percentage,
-            category_scores=completion_result.category_scores,
+        # Sanitize overall percentage
+        overall_percentage = completion_result.overall_percentage
+        if not isinstance(overall_percentage, (int, float)) or math.isnan(overall_percentage) or math.isinf(overall_percentage):
+            logger.error(f"Invalid overall_percentage detected: {overall_percentage}, setting to 0.0")
+            overall_percentage = 0.0
+        else:
+            overall_percentage = max(0.0, min(1.0, float(overall_percentage)))
+        
+        # Sanitize category scores
+        safe_category_scores = {}
+        for category, score in completion_result.category_scores.items():
+            if not isinstance(score, (int, float)) or math.isnan(score) or math.isinf(score):
+                logger.warning(f"Invalid category score for {category}: {score}, setting to 0.0")
+                safe_category_scores[category] = 0.0
+            else:
+                safe_category_scores[category] = max(0.0, min(1.0, float(score)))
+        
+        # Validate recommendation eligibility makes sense
+        recommendation_eligible = completion_result.recommendation_eligible
+        if overall_percentage == 0.0 and recommendation_eligible:
+            logger.warning("Correcting inconsistent state: 0% completion but eligible for recommendations")
+            recommendation_eligible = False
+        
+        # Convert CompletionAction objects to response models
+        next_actions = []
+        try:
+            next_actions = [
+                CompletionActionResponse(
+                    id=action.id,
+                    title=action.title,
+                    description=action.description,
+                    url=action.url,
+                    category=action.category,
+                    weight=float(action.weight) if isinstance(action.weight, (int, float)) and not math.isnan(action.weight) else 0.0,
+                    estimated_time=action.estimated_time
+                )
+                for action in completion_result.next_actions
+            ]
+        except Exception as e:
+            logger.error(f"Error processing next_actions: {e}")
+            next_actions = []
+        
+        # Final validation before returning
+        response = ProfileCompletionResponse(
+            overall_percentage=overall_percentage,
+            category_scores=safe_category_scores,
             next_actions=next_actions,
-            recommendation_eligible=completion_result.recommendation_eligible,
-            missing_critical_data=completion_result.missing_critical_data
+            recommendation_eligible=recommendation_eligible,
+            missing_critical_data=completion_result.missing_critical_data or []
         )
+        
+        logger.info(f"Profile completion response for user {current_user.clerk_user_id}: {overall_percentage:.1%}")
+        return response
         
     except Exception as e:
         logger.error(f"Error getting profile completion: {str(e)}")
@@ -579,8 +614,8 @@ async def get_completion_recommendations(
     try:
         logger.info(f"Getting completion recommendations for user {current_user.clerk_user_id}")
         
-        # Calculate profile completion
-        completion_result = ProfileCompletionCalculator.calculate_completion(
+        # Calculate profile completion - FIXED: Use await for async method
+        completion_result = await ProfileCompletionCalculator.calculate_completion(
             db, current_user.clerk_user_id
         )
         

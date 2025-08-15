@@ -31,13 +31,13 @@ Endpoints:
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, BackgroundTasks
 from fastapi.responses import JSONResponse
-from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, Field
 import logging
 
 from app.services.career_progression_service import CareerProgressionService
-from app.utils.database import get_db
+from prisma import Prisma
+from app.utils.database import get_prisma as get_prisma_client
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from app.models import User
 
@@ -77,7 +77,7 @@ async def preload_career_progression_service():
         logger.error(f"Error preloading career progression service: {str(e)}")
 
 @router.get("/{occupation_id}", response_model=Dict[str, Any])
-def get_career_progression(
+async def get_career_progression(
     occupation_id: str,
     background_tasks: BackgroundTasks,
     depth: int = 3,
@@ -85,7 +85,7 @@ def get_career_progression(
     min_similarity: float = 0.4,
     personalized: bool = False,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """
     PHASE 1 & 2: Extract career progression skills using GraphSage recursive traversal.
@@ -198,13 +198,13 @@ def get_career_progression(
         )
 
 @router.get("/{occupation_id}/personalized", response_model=Dict[str, Any])
-def get_personalized_career_progression(
+async def get_personalized_career_progression(
     occupation_id: str = Path(..., description="ESCO occupation ID to analyze"),
     depth: int = Query(4, ge=1, le=6, description="Maximum GraphSage traversal depth"),
     max_skills_per_tier: int = Query(5, ge=3, le=10, description="Maximum skills per tier"),
     min_similarity: float = Query(0.3, ge=0.1, le=0.9, description="Minimum GraphSage similarity threshold"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """
     Get fully personalized career progression based on user profile.
@@ -263,10 +263,10 @@ def get_personalized_career_progression(
         )
 
 @router.get("/{occupation_id}/analyze", response_model=Dict[str, Any])
-def analyze_career_progression_performance(
+async def analyze_career_progression_performance(
     occupation_id: str = Path(..., description="ESCO occupation ID to analyze"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """
     Analyze GraphSage performance for career progression extraction.

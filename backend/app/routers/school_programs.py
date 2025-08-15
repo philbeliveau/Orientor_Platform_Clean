@@ -98,14 +98,14 @@ async def get_search_facets(db: Session) -> Dict[str, Any]:
         ORDER BY count DESC
         """
         
-        types_result = db.execute(text(types_sql)).fetchall()
-        levels_result = db.execute(text(levels_sql)).fetchall()
-        provinces_result = db.execute(text(provinces_sql)).fetchall()
+        types_result = await db.query_raw(types_sql)
+        levels_result = await db.query_raw(levels_sql)
+        provinces_result = await db.query_raw(provinces_sql)
         
         return {
-            'program_types': {row[0]: row[1] for row in types_result},
-            'levels': {row[0]: row[1] for row in levels_result},
-            'provinces': {row[0]: row[1] for row in provinces_result}
+            'program_types': {row['program_type']: row['count'] for row in types_result},
+            'levels': {row['level']: row['count'] for row in levels_result},
+            'provinces': {row['province_state']: row['count'] for row in provinces_result}
         }
     except Exception as e:
         logger.error(f"Error getting facets: {e}")
@@ -156,10 +156,10 @@ async def search_programs(
         offset = (query.pagination.get('page', 1) - 1) * limit
         
         # Execute the search
-        result = db.execute(text(search_sql), (
+        result = await db.query_raw(search_sql,
             search_text, program_types, levels, countries, provinces,
             languages, max_duration, min_employment_rate, limit, offset
-        ))
+        )
         
         rows = result.fetchall()
         
@@ -167,21 +167,21 @@ async def search_programs(
         results = []
         for row in rows:
             program_data = {
-                'id': row[0],  # id
-                'title': row[1],  # title
+                'id': row.get('id', ''),
+                'title': row.get('title', ''),
                 'title_fr': None,
                 'description': None,
                 'description_fr': None,
                 'institution': {
-                    'name': row[2],  # institution_name
-                    'city': row[3],  # city
-                    'province': row[4],  # province_state
+                    'name': row.get('institution_name', ''),
+                    'city': row.get('city', ''),
+                    'province': row.get('province_state', ''),
                     'type': 'institution'
                 },
                 'program_details': {
-                    'type': row[5],  # program_type
-                    'level': row[6],  # level
-                    'duration_months': row[7]  # duration_months
+                    'type': row.get('program_type', ''),
+                    'level': row.get('level', ''),
+                    'duration_months': row.get('duration_months')
                 },
                 'classification': {
                     'field_of_study': 'General',
@@ -196,7 +196,7 @@ async def search_programs(
                     'internship_required': False
                 },
                 'career_outcomes': {
-                    'employment_rate': row[8] if len(row) > 8 else None,  # employment_rate
+                    'employment_rate': row.get('employment_rate'),
                     'job_titles': []
                 },
                 'costs': {
@@ -204,7 +204,7 @@ async def search_programs(
                     'currency': 'CAD'
                 },
                 'metadata': {
-                    'search_rank': row[9] if len(row) > 9 else 1.0,  # search_rank
+                    'search_rank': row.get('search_rank', 1.0),
                     'last_updated': datetime.utcnow().isoformat()
                 }
             }
@@ -216,10 +216,10 @@ async def search_programs(
             %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
         """
-        count_result = db.execute(text(count_sql), (
+        count_result = await db.query_raw(count_sql,
             search_text, program_types, levels, countries, provinces,
             languages, max_duration, min_employment_rate, 1000, 0  # Get total count
-        ))
+        )
         total_results = count_result.scalar()
         
         # Calculate pagination
@@ -316,7 +316,7 @@ async def get_program_details(
         WHERE p.id = %s AND p.active = true
         """
         
-        result = db.execute(text(query_sql), (str(program_id),))
+        result = await db.query_raw(query_sql, str(program_id))
         row = result.fetchone()
         
         if not row:
@@ -324,65 +324,65 @@ async def get_program_details(
         
         # Format full program response
         program_data = {
-            'id': row.id,
-            'title': row.title,
-            'title_fr': row.title_fr,
-            'description': row.description,
-            'description_fr': row.description_fr,
+            'id': row.get('id'),
+            'title': row.get('title'),
+            'title_fr': row.get('title_fr'),
+            'description': row.get('description'),
+            'description_fr': row.get('description_fr'),
             'institution': {
-                'name': row.institution_name,
-                'city': row.city,
-                'province': row.province_state,
-                'country': row.country,
-                'website': row.institution_website,
-                'type': row.institution_type
+                'name': row.get('institution_name'),
+                'city': row.get('city'),
+                'province': row.get('province_state'),
+                'country': row.get('country'),
+                'website': row.get('institution_website'),
+                'type': row.get('institution_type')
             },
             'program_details': {
-                'type': row.program_type,
-                'level': row.level,
-                'duration_months': row.duration_months,
-                'language': row.language or ['en'],
-                'cip_code': row.cip_code,
-                'program_code': row.program_code,
-                'delivery_mode': row.delivery_mode
+                'type': row.get('program_type'),
+                'level': row.get('level'),
+                'duration_months': row.get('duration_months'),
+                'language': row.get('language') or ['en'],
+                'cip_code': row.get('cip_code'),
+                'program_code': row.get('program_code'),
+                'delivery_mode': row.get('delivery_mode')
             },
             'classification': {
-                'field_of_study': row.field_of_study,
-                'field_of_study_fr': row.field_of_study_fr
+                'field_of_study': row.get('field_of_study'),
+                'field_of_study_fr': row.get('field_of_study_fr')
             },
             'admission': {
-                'requirements': row.admission_requirements or [],
-                'deadline': row.application_deadline,
-                'application_method': row.application_method,
-                'application_fee': row.application_fee,
-                'min_gpa': row.min_gpa
+                'requirements': row.get('admission_requirements') or [],
+                'deadline': row.get('application_deadline'),
+                'application_method': row.get('application_method'),
+                'application_fee': row.get('application_fee'),
+                'min_gpa': row.get('min_gpa')
             },
             'academic_info': {
-                'credits': row.credits,
-                'semester_count': row.semester_count,
-                'internship_required': row.internship_required,
-                'coop_available': row.coop_available,
-                'thesis_required': row.thesis_required
+                'credits': row.get('credits'),
+                'semester_count': row.get('semester_count'),
+                'internship_required': row.get('internship_required'),
+                'coop_available': row.get('coop_available'),
+                'thesis_required': row.get('thesis_required')
             },
             'career_outcomes': {
-                'job_titles': row.career_outcomes or [],
-                'employment_rate': row.employment_rate,
-                'average_salary': row.average_salary_range or {},
-                'top_employers': row.top_employers or []
+                'job_titles': row.get('career_outcomes') or [],
+                'employment_rate': row.get('employment_rate'),
+                'average_salary': row.get('average_salary_range') or {},
+                'top_employers': row.get('top_employers') or []
             },
             'costs': {
-                'tuition_domestic': row.tuition_domestic,
-                'tuition_international': row.tuition_international,
-                'additional_fees': row.fees_additional or {},
+                'tuition_domestic': row.get('tuition_domestic'),
+                'tuition_international': row.get('tuition_international'),
+                'additional_fees': row.get('fees_additional') or {},
                 'currency': 'CAD',
-                'financial_aid_available': row.financial_aid_available,
-                'scholarships': row.scholarships_available or []
+                'financial_aid_available': row.get('financial_aid_available'),
+                'scholarships': row.get('scholarships_available') or []
             },
             'metadata': {
-                'created_at': row.created_at.isoformat() if row.created_at else None,
-                'updated_at': row.updated_at.isoformat() if row.updated_at else None,
-                'source': row.source_system,
-                'source_url': row.source_url
+                'created_at': row.get('created_at').isoformat() if row.get('created_at') else None,
+                'updated_at': row.get('updated_at').isoformat() if row.get('updated_at') else None,
+                'source': row.get('source_system'),
+                'source_url': row.get('source_url')
             }
         }
         
@@ -492,11 +492,13 @@ async def health_check(db: Session = Depends(get_db)) -> Dict[str, Any]:
     
     try:
         # Check database connectivity
-        db.execute(text("SELECT 1"))
+        await db.query_raw("SELECT 1")
         
         # Get basic statistics
-        institution_count = db.execute(text("SELECT COUNT(*) FROM institutions WHERE active = true")).scalar()
-        program_count = db.execute(text("SELECT COUNT(*) FROM programs WHERE active = true")).scalar()
+        institution_result = await db.query_raw("SELECT COUNT(*) FROM institutions WHERE active = true")
+        program_result = await db.query_raw("SELECT COUNT(*) FROM programs WHERE active = true")
+        institution_count = institution_result[0][0] if institution_result else 0
+        program_count = program_result[0][0] if program_result else 0
         
         return {
             'status': 'healthy',

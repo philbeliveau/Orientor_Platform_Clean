@@ -146,10 +146,10 @@ def read_career_recommendations(
         )
 
 @router.post("/save/{career_id}", response_model=Dict[str, Any])
-def save_career(
+async def save_career(
     career_id: str,  # Changed from int to str to handle ESCO occupation codes
     current_user: User = Depends(get_current_user),
-    db: Prisma = Depends(get_prisma_client)
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """
     Save a career recommendation for the current user.
@@ -163,41 +163,38 @@ def save_career(
             from sqlalchemy import text
             
             # Insert into saved_recommendations table with ESCO occupation code
-            insert_query = text("""
+            insert_query = """
                 INSERT INTO saved_recommendations 
                 (user_id, oasis_code, label, description, main_duties, created_at)
-                SELECT :user_id, :oasis_code, 
+                SELECT $1, $2, 
                        COALESCE(jobs.title, 'Unknown Job'), 
                        COALESCE(jobs.description, ''),
                        COALESCE(jobs.description, ''),
                        NOW()
-                FROM (VALUES (:oasis_code, 
+                FROM (VALUES ($2, 
                              CASE 
-                                 WHEN :oasis_code = 'occupation::key_15224' THEN 'Software Developer'
-                                 WHEN :oasis_code = 'occupation::key_15156' THEN 'Technical Director'
-                                 WHEN :oasis_code = 'occupation::key_15225' THEN 'Systems Analyst'
-                                 WHEN :oasis_code = 'occupation::key_15226' THEN 'Database Analyst'
-                                 WHEN :oasis_code = 'occupation::key_15227' THEN 'Computer Programmer'
+                                 WHEN $2 = 'occupation::key_15224' THEN 'Software Developer'
+                                 WHEN $2 = 'occupation::key_15156' THEN 'Technical Director'
+                                 WHEN $2 = 'occupation::key_15225' THEN 'Systems Analyst'
+                                 WHEN $2 = 'occupation::key_15226' THEN 'Database Analyst'
+                                 WHEN $2 = 'occupation::key_15227' THEN 'Computer Programmer'
                                  ELSE 'Career Recommendation'
                              END,
                              CASE 
-                                 WHEN :oasis_code = 'occupation::key_15224' THEN 'Develops and maintains software applications using various programming languages and frameworks'
-                                 WHEN :oasis_code = 'occupation::key_15156' THEN 'Leads technical teams and oversees technology strategy and implementation'
-                                 WHEN :oasis_code = 'occupation::key_15225' THEN 'Analyzes and designs information systems to solve business problems'
-                                 WHEN :oasis_code = 'occupation::key_15226' THEN 'Designs, implements and maintains database systems for organizations'
-                                 WHEN :oasis_code = 'occupation::key_15227' THEN 'Writes, tests and maintains computer programs and applications'
+                                 WHEN $2 = 'occupation::key_15224' THEN 'Develops and maintains software applications using various programming languages and frameworks'
+                                 WHEN $2 = 'occupation::key_15156' THEN 'Leads technical teams and oversees technology strategy and implementation'
+                                 WHEN $2 = 'occupation::key_15225' THEN 'Analyzes and designs information systems to solve business problems'
+                                 WHEN $2 = 'occupation::key_15226' THEN 'Designs, implements and maintains database systems for organizations'
+                                 WHEN $2 = 'occupation::key_15227' THEN 'Writes, tests and maintains computer programs and applications'
                                  ELSE 'Career recommendation from Find Your Way feature'
                              END
                       )) AS jobs(id, title, description)
-                WHERE jobs.id = :oasis_code
+                WHERE jobs.id = $2
                 ON CONFLICT (user_id, oasis_code) DO NOTHING
-            """)
+            """
             
-            result = db.execute(insert_query, {
-                "user_id": current_user.id,
-                "oasis_code": career_id
-            })
-            db.commit()
+            result = await prisma.query_raw(insert_query, current_user.id, career_id)
+            # Prisma handles transactions automatically, no manual commit needed
             
             logger.info(f"Saved ESCO career {career_id} for user {current_user.id}")
             return {"success": True, "message": f"Career '{career_id}' saved successfully"}
@@ -206,7 +203,7 @@ def save_career(
             # Try to parse as integer for legacy integer IDs
             try:
                 career_int_id = int(career_id)
-                success = save_career_recommendation(db, current_user.id, career_int_id)
+                success = await save_career_recommendation(prisma, current_user.id, career_int_id)
                 
                 if not success:
                     raise HTTPException(
@@ -231,9 +228,9 @@ def save_career(
         )
 
 @router.get("/saved", response_model=List[Dict[str, Any]])
-def read_saved_careers(
+async def read_saved_careers(
     current_user: User = Depends(get_current_user),
-    db: Prisma = Depends(get_prisma_client)
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """
     Get saved career recommendations for the current user.
@@ -247,11 +244,11 @@ def read_saved_careers(
     """
     try:
         # Get ESCO saved careers from saved_recommendations table (home page recommendations)
-        esco_careers = get_saved_careers(db, current_user.id)
+        esco_careers = await get_saved_careers(prisma, current_user.id)
         
         # Get OaSIS saved jobs from saved_jobs table (SwipeMyWay discoveries)
         from sqlalchemy import text
-        oasis_query = text("""
+        oasis_query = """
             SELECT 
                 id,
                 esco_id,
@@ -263,11 +260,11 @@ def read_saved_careers(
                 saved_at,
                 metadata
             FROM saved_jobs
-            WHERE user_id = :user_id
+            WHERE user_id = $1
             ORDER BY saved_at DESC
-        """)
+        """
         
-        oasis_results = db.execute(oasis_query, {"user_id": current_user.id}).fetchall()
+        oasis_results = await prisma.query_raw(oasis_query, current_user.id)
         
         # Format OaSIS jobs to match the expected structure
         oasis_careers = []
@@ -356,10 +353,9 @@ async def analyze_career_fit(
     Analyzes skill gaps, cognitive trait alignment, and provides recommendations.
     """
     try:
-        # Get user skills and profile
-        from ..models import UserSkill, UserProfile
-        user_skills = db.query(UserSkill).filter(UserSkill.user_id == current_user.id).first()
-        user_profile = db.query(UserProfile).filter(UserProfile.user_id == current_user.id).first()
+        # Get user skills and profile using Prisma
+        user_skills = await db.userskill.find_first(where={"user_id": current_user.id})
+        user_profile = await db.userprofile.find_first(where={"user_id": current_user.id})
         
         if not user_skills:
             raise HTTPException(
@@ -380,10 +376,10 @@ async def analyze_career_fit(
                        adaptability, independence, evaluation, decision_making,
                        stress_tolerance
                 FROM saved_recommendations
-                WHERE oasis_code = :job_id
+                WHERE oasis_code = $1
                 LIMIT 1
             """)
-            result = db.execute(query, {"job_id": request.job_id}).fetchone()
+            result = await prisma.query_raw(query, request.job_id)
             
             if result:
                 job_details = {
@@ -416,10 +412,10 @@ async def analyze_career_fit(
             query = text("""
                 SELECT esco_id, job_title, metadata
                 FROM saved_jobs
-                WHERE esco_id = :job_id
+                WHERE esco_id = $1
                 LIMIT 1
             """)
-            result = db.execute(query, {"job_id": request.job_id}).fetchone()
+            result = await prisma.query_raw(query, request.job_id)
             
             if result:
                 job_details = {
@@ -567,14 +563,14 @@ async def cleanup_test_jobs(
         from sqlalchemy import text
         
         # Delete fake ESCO jobs (starting with occupation::key_)
-        delete_query = text("""
+        delete_query = """
             DELETE FROM saved_recommendations 
-            WHERE user_id = :user_id 
+            WHERE user_id = $1 
             AND oasis_code LIKE 'occupation::key_%'
-        """)
-        result = db.execute(delete_query, {"user_id": current_user.id})
-        deleted_count = result.rowcount
-        db.commit()
+        """
+        result = await prisma.query_raw(delete_query, current_user.id)
+        deleted_count = len(result) if result else 0
+        # Prisma handles transactions automatically
         
         logger.info(f"Cleaned up {deleted_count} fake test jobs for user {current_user.id}")
         
@@ -586,7 +582,7 @@ async def cleanup_test_jobs(
         
     except Exception as e:
         logger.error(f"Error cleaning up test jobs: {str(e)}")
-        db.rollback()
+        # Prisma handles errors automatically
         raise HTTPException(
             status_code=500,
             detail=f"Failed to cleanup test jobs: {str(e)}"

@@ -83,26 +83,23 @@ async def save_job(
     try:
         # Check if job already saved by this user
         from sqlalchemy import text
-        check_query = text("""
+        check_query = """
             SELECT id FROM saved_jobs 
-            WHERE user_id = :user_id AND esco_id = :esco_id
-        """)
-        existing = db.execute(check_query, {
-            "user_id": current_user.id,
-            "esco_id": request.esco_id
-        }).fetchone()
+            WHERE user_id = $1 AND esco_id = $2
+        """
+        existing = await db.query_raw(check_query, current_user.id, request.esco_id)
         
         if existing:
             logger.info(f"Job {request.esco_id} already saved by user {current_user.id}")
             # Return existing saved job
-            saved_job_query = text("""
+            saved_job_query = """
                 SELECT id, user_id, esco_id, job_title, skills_required, 
                        discovery_source, tree_graph_id, relevance_score, 
                        saved_at, metadata
                 FROM saved_jobs
-                WHERE id = :job_id
-            """)
-            result = db.execute(saved_job_query, {"job_id": existing[0]}).fetchone()
+                WHERE id = $1
+            """
+            result = await db.query_raw(saved_job_query, existing[0] if existing else None)
             
             return SavedJobResponse(
                 id=result[0],
@@ -126,48 +123,41 @@ async def save_job(
         metadata_json = json.dumps(request.metadata) if request.metadata else '{}'
         
         if request.tree_graph_id:
-            insert_query = text("""
+            insert_query = """
                 INSERT INTO saved_jobs (
                     user_id, esco_id, job_title, skills_required, 
                     discovery_source, tree_graph_id, relevance_score, metadata
                 ) VALUES (
-                    :user_id, :esco_id, :job_title, CAST(:skills_required AS jsonb), 
-                    :discovery_source, CAST(:tree_graph_id AS uuid), :relevance_score, CAST(:metadata AS jsonb)
+                    $1, $2, $3, CAST($4 AS jsonb), 
+                    $5, CAST($6 AS uuid), $7, CAST($8 AS jsonb)
                 ) RETURNING id, saved_at
-            """)
+            """
             
-            result = db.execute(insert_query, {
-                "user_id": current_user.id,
-                "esco_id": request.esco_id,
-                "job_title": request.job_title,
-                "skills_required": skills_json,
-                "discovery_source": request.discovery_source,
-                "tree_graph_id": request.tree_graph_id,
-                "relevance_score": request.relevance_score,
-                "metadata": metadata_json
-            }).fetchone()
+            result = await db.query_raw(
+                insert_query, 
+                current_user.id, request.esco_id, request.job_title, 
+                skills_json, request.discovery_source, request.tree_graph_id,
+                request.relevance_score, metadata_json
+            )
         else:
-            insert_query = text("""
+            insert_query = """
                 INSERT INTO saved_jobs (
                     user_id, esco_id, job_title, skills_required, 
                     discovery_source, relevance_score, metadata
                 ) VALUES (
-                    :user_id, :esco_id, :job_title, CAST(:skills_required AS jsonb), 
-                    :discovery_source, :relevance_score, CAST(:metadata AS jsonb)
+                    $1, $2, $3, CAST($4 AS jsonb), 
+                    $5, $6, CAST($7 AS jsonb)
                 ) RETURNING id, saved_at
-            """)
+            """
             
-            result = db.execute(insert_query, {
-                "user_id": current_user.id,
-                "esco_id": request.esco_id,
-                "job_title": request.job_title,
-                "skills_required": skills_json,
-                "discovery_source": request.discovery_source,
-                "relevance_score": request.relevance_score,
-                "metadata": metadata_json
-            }).fetchone()
+            result = await db.query_raw(
+                insert_query,
+                current_user.id, request.esco_id, request.job_title,
+                skills_json, request.discovery_source, request.relevance_score,
+                metadata_json
+            )
         
-        db.commit()
+        # Prisma handles transactions automatically
         
         logger.info(f"Job {request.esco_id} saved successfully for user {current_user.id}")
         
@@ -212,21 +202,27 @@ async def get_saved_jobs(
     """
     try:
         # Build query
-        query = text("""
+        base_query = """
             SELECT id, user_id, esco_id, job_title, skills_required, 
                    discovery_source, tree_graph_id, relevance_score, 
                    saved_at, metadata
             FROM saved_jobs
-            WHERE user_id = :user_id
-            """ + (" AND discovery_source = :source" if discovery_source else "") + """
-            ORDER BY saved_at DESC
-        """)
+            WHERE user_id = $1
+        """
+        if discovery_source:
+            query = base_query + " AND discovery_source = $2 ORDER BY saved_at DESC"
+        else:
+            query = base_query + " ORDER BY saved_at DESC"
         
         params = {"user_id": current_user.id}
         if discovery_source:
             params["source"] = discovery_source
             
-        results = db.execute(query, params).fetchall()
+        # Convert params dict to positional arguments for Prisma
+        if discovery_source:
+            results = await db.query_raw(query, current_user.id, discovery_source)
+        else:
+            results = await db.query_raw(query, current_user.id)
         
         jobs = []
         for row in results:
@@ -277,14 +273,11 @@ async def delete_saved_job(
     """
     try:
         # Check if job exists and belongs to user
-        check_query = text("""
+        check_query = """
             SELECT id FROM saved_jobs 
-            WHERE id = :job_id AND user_id = :user_id
-        """)
-        existing = db.execute(check_query, {
-            "job_id": job_id,
-            "user_id": current_user.id
-        }).fetchone()
+            WHERE id = $1 AND user_id = $2
+        """
+        existing = await db.query_raw(check_query, job_id, current_user.id)
         
         if not existing:
             raise HTTPException(
@@ -293,15 +286,12 @@ async def delete_saved_job(
             )
         
         # Delete the job
-        delete_query = text("""
+        delete_query = """
             DELETE FROM saved_jobs 
-            WHERE id = :job_id AND user_id = :user_id
-        """)
-        db.execute(delete_query, {
-            "job_id": job_id,
-            "user_id": current_user.id
-        })
-        db.commit()
+            WHERE id = $1 AND user_id = $2
+        """
+        await db.query_raw(delete_query, job_id, current_user.id)
+        # Prisma handles transactions automatically
         
         logger.info(f"Deleted saved job {job_id} for user {current_user.id}")
         

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 import logging
 
-from ..utils.database import get_db
+from prisma import Prisma
+from app.utils.database import get_prisma as get_prisma_client
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..models import User
 from ..services.program_matching_service import ProgramMatchingService
@@ -45,7 +45,7 @@ async def get_program_recommendations_for_goal(
     goal_id: int,
     limit: int = 10,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """
     Get educational program recommendations for a specific career goal.
@@ -81,7 +81,7 @@ async def get_program_recommendations_for_goal(
 
     try:
         # Initialize the program matching service
-        program_service = ProgramMatchingService(db)
+        program_service = ProgramMatchingService(prisma)
         
         # Get program recommendations
         recommendations = await program_service.find_programs_for_career_goal(
@@ -97,26 +97,27 @@ async def get_program_recommendations_for_goal(
             )
         
         # Get career goal information for context
-        from sqlalchemy import text
-        goal_query = text("""
+        goal_result = await prisma.query_raw(
+            """
             SELECT cg.id, cg.notes, cg.target_date, cg.set_at,
                    sj.job_title, sj.esco_id
             FROM career_goals cg
             JOIN saved_jobs sj ON cg.job_id = sj.id
-            WHERE cg.id = :goal_id AND cg.user_id = :user_id AND cg.status = 'active'
-        """)
-        
-        goal_result = db.execute(goal_query, {"goal_id": goal_id, "user_id": current_user.id}).fetchone()
+            WHERE cg.id = $1 AND cg.user_id = $2 AND cg.status = 'active'
+            """,
+            goal_id, current_user.id
+        )
         
         goal_info = {}
-        if goal_result:
+        if goal_result and len(goal_result) > 0:
+            row = goal_result[0]
             goal_info = {
-                "goal_id": goal_result[0],
-                "notes": goal_result[1],
-                "target_date": goal_result[2].isoformat() if goal_result[2] else None,
-                "set_at": goal_result[3].isoformat() if goal_result[3] else None,
-                "job_title": goal_result[4],
-                "esco_id": goal_result[5]
+                "goal_id": row.get("id"),
+                "notes": row.get("notes"),
+                "target_date": row.get("target_date").isoformat() if row.get("target_date") else None,
+                "set_at": row.get("set_at").isoformat() if row.get("set_at") else None,
+                "job_title": row.get("job_title"),
+                "esco_id": row.get("esco_id")
             }
         
         # Convert to response format
@@ -162,7 +163,7 @@ async def save_program_recommendation(
     goal_id: int,
     program_id: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """
     Save a specific program recommendation for future reference.
@@ -178,7 +179,7 @@ async def save_program_recommendation(
     """
     try:
         # Initialize the program matching service
-        program_service = ProgramMatchingService(db)
+        program_service = ProgramMatchingService(prisma)
         
         # Get the specific program recommendation
         recommendations = await program_service.find_programs_for_career_goal(
@@ -228,7 +229,7 @@ async def save_program_recommendation(
 async def get_saved_program_recommendations(
     goal_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """
     Get previously saved program recommendations for a career goal.
@@ -243,7 +244,7 @@ async def get_saved_program_recommendations(
     """
     try:
         # Initialize the program matching service
-        program_service = ProgramMatchingService(db)
+        program_service = ProgramMatchingService(prisma)
         
         # Get saved recommendations
         saved_recommendations = await program_service.get_saved_recommendations(goal_id)

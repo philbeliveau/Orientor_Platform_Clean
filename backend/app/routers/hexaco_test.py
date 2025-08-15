@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
+from datetime import datetime
 from prisma import Prisma
 from app.utils.prisma_client import get_prisma_client, PrismaOperationLogger
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
@@ -484,25 +485,26 @@ async def get_hexaco_analysis(
         # Si une nouvelle analyse a été générée, mettre à jour la base de données
         if force_regenerate or not profile.get("narrative_description"):
             try:
-                from sqlalchemy import text
-                update_query = text("""
-                    UPDATE personality_profiles
-                    SET narrative_description = :narrative_description,
-                        updated_at = NOW()
-                    WHERE user_id = :user_id AND profile_type = 'hexaco'
-                    AND (:assessment_version IS NULL OR assessment_version = :assessment_version)
-                """)
-                
-                db.execute(update_query, {
+                # Convert to Prisma update operation
+                update_where = {
                     "user_id": user_id,
-                    "narrative_description": analysis,
-                    "assessment_version": assessment_version
-                })
-                db.commit()
+                    "profile_type": "hexaco"
+                }
+                
+                # Add assessment_version condition if provided
+                if assessment_version:
+                    update_where["assessment_version"] = assessment_version
+                
+                await db.personality_profile.update_many(
+                    where=update_where,
+                    data={
+                        "narrative_description": analysis,
+                        "updated_at": datetime.utcnow()
+                    }
+                )
                 logger.info(f"Analyse LLM mise à jour pour utilisateur {user_id}")
             except Exception as e:
                 logger.warning(f"Erreur lors de la mise à jour de l'analyse: {e}")
-                db.rollback()
         
         return {
             "analysis": analysis,

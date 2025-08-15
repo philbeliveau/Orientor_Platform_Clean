@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-from sqlalchemy import text
-from sqlalchemy.orm import Session
-from ..utils.database import get_db
+from prisma import Prisma
+from app.utils.prisma_client import get_prisma_client
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from app.models import User
 from ..services.LLMholland_service import LLMService
@@ -64,7 +63,7 @@ class ScoreResponse(BaseModel):
     personality_description: Optional[str] = None
 
 @router.get("/", response_model=TestMetadata)
-async def get_test_metadata(db: Session = Depends(get_db)):
+async def get_test_metadata(prisma: Prisma = Depends(get_prisma_client)):
     """
     Retourne les métadonnées du test Holland Code (RIASEC).
     """
@@ -90,7 +89,7 @@ async def get_test_metadata(db: Session = Depends(get_db)):
 
     try:
         # Récupérer les métadonnées du test depuis la base de données
-        query = text("""
+        query = """
             SELECT id, title, description,
                    COALESCE(seo_code, 'holland') as seo_code,
                    video_url, image_url,
@@ -98,9 +97,9 @@ async def get_test_metadata(db: Session = Depends(get_db)):
             FROM gca_tests
             WHERE active = 1
             LIMIT 1
-        """)
+        """
         
-        result = db.execute(query).fetchone()
+        result = await prisma.query_raw(query)
         
         # Ajouter des logs pour déboguer
         logger.info(f"Résultat de la requête: {result}")
@@ -145,23 +144,20 @@ async def get_test_metadata(db: Session = Depends(get_db)):
     except Exception as e:
         logger.error(f"Erreur lors de la récupération des métadonnées du test: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_interNAL_SERVER_ERROR,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur lors de la récupération des métadonnées du test: {str(e)}"
         )
 
 @router.get("/questions", response_model=List[Question])
-async def get_test_questions(db: Session = Depends(get_db)):
+async def get_test_questions(prisma: Prisma = Depends(get_prisma_client)):
     """
     Retourne toutes les questions et choix du test Holland Code (RIASEC).
     """
     try:
         # Récupérer l'ID du test Holland
-        test_query = text("""
-            SELECT id FROM gca_tests
-            WHERE active = 1
-            LIMIT 1
-        """)
-        test_result = db.execute(test_query).fetchone()
+        test_result = await prisma.gca_tests.find_first(
+            where={"active": 1}
+        )
         
         if not test_result:
             raise HTTPException(
@@ -171,104 +167,93 @@ async def get_test_questions(db: Session = Depends(get_db)):
         
         test_id = test_result.id
         
-        # Récupérer toutes les questions et choix
-        query = text("""
-            SELECT 
-                q.id AS question_id, 
-                q.title AS question_title, 
-                q.chapter_number,
-                q.sort_idx AS question_sort_idx,
-                c.id AS choice_id, 
-                c.title AS choice_title,
-                c.sort_idx AS choice_sort_idx,
-                c.r, c.i, c.a, c.s, c.e, c.c
-            FROM gca_questions q
-            JOIN gca_choices c ON q.id = c.question_id
-            WHERE q.test_id = :test_id AND q.active = 1 AND c.active = 1
-            ORDER BY q.chapter_number, q.sort_idx, c.sort_idx
-        """)
+        # Récupérer toutes les questions
+        questions_data = await prisma.gca_questions.find_many(
+            where={
+                "test_id": test_id,
+                "active": 1
+            }
+        )
         
-        results = db.execute(query, {"test_id": test_id}).fetchall()
+        # Récupérer tous les choix pour ces questions  
+        if not questions_data:
+            choices_data = []
+        else:
+            question_ids = [q.id for q in questions_data]
+            choices_data = await prisma.gca_choices.find_many(
+                where={
+                    "question_id": {"in": question_ids},
+                    "active": 1
+                }
+            )
         
-        logger.info(f"Nombre de résultats pour les questions: {len(results) if results else 0}")
+        logger.info(f"Nombre de questions trouvées: {len(questions_data) if questions_data else 0}")
         
-        if not results:
+        if not questions_data:
             logger.warning("Aucune question trouvée pour le test Holland Code")
-            # Au lieu de lever une exception, retourner un ensemble de questions par défaut
-            # pour permettre au frontend de fonctionner
-            return [
-                {
-                    "id": 1,
-                    "title": "Quelle activité préférez-vous?",
-                    "chapter_number": 1,
-                    "sort_idx": 1,
-                    "choices": [
-                        {"id": 1, "title": "Réparer un appareil électronique", "question_id": 1, "sort_idx": 1, "r": 5, "i": 3, "a": 1, "s": 0, "e": 1, "c": 2},
-                        {"id": 2, "title": "Analyser des données scientifiques", "question_id": 1, "sort_idx": 2, "r": 1, "i": 5, "a": 1, "s": 0, "e": 1, "c": 3},
-                        {"id": 3, "title": "Créer une œuvre d'art", "question_id": 1, "sort_idx": 3, "r": 1, "i": 1, "a": 5, "s": 1, "e": 1, "c": 0},
-                        {"id": 4, "title": "Aider quelqu'un à résoudre un problème personnel", "question_id": 1, "sort_idx": 4, "r": 0, "i": 1, "a": 1, "s": 5, "e": 2, "c": 0}
-                    ]
-                },
-                {
-                    "id": 2,
-                    "title": "Dans un projet de groupe, quel rôle préférez-vous jouer?",
-                    "chapter_number": 1,
-                    "sort_idx": 2,
-                    "choices": [
-                        {"id": 5, "title": "Construire ou fabriquer le produit final", "question_id": 2, "sort_idx": 1, "r": 5, "i": 1, "a": 2, "s": 0, "e": 1, "c": 1},
-                        {"id": 6, "title": "Rechercher et analyser les informations", "question_id": 2, "sort_idx": 2, "r": 1, "i": 5, "a": 1, "s": 1, "e": 0, "c": 2},
-                        {"id": 7, "title": "Concevoir l'aspect visuel ou créatif", "question_id": 2, "sort_idx": 3, "r": 1, "i": 1, "a": 5, "s": 1, "e": 1, "c": 0},
-                        {"id": 8, "title": "Coordonner l'équipe et motiver les membres", "question_id": 2, "sort_idx": 4, "r": 0, "i": 0, "a": 1, "s": 2, "e": 5, "c": 1}
-                    ]
-                }
-            ]
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Aucune question trouvée pour le test Holland Code"
+            )
         
-        # Organiser les résultats par question
-        questions_dict = {}
-        for row in results:
-            question_id = row.question_id
-            
-            # Créer la question si elle n'existe pas encore
-            if question_id not in questions_dict:
-                questions_dict[question_id] = {
-                    "id": question_id,
-                    "title": row.question_title,
-                    "chapter_number": row.chapter_number,
-                    "sort_idx": row.question_sort_idx,
-                    "choices": []
-                }
-            
-            # Ajouter le choix à la question
-            questions_dict[question_id]["choices"].append({
-                "id": row.choice_id,
-                "title": row.choice_title,
-                "question_id": question_id,
-                "sort_idx": row.choice_sort_idx,
-                "r": float(row.r),
-                "i": float(row.i),
-                "a": float(row.a),
-                "s": float(row.s),
-                "e": float(row.e),
-                "c": float(row.c)
-            })
+        # Organiser les choix par question
+        choices_by_question = {}
+        for choice in choices_data:
+            if choice.question_id not in choices_by_question:
+                choices_by_question[choice.question_id] = []
+            choices_by_question[choice.question_id].append(choice)
         
-        # Convertir le dictionnaire en liste
-        questions = list(questions_dict.values())
+        # Trier les choix dans chaque question
+        for question_id in choices_by_question:
+            choices_by_question[question_id].sort(key=lambda x: x.sort_idx)
+        
+        # Trier les questions par chapitre et order
+        questions_data.sort(key=lambda x: (x.chapter_number, x.sort_idx))
+        
+        # Convertir en modèles Pydantic
+        questions = []
+        for q in questions_data:
+            choices = []
+            question_choices = choices_by_question.get(q.id, [])
+            for choice in question_choices:
+                choices.append(Choice(
+                    id=choice.id,
+                    title=choice.title,
+                    question_id=choice.question_id,
+                    sort_idx=choice.sort_idx,
+                    r=float(choice.r),
+                    i=float(choice.i),
+                    a=float(choice.a),
+                    s=float(choice.s),
+                    e=float(choice.e),
+                    c=float(choice.c)
+                ))
+            
+            question = Question(
+                id=q.id,
+                title=q.title,
+                chapter_number=q.chapter_number,
+                sort_idx=q.sort_idx,
+                choices=choices
+            )
+            questions.append(question)
         
         return questions
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Erreur lors de la récupération des questions du test: {str(e)}")
+        import traceback
+        logger.error(f"Stack trace: {traceback.format_exc()}")
         raise HTTPException(
-            status_code=status.HTTP_500_interNAL_SERVER_ERROR,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur lors de la récupération des questions du test: {str(e)}"
         )
 
 @router.post("/answer", status_code=status.HTTP_201_CREATED)
 async def save_answer(
     answer: AnswerRequest,
-    db: Session = Depends(get_db),
+    prisma: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -277,12 +262,12 @@ async def save_answer(
     logger.info(f"Tentative d'enregistrement de réponse: attempt_id={answer.attempt_id}, question_id={answer.question_id}, choice_id={answer.choice_id}")
     try:
         # Récupérer l'ID du test Holland
-        test_query = text("""
+        test_query = """
             SELECT id FROM gca_tests
             WHERE active = 1
             LIMIT 1
-        """)
-        test_result = db.execute(test_query).fetchone()
+        """
+        test_result = await prisma.query_raw(test_query)
         
         if not test_result:
             raise HTTPException(
@@ -293,14 +278,11 @@ async def save_answer(
         test_id = test_result.id
         
         # Vérifier que la question existe
-        question_query = text("""
+        question_query = """
             SELECT id FROM gca_questions 
-            WHERE id = :question_id AND test_id = :test_id AND active = 1
-        """)
-        question_result = db.execute(question_query, {
-            "question_id": answer.question_id,
-            "test_id": test_id
-        }).fetchone()
+            WHERE id = $2 AND test_id = $2 AND active = 1
+        """
+        question_result = await prisma.query_raw(question_query, answer.question_id, test_id)
         
         if not question_result:
             logger.warning(f"Question non trouvée: question_id={answer.question_id}, test_id={test_id}")
@@ -309,14 +291,11 @@ async def save_answer(
             # Dans un environnement de production, vous pourriez vouloir gérer cela différemment
         
         # Vérifier que le choix existe
-        choice_query = text("""
+        choice_query = """
             SELECT id FROM gca_choices 
-            WHERE id = :choice_id AND question_id = :question_id AND active = 1
-        """)
-        choice_result = db.execute(choice_query, {
-            "choice_id": answer.choice_id,
-            "question_id": answer.question_id
-        }).fetchone()
+            WHERE id = $2 AND question_id = $2 AND active = 1
+        """
+        choice_result = await prisma.query_raw(choice_query, answer.choice_id, answer.question_id)
         
         if not choice_result:
             logger.warning(f"Choix non trouvé: choice_id={answer.choice_id}, question_id={answer.question_id}")
@@ -327,28 +306,21 @@ async def save_answer(
         answer_id = str(uuid4())
         
         # Enregistrer la réponse
-        insert_query = text("""
+        insert_query = """
             INSERT INTO gca_users_answers (id, attempt_id, user_id, test_id, question_id, choice_id, created_at)
-            VALUES (:id, :attempt_id, :user_id, :test_id, :question_id, :choice_id, CURRENT_TIMESTAMP)
-        """)
+            VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+        """
         
-        db.execute(insert_query, {
-            "id": answer_id,
-            "attempt_id": answer.attempt_id,
-            "user_id": str(current_user.id),
-            "test_id": test_id,
-            "question_id": answer.question_id,
-            "choice_id": answer.choice_id
-        })
+        await prisma.query_raw(insert_query, answer_id, answer.attempt_id, str(current_user.id), test_id, answer.question_id, answer.choice_id)
         
-        db.commit()
+        # Prisma handles transactions automatically
         
         logger.info(f"Réponse enregistrée avec succès: id={answer_id}")
         return {"message": "Réponse enregistrée avec succès", "id": answer_id}
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        # Prisma handles errors automatically
         logger.error(f"Erreur lors de l'enregistrement de la réponse: {str(e)}", exc_info=True)
         # En cas d'erreur, simuler un succès pour permettre au frontend de continuer
         # Dans un environnement de production, vous pourriez vouloir gérer cela différemment
@@ -358,7 +330,7 @@ async def save_answer(
 async def get_test_score(
     attempt_id: str,
     include_description: bool = False,
-    db: Session = Depends(get_db),
+    prisma: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -367,18 +339,15 @@ async def get_test_score(
     logger.info(f"Calcul du score pour attempt_id={attempt_id}, include_description={include_description}")
     try:
         # Vérifier que l'attempt_id appartient à l'utilisateur actuel
-        check_query = text("""
+        check_query = """
             SELECT COUNT(*) as count
             FROM gca_users_answers
-            WHERE attempt_id = :attempt_id AND user_id = :user_id
-        """)
+            WHERE attempt_id = $1 AND user_id = $1
+        """
         
-        check_result = db.execute(check_query, {
-            "attempt_id": attempt_id,
-            "user_id": str(current_user.id)
-        }).fetchone()
+        check_result = await prisma.query_raw(check_query, attempt_id, str(current_user.id))
         
-        if not check_result or check_result.count == 0:
+        if not check_result or check_result.get('count', 0) == 0:
             logger.warning(f"Tentative de test non trouvée ou non autorisée: attempt_id={attempt_id}, user_id={current_user.id}")
             # Au lieu de lever une exception, on retourne des valeurs par défaut
             # Cela permet au frontend de continuer même si l'attempt_id n'existe pas
@@ -394,7 +363,7 @@ async def get_test_score(
             }
         
         # Calculer les scores RIASEC
-        score_query = text("""
+        score_query = """
             SELECT 
                 SUM(c.r) AS r_score,
                 SUM(c.i) AS i_score,
@@ -404,10 +373,10 @@ async def get_test_score(
                 SUM(c.c) AS c_score
             FROM gca_users_answers ua
             JOIN gca_choices c ON ua.choice_id = c.id
-            WHERE ua.attempt_id = :attempt_id
-        """)
+            WHERE ua.attempt_id = $1
+        """
         
-        score_result = db.execute(score_query, {"attempt_id": attempt_id}).fetchone()
+        score_result = await prisma.query_raw(score_query, attempt_id)
         
         if not score_result:
             logger.warning(f"Aucun score trouvé pour cette tentative: attempt_id={attempt_id}")
@@ -443,39 +412,45 @@ async def get_test_score(
         personality_description = None
         if include_description:
             # Récupérer la description de la personnalité dominante (première lettre du code)
-            personality_query = text("""
+            personality_query = """
                 SELECT description
                 FROM gca_personalities
-                WHERE initial = :initial
-            """)
+                WHERE initial = $1
+            """
             
-            personality_result = db.execute(personality_query, {
-                "initial": top_3_code[0]
-            }).fetchone()
+            personality_result = await prisma.query_raw(
+                """
+                SELECT description
+                FROM gca_personalities
+                WHERE initial = $1
+                """,
+                top_3_code[0]
+            )
+            personality_result = personality_result[0] if personality_result else None
             
             if personality_result:
                 personality_description = personality_result.description
         
         # Enregistrer le résultat dans la table gca_results
         try:
-            test_query = text("""
+            test_query = """
                 SELECT id FROM gca_tests
                 WHERE active = 1
                 LIMIT 1
-            """)
-            test_result = db.execute(test_query).fetchone()
+            """
+            test_result = await prisma.query_raw(test_query)
             
             if test_result:
                 result_id = str(uuid4())
                 
                 # Get the actual user_id from gca_users_answers
-                user_id_query = text("""
+                user_id_query = """
                     SELECT user_id FROM gca_users_answers
-                    WHERE attempt_id = :attempt_id
+                    WHERE attempt_id = $1
                     LIMIT 1
-                """)
+                """
                 
-                user_id_result = db.execute(user_id_query, {"attempt_id": attempt_id}).fetchone()
+                user_id_result = await prisma.query_raw(user_id_query, attempt_id)
                 
                 if not user_id_result:
                     logger.warning(f"Could not find user_id for attempt_id={attempt_id}")
@@ -487,76 +462,63 @@ async def get_test_score(
                 logger.info(f"Using actual user_id: {actual_user_id} for attempt_id={attempt_id}")
                 
                 # Vérifier si un enregistrement avec le même attempt_id existe déjà
-                check_existing_query = text("""
-                    SELECT id FROM gca_results WHERE attempt_id = :attempt_id
-                """)
+                check_existing_query = """
+                    SELECT id FROM gca_results WHERE attempt_id = $1
+                """
                 
-                existing_result = db.execute(check_existing_query, {"attempt_id": attempt_id}).fetchone()
+                existing_result = await prisma.query_raw(check_existing_query, attempt_id)
                 
                 if existing_result:
                     # Mettre à jour l'enregistrement existant
-                    update_query = text("""
+                    update_query = """
                         UPDATE gca_results SET
-                            r_score = :r_score,
-                            i_score = :i_score,
-                            a_score = :a_score,
-                            s_score = :s_score,
-                            e_score = :e_score,
-                            c_score = :c_score,
-                            top_3_code = :top_3_code,
-                            user_id = :user_id
-                        WHERE attempt_id = :attempt_id
-                    """)
+                            r_score = $3,
+                            i_score = $4,
+                            a_score = $5,
+                            s_score = $6,
+                            e_score = $7,
+                            c_score = $8,
+                            top_3_code = $9,
+                            user_id = $1
+                        WHERE attempt_id = $2
+                    """
                     
-                    db.execute(update_query, {
-                        "attempt_id": attempt_id,
-                        "r_score": score_result.r_score,
-                        "i_score": score_result.i_score,
-                        "a_score": score_result.a_score,
-                        "s_score": score_result.s_score,
-                        "e_score": score_result.e_score,
-                        "c_score": score_result.c_score,
-                        "top_3_code": top_3_code,
-                        "user_id": actual_user_id
-                    })
+                    await prisma.query_raw(update_query,
+                        actual_user_id, attempt_id, score_result.r_score, score_result.i_score, score_result.a_score,
+                        score_result.s_score, score_result.e_score, score_result.c_score,
+                        top_3_code
+                    )
                     
                     logger.info(f"Résultat mis à jour dans gca_results pour attempt_id={attempt_id}")
                 else:
                     # Insérer un nouvel enregistrement
-                    insert_query = text("""
+                    insert_query = """
                         INSERT INTO gca_results (
                             id, attempt_id, user_id, test_id,
                             r_score, i_score, a_score, s_score, e_score, c_score,
                             top_3_code, created_at
                         )
                         VALUES (
-                            :id, :attempt_id, :user_id, :test_id,
-                            :r_score, :i_score, :a_score, :s_score, :e_score, :c_score,
-                            :top_3_code, CURRENT_TIMESTAMP
+                            $1, $2, $3, $4,
+                            $5, $6, $7, $8, $9, $10,
+                            $11, CURRENT_TIMESTAMP
                         )
-                    """)
+                    """
                     
-                    db.execute(insert_query, {
-                        "id": result_id,
-                        "attempt_id": attempt_id,
-                        "user_id": actual_user_id,  # Use the actual user_id from gca_users_answers
-                        "test_id": test_result.id,
-                        "r_score": score_result.r_score,
-                        "i_score": score_result.i_score,
-                        "a_score": score_result.a_score,
-                        "s_score": score_result.s_score,
-                        "e_score": score_result.e_score,
-                        "c_score": score_result.c_score,
-                        "top_3_code": top_3_code
-                    })
+                    await prisma.query_raw(insert_query, 
+                        result_id, attempt_id, actual_user_id, test_result.id,
+                        score_result.r_score, score_result.i_score, score_result.a_score,
+                        score_result.s_score, score_result.e_score, score_result.c_score,
+                        top_3_code
+                    )
                     
                     logger.info(f"Nouveau résultat inséré dans gca_results pour attempt_id={attempt_id}")
                 
                 try:
-                    db.commit()
+                    # Prisma handles transactions automatically
                     logger.info(f"Résultat enregistré avec succès dans gca_results pour attempt_id={attempt_id}")
                 except Exception as insert_error:
-                    db.rollback()
+                    # Prisma handles errors automatically
                     logger.error(f"Erreur lors de l'insertion dans gca_results: {str(insert_error)}")
                     # Continuer malgré l'erreur d'insertion
         except Exception as e:
@@ -564,12 +526,12 @@ async def get_test_score(
             # Continuer malgré l'erreur
         
         return {
-            "r_score": float(score_result.r_score),
-            "i_score": float(score_result.i_score),
-            "a_score": float(score_result.a_score),
-            "s_score": float(score_result.s_score),
-            "e_score": float(score_result.e_score),
-            "c_score": float(score_result.c_score),
+            "r_score": float(score_result.get('r_score', 0)),
+            "i_score": float(score_result.get('i_score', 0)),
+            "a_score": float(score_result.get('a_score', 0)),
+            "s_score": float(score_result.get('s_score', 0)),
+            "e_score": float(score_result.get('e_score', 0)),
+            "c_score": float(score_result.get('c_score', 0)),
             "top_3_code": top_3_code,
             "personality_description": personality_description
         }
@@ -591,8 +553,8 @@ async def get_test_score(
 
 @router.get("/user-results", response_model=ScoreResponse)
 async def get_user_latest_results(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """
     Récupère les résultats les plus récents du test Holland Code (RIASEC) pour l'utilisateur connecté.
@@ -600,17 +562,29 @@ async def get_user_latest_results(
     logger.info(f"Récupération des résultats RIASEC pour l'utilisateur: {current_user.id}")
     try:
         # Récupérer le résultat le plus récent pour l'utilisateur
-        query = text("""
+        query = """
             SELECT
                 r.r_score, r.i_score, r.a_score, r.s_score, r.e_score, r.c_score,
                 r.top_3_code, r.created_at, r.attempt_id
             FROM gca_results r
-            WHERE r.user_id = :user_id
+            WHERE r.user_id = $1
             ORDER BY r.created_at DESC
             LIMIT 1
-        """)
+        """
         
-        result = db.execute(query, {"user_id": str(current_user.id)}).fetchone()
+        results = await prisma.query_raw(
+            """
+            SELECT
+                r.r_score, r.i_score, r.a_score, r.s_score, r.e_score, r.c_score,
+                r.top_3_code, r.created_at, r.attempt_id
+            FROM gca_results r
+            WHERE r.user_id = $1
+            ORDER BY r.created_at DESC
+            LIMIT 1
+            """,
+            str(current_user.id)
+        )
+        result = results[0] if results else None
         
         if not result:
             logger.warning(f"No Holland test results found for user {current_user.id}")
@@ -629,41 +603,40 @@ async def get_user_latest_results(
         # Récupérer la description de la personnalité dominante
         personality_description = None
         if result.top_3_code:
-            personality_query = text("""
+            personality_query = """
                 SELECT description
                 FROM gca_personalities
-                WHERE initial = :initial
-            """)
+                WHERE initial = $1
+            """
             
-            personality_result = db.execute(personality_query, {
-                "initial": result.top_3_code[0]
-            }).fetchone()
+            personality_result = await prisma.query_raw(personality_query, result.top_3_code[0])
             
-            if personality_result:
-                personality_description = personality_result.description
+            if personality_result and len(personality_result) > 0:
+                personality_description = getattr(personality_result[0], 'description', None)
         
+        # ✅ DEFENSIVE PROGRAMMING: Safe access to query result attributes
         return {
-            "r_score": float(result.r_score),
-            "i_score": float(result.i_score),
-            "a_score": float(result.a_score),
-            "s_score": float(result.s_score),
-            "e_score": float(result.e_score),
-            "c_score": float(result.c_score),
-            "top_3_code": result.top_3_code,
-            "personality_description": personality_description
+            "r_score": float(getattr(result, 'r_score', 0) or 0),
+            "i_score": float(getattr(result, 'i_score', 0) or 0),
+            "a_score": float(getattr(result, 'a_score', 0) or 0),
+            "s_score": float(getattr(result, 's_score', 0) or 0),
+            "e_score": float(getattr(result, 'e_score', 0) or 0),
+            "c_score": float(getattr(result, 'c_score', 0) or 0),
+            "top_3_code": getattr(result, 'top_3_code', '') or '',
+            "personality_description": personality_description or "No personality description available."
         }
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Erreur lors de la récupération des résultats de l'utilisateur: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_interNAL_SERVER_ERROR,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur lors de la récupération des résultats: {str(e)}"
         )
 
 @router.get("/profile-description", response_model=Dict[str, str])
 async def get_profile_description(
-    db: Session = Depends(get_db),
+    prisma: Prisma = Depends(get_prisma_client),
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -673,14 +646,14 @@ async def get_profile_description(
     Cette route est maintenue pour la compatibilité avec les versions antérieures.
     Elle redirige vers le nouvel endpoint avec l'ID utilisateur.
     """
-    return await get_user_profile_description(current_user.id, False, db, current_user)
+    return await get_user_profile_description(current_user.id, False, prisma, current_user)
 
 @router.get("/profile-description/{user_id}", response_model=Dict[str, str])
 async def get_user_profile_description(
     user_id: str,
     regenerate: bool = False,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    prisma: Prisma = Depends(get_prisma_client)
 ):
     """
     Génère une description personnalisée du profil RIASEC de l'utilisateur
@@ -695,17 +668,17 @@ async def get_user_profile_description(
     """
     try:
         # 1. Récupérer les scores RIASEC les plus récents
-        riasec_query = text("""
+        riasec_query = """
             SELECT
                 r.r_score, r.i_score, r.a_score, r.s_score, r.e_score, r.c_score,
                 r.top_3_code
             FROM gca_results r
-            WHERE r.user_id = :user_id
+            WHERE r.user_id = $1
             ORDER BY r.created_at DESC
             LIMIT 1
-        """)
+        """
         
-        riasec_result = db.execute(riasec_query, {"user_id": str(current_user.id)}).fetchone()
+        riasec_result = await prisma.query_raw(riasec_query, str(current_user.id))
         
         if not riasec_result:
             logger.warning(f"No Holland test results found for user {current_user.id} in profile description")
@@ -713,7 +686,7 @@ async def get_user_profile_description(
             return {"description": "No Holland test results available. Please complete the Holland test to receive your personalized career profile description."}
         
         # 2. Récupérer les données du profil utilisateur
-        profile_query = text("""
+        profile_query = """
             SELECT 
                 id, user_id, name, age, sex, major, year, gpa,
                 hobbies, country, state_province, unique_quality,
@@ -722,10 +695,10 @@ async def get_user_profile_description(
                 years_experience, education_level, career_goals,
                 skills, personal_analysis, created_at, updated_at
             FROM user_profiles
-            WHERE user_id = :user_id
-        """)
+            WHERE user_id = $1
+        """
         
-        profile_result = db.execute(profile_query, {"user_id": str(current_user.id)}).fetchone()
+        profile_result = await prisma.query_raw(profile_query, str(current_user.id))
         
         # Convertir le résultat en dictionnaire de manière sécurisée
         user_profile = {}
@@ -743,17 +716,17 @@ async def get_user_profile_description(
                 logger.error(f"Erreur lors de la conversion du profil en dictionnaire: {str(e)}")
         
         # 3. Récupérer les compétences de l'utilisateur
-        skills_query = text("""
+        skills_query = """
             SELECT
                 id, user_id, creativity, leadership, digital_literacy,
                 critical_thinking, problem_solving, analytical_thinking,
                 attention_to_detail, collaboration, adaptability,
                 independence, evaluation, decision_making, stress_tolerance
             FROM user_skills
-            WHERE user_id = :user_id
-        """)
+            WHERE user_id = $1
+        """
         
-        skills_results = db.execute(skills_query, {"user_id": str(current_user.id)}).fetchall()
+        skills_results = await prisma.query_raw(skills_query, str(current_user.id))
         
         # Convertir les résultats en liste de dictionnaires de manière sécurisée
         user_skills = []
@@ -773,7 +746,7 @@ async def get_user_profile_description(
                     logger.error(f"Erreur lors de la conversion d'une compétence en dictionnaire: {str(e)}")
         
         # 4. Récupérer les recommandations sauvegardées
-        recommendations_query = text("""
+        recommendations_query = """
             SELECT
                 id, user_id, label, description, main_duties, oasis_code,
                 role_creativity, role_leadership, role_digital_literacy,
@@ -781,12 +754,12 @@ async def get_user_profile_description(
                 attention_to_detail, collaboration, adaptability, independence,
                 evaluation, decision_making, stress_tolerance
             FROM saved_recommendations
-            WHERE user_id = :user_id
+            WHERE user_id = $1
             ORDER BY saved_at DESC
             LIMIT 5
-        """)
+        """
         
-        recommendations_results = db.execute(recommendations_query, {"user_id": str(current_user.id)}).fetchall()
+        recommendations_results = await prisma.query_raw(recommendations_query, str(current_user.id))
         
         # Convertir les résultats en liste de dictionnaires de manière sécurisée
         saved_recommendations = []
@@ -835,33 +808,27 @@ async def get_user_profile_description(
                 # Vérifier si le profil existe
                 if user_profile:
                     # Mettre à jour le profil existant
-                    update_query = text("""
+                    update_query = """
                         UPDATE user_profiles
-                        SET personal_analysis = :personal_analysis
-                        WHERE user_id = :user_id
-                    """)
+                        SET personal_analysis = $2
+                        WHERE user_id = $1
+                    """
                     
-                    db.execute(update_query, {
-                        "user_id": str(current_user.id),
-                        "personal_analysis": description
-                    })
+                    await prisma.query_raw(update_query, str(current_user.id), description)
                 else:
                     # Créer un nouveau profil
-                    insert_query = text("""
+                    insert_query = """
                         INSERT INTO user_profiles (user_id, personal_analysis)
-                        VALUES (:user_id, :personal_analysis)
-                    """)
+                        VALUES ($1, $2)
+                    """
                     
-                    db.execute(insert_query, {
-                        "user_id": str(current_user.id),
-                        "personal_analysis": description
-                    })
+                    await prisma.query_raw(insert_query, str(current_user.id), description)
                 
-                db.commit()
+                # Prisma handles transactions automatically
                 logger.info(f"Description sauvegardée dans le profil de l'utilisateur {user_id}")
             except Exception as db_error:
                 logger.error(f"Erreur lors de la sauvegarde de la description: {str(db_error)}")
-                db.rollback()
+                # Prisma handles errors automatically
                 # Continuer même en cas d'erreur de sauvegarde
         
         except Exception as llm_error:
@@ -875,6 +842,6 @@ async def get_user_profile_description(
     except Exception as e:
         logger.error(f"Erreur lors de la génération de la description du profil: {str(e)}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_interNAL_SERVER_ERROR,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur lors de la génération de la description du profil: {str(e)}"
         )

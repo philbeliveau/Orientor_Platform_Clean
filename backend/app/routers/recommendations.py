@@ -286,16 +286,24 @@ async def swipe_recommendation(
             swiped_right=swipe.swiped_right
         )
         
-        db.add(user_recommendation)
-        db.commit()
+        # Create recommendation using Prisma
+        await db.userrecommendation.create(data={
+            "user_id": current_user.id,
+            "oasis_code": rec["oasis_code"],
+            "label": rec["label"],
+            "description": rec["description"],
+            "main_duties": rec["main_duties"]
+        })
         
         # If swiped right, save to saved_recommendations
         if swipe.swiped_right:
-            # Check if already saved
-            existing = db.query(SavedRecommendation).filter(
-                SavedRecommendation.user_id == current_user.id,
-                SavedRecommendation.oasis_code == swipe.oasis_code
-            ).first()
+            # Check if already saved using Prisma
+            existing = await db.savedrecommendation.find_first(
+                where={
+                    "user_id": current_user.id,
+                    "oasis_code": swipe.oasis_code
+                }
+            )
             
             if existing:
                 return SwipeResponse(
@@ -344,8 +352,28 @@ async def swipe_recommendation(
             logger.info(f"Main Duties: {swipe.main_duties}")
             logger.info(f"Parsed Fields: {parsed_fields}")
             
-            db.add(new_recommendation)
-            db.commit()
+            # Create saved recommendation using Prisma
+            await db.savedrecommendation.create(data={
+                "user_id": current_user.id,
+                "oasis_code": swipe.oasis_code,
+                "label": swipe.label,
+                "description": swipe.lead_statement,
+                "main_duties": swipe.main_duties,
+                "role_creativity": try_parse_float(parsed_fields.get("creativity")),
+                "role_leadership": try_parse_float(parsed_fields.get("leadership")),
+                "role_digital_literacy": try_parse_float(parsed_fields.get("digital_literacy")),
+                "role_critical_thinking": try_parse_float(parsed_fields.get("critical_thinking")),
+                "role_problem_solving": try_parse_float(parsed_fields.get("problem_solving")),
+                "analytical_thinking": try_parse_float(parsed_fields.get("analytical_thinking")),
+                "attention_to_detail": try_parse_float(parsed_fields.get("attention_to_detail")),
+                "collaboration": try_parse_float(parsed_fields.get("collaboration")),
+                "adaptability": try_parse_float(parsed_fields.get("adaptability")),
+                "independence": try_parse_float(parsed_fields.get("independence")),
+                "evaluation": try_parse_float(parsed_fields.get("evaluation")),
+                "decision_making": try_parse_float(parsed_fields.get("decision_making")),
+                "stress_tolerance": try_parse_float(parsed_fields.get("stress_tolerance")),
+                "all_fields": parsed_fields
+            })
             db.refresh(new_recommendation)
             
             return SwipeResponse(
