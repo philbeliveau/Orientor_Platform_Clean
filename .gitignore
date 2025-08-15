@@ -149,3 +149,25 @@ package-lock.json
 # .serena
 .serena
 data/HEXACO
+
+# Testing and validation files (development/debugging only)
+backend/fix_holland_critical.py
+backend/tests/comprehensive_platform_validation.py
+backend/tests/final_platform_validation_report.md
+backend/tests/platform_health_report_*.md
+backend/tests/simple_platform_validation.py
+backend/tests/validation_results_*.json
+
+# Documentation (development reports)
+docs/Major-debugging/
+docs/data_processing_fixes_summary.md
+docs/pattern_violations_comprehensive_scan.md
+
+# Test results and validation reports
+tests/baseline_results_*/
+tests/baseline_validation_results_*.json
+tests/critical_functionality_test_*.json
+tests/comprehensive_platform_validation_report_*.md
+tests/model_validation_*.md
+tests/prisma_model_name_analysis_report.md
+tests/baseline_platform_health_report.md
