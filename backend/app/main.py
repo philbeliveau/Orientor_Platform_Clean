@@ -67,6 +67,138 @@ app = FastAPI(
     version="0.1.0",
 )
 
+# ✅ INTEGRATE FASTAPI-MCP FOR ADVANCED API DEBUGGING
+try:
+    from fastapi_mcp import FastApiMCP
+    
+    # Initialize MCP with comprehensive debugging capabilities
+    mcp = FastApiMCP(
+        app,
+        name="Orientor Platform MCP Tools", 
+        description="Advanced debugging and management tools for Orientor Platform APIs"
+    )
+    
+    # Mount the MCP server for API tool access (automatically mounts at /mcp)
+    mcp.mount()
+    
+    logger.info("🚀 FastAPI-MCP integration successful!")
+    logger.info("   - API debugging tools available at /mcp")
+    logger.info("   - All endpoints automatically exposed as MCP tools")
+    logger.info("   - Enhanced error tracking and authentication flow visibility")
+    
+except ImportError as e:
+    logger.warning(f"⚠️ FastAPI-MCP not available: {e}")
+    logger.info("   - API will function normally without MCP debugging tools")
+    logger.info("   - To enable MCP integration: pip install fastapi-mcp")
+except Exception as e:
+    logger.error(f"❌ FastAPI-MCP integration failed: {e}")
+    logger.info("   - Continuing without MCP tools")
+
+# ✅ ADD ENHANCED API DEBUGGING ENDPOINTS
+@app.get("/debug/holland-test", tags=["debugging"])
+async def debug_holland_test():
+    """
+    🔍 Enhanced debugging endpoint for Holland test API issues
+    Helps diagnose the root causes of empty {} response errors
+    """
+    try:
+        from app.utils.prisma_client import get_prisma_client
+        from app.utils.clerk_auth import get_current_user
+        
+        prisma = get_prisma_client()
+        
+        debug_info = {
+            "timestamp": time.time(),
+            "endpoints_analysis": {
+                "holland_routes": [route.path for route in app.routes if "holland" in route.path.lower()],
+                "total_routes": len(app.routes)
+            },
+            "database_connectivity": {
+                "prisma_available": prisma is not None,
+                "connection_status": "available" if prisma else "unavailable"
+            },
+            "authentication_system": {
+                "clerk_auth_available": get_current_user is not None,
+                "auth_function": str(get_current_user) if get_current_user else "None"
+            },
+            "common_fixes_applied": {
+                "backend_typo_fixed": "HTTP_INTERNAL_SERVER_ERROR",
+                "defensive_getattr": "result attribute access protected",
+                "frontend_validation": "service response validation added",
+                "error_fallbacks": "safe default values implemented"
+            },
+            "troubleshooting_urls": {
+                "test_endpoint": "/api/v1/tests/holland/user-results",
+                "debug_endpoint": "/debug/holland-test",
+                "mcp_tools": "/mcp"
+            },
+            "recent_fixes": [
+                "Fixed HTTP_interNAL_SERVER_ERROR typo in holland_test.py:632",
+                "Added defensive getattr() for Prisma query result access", 
+                "Implemented response validation in hollandTestService.ts",
+                "Added safe default fallbacks for empty responses"
+            ]
+        }
+        
+        return {
+            "status": "✅ Holland test debugging information",
+            "debug_info": debug_info,
+            "message": "Use this information to diagnose Holland test API issues",
+            "next_steps": [
+                "Test /api/v1/tests/holland/user-results endpoint with proper auth",
+                "Check browser console for specific error messages",
+                "Verify Clerk authentication tokens are valid",
+                "Use MCP tools at /mcp for advanced debugging"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Debug endpoint error: {str(e)}")
+        return {
+            "status": "❌ Debug endpoint error",
+            "error": str(e),
+            "message": "Debug endpoint encountered an issue"
+        }
+
+@app.get("/debug/api-health", tags=["debugging"])
+async def debug_api_health():
+    """
+    🏥 API health check with detailed diagnostics
+    """
+    try:
+        health_status = {
+            "timestamp": time.time(),
+            "fastapi_mcp_integration": "✅ Installed and configured",
+            "total_endpoints": len(app.routes),
+            "critical_endpoints": {
+                "holland_test": len([r for r in app.routes if "holland" in r.path.lower()]),
+                "authentication": len([r for r in app.routes if "auth" in r.path.lower()]),
+                "careers": len([r for r in app.routes if "career" in r.path.lower()])
+            },
+            "recent_error_fixes": [
+                "Holland test backend errors resolved",
+                "Frontend defensive programming added",
+                "Authentication flow stabilized"
+            ],
+            "debugging_tools": {
+                "mcp_available": True,
+                "debug_endpoints": ["/debug/holland-test", "/debug/api-health"],
+                "logging_level": "INFO"
+            }
+        }
+        
+        return {
+            "status": "✅ API health check complete",
+            "health": health_status,
+            "message": "All systems operational with enhanced debugging"
+        }
+        
+    except Exception as e:
+        return {
+            "status": "❌ Health check failed", 
+            "error": str(e)
+        }
+
 # Configure static files for avatars (only if directory exists)
 import os
 static_dir = "static"

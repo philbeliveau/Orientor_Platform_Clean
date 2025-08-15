@@ -32,6 +32,9 @@ aiohttp==3.9.0
 requests==2.31.0
 httpx==0.24.1
 
+# FastAPI-MCP integration for advanced API debugging
+fastapi-mcp
+
 # AI services (lightweight)
 anthropic==0.18.0
 openai>=1.10.0,<2.0.0  # Updated for langchain-openai compatibility

@@ -281,6 +281,19 @@ def check_database_health():
 logger.info("📌 Database initialization deferred to avoid environment variable caching")
 
 # ============================================================================
+# PRISMA CLIENT BRIDGE FOR COMPATIBILITY
+# ============================================================================
+# Add Prisma client bridge for routes that import from this file
+
+def get_prisma():
+    """
+    Bridge function to import Prisma client
+    This maintains compatibility for existing imports while migrating to Prisma
+    """
+    from app.utils.prisma_client import get_prisma_client
+    return get_prisma_client
+
+# ============================================================================
 # DATABASE SESSION UTILITIES FOR OPTIMIZATION (Phase 4-5)
 # ============================================================================
 
