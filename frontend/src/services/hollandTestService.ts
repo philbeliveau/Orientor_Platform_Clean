@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { clerkApiService } from './api';  // Import Clerk-authenticated API service
+import { validateTestMetadata } from '@/utils/numberUtils';  // Import validation utilities
 
 // Types basés sur les modèles backend
 export interface TestMetadata {
@@ -60,13 +61,28 @@ const hollandTestService = {
   // Récupérer les métadonnées du test
   getTestMetadata: async (token: string): Promise<TestMetadata> => {
     try {
-      return await clerkApiService.request<TestMetadata>(`/api/v1/tests/holland`, {
+      const rawMetadata = await clerkApiService.request<any>(`/api/v1/tests/holland`, {
         method: 'GET',
         token
       });
+      
+      // ✅ DEFENSIVE PROGRAMMING: Validate and sanitize metadata
+      const validatedMetadata = validateTestMetadata(rawMetadata);
+      
+      if (!validatedMetadata.is_valid) {
+        console.warn('Invalid test metadata received, using fallback values:', rawMetadata);
+      }
+      
+      // Return clean TestMetadata without the is_valid field
+      const { is_valid, ...cleanMetadata } = validatedMetadata;
+      return cleanMetadata;
     } catch (error) {
       console.error('Erreur lors de la récupération des métadonnées du test:', error);
-      throw error;
+      
+      // ✅ DEFENSIVE PROGRAMMING: Return safe fallback instead of throwing
+      const fallbackMetadata = validateTestMetadata(null);
+      const { is_valid, ...cleanMetadata } = fallbackMetadata;
+      return cleanMetadata;
     }
   },
 
@@ -116,13 +132,52 @@ const hollandTestService = {
   // Récupérer les derniers résultats du test Holland pour l'utilisateur connecté
   getUserLatestResults: async (token: string): Promise<ScoreResponse> => {
     try {
-      return await clerkApiService.request<ScoreResponse>(`/api/v1/tests/holland/user-results`, {
+      const response = await clerkApiService.request<ScoreResponse>(`/api/v1/tests/holland/user-results`, {
         method: 'GET',
         token
       });
+      
+      // ✅ DEFENSIVE PROGRAMMING: Validate response structure
+      if (!response || typeof response !== 'object') {
+        console.warn('Invalid Holland test response structure:', response);
+        return {
+          r_score: 0,
+          i_score: 0,
+          a_score: 0,
+          s_score: 0,
+          e_score: 0,
+          c_score: 0,
+          top_3_code: '',
+          personality_description: 'No test results available. Please complete the Holland test.'
+        };
+      }
+      
+      // ✅ DEFENSIVE PROGRAMMING: Ensure all required fields exist with defaults
+      return {
+        r_score: typeof response.r_score === 'number' ? response.r_score : 0,
+        i_score: typeof response.i_score === 'number' ? response.i_score : 0,
+        a_score: typeof response.a_score === 'number' ? response.a_score : 0,
+        s_score: typeof response.s_score === 'number' ? response.s_score : 0,
+        e_score: typeof response.e_score === 'number' ? response.e_score : 0,
+        c_score: typeof response.c_score === 'number' ? response.c_score : 0,
+        top_3_code: typeof response.top_3_code === 'string' ? response.top_3_code : '',
+        personality_description: typeof response.personality_description === 'string' 
+          ? response.personality_description 
+          : 'No personality description available.'
+      };
     } catch (error) {
       console.error('Erreur lors de la récupération des résultats du test:', error);
-      throw error;
+      // ✅ DEFENSIVE PROGRAMMING: Return safe default instead of throwing
+      return {
+        r_score: 0,
+        i_score: 0,
+        a_score: 0,
+        s_score: 0,
+        e_score: 0,
+        c_score: 0,
+        top_3_code: '',
+        personality_description: 'Error loading test results. Please try again later.'
+      };
     }
   },
 

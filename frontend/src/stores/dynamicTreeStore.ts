@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools, subscribeWithSelector } from 'zustand/middleware';
 import { Node, Edge } from 'reactflow';
-import { realTimeGraphSageService, GraphSageRecalculationResponse } from '../services/realTimeGraphSageService';
+import { createRealTimeGraphSageService, GraphSageRecalculationResponse } from '../services/realTimeGraphSageService';
 import { AlternativePath } from '../components/tree/AlternativePathsExplorer';
 
 interface DynamicParameters {
@@ -51,11 +51,15 @@ interface DynamicTreeState {
   showDynamicControls: boolean;
   isAutoRecalculationEnabled: boolean;
   pendingChanges: boolean;
+  
+  // Authentication
+  getToken: (() => Promise<string | null>) | null;
 }
 
 interface DynamicTreeActions {
   // Initialization
   initializeTree: (nodes: Node[], edges: Edge[], profile: string) => void;
+  setAuth: (getToken: () => Promise<string | null>) => void;
   
   // Parameter updates
   updateDepth: (depth: number) => void;
@@ -129,8 +133,12 @@ export const useDynamicTreeStore = create<DynamicTreeStore>()(subscribeWithSelec
     showDynamicControls: true,
     isAutoRecalculationEnabled: true,
     pendingChanges: false,
+    getToken: null,
 
     // Actions
+    setAuth: (getToken) => {
+      set({ getToken }, false, 'setAuth');
+    },
     initializeTree: (nodes, edges, profile) => {
       const maxDepth = Math.max(...nodes.map(node => node.data?.level || 0));
       
@@ -220,7 +228,14 @@ export const useDynamicTreeStore = create<DynamicTreeStore>()(subscribeWithSelec
           }
         };
         
-        const result = await realTimeGraphSageService.recalculateWithDebounce(
+        // Get authenticated service
+        const { getToken } = state;
+        if (!getToken) {
+          throw new Error('Authentication not initialized. Please sign in.');
+        }
+        
+        const service = createRealTimeGraphSageService(getToken);
+        const result = await service.recalculateWithDebounce(
           request,
           'main-tree-recalculation',
           {
@@ -311,7 +326,14 @@ export const useDynamicTreeStore = create<DynamicTreeStore>()(subscribeWithSelec
           }
         };
         
-        const alternatives = await realTimeGraphSageService.generateAlternativePaths(request, 5);
+        // Get authenticated service
+        const { getToken } = state;
+        if (!getToken) {
+          throw new Error('Authentication not initialized. Please sign in.');
+        }
+        
+        const service = createRealTimeGraphSageService(getToken);
+        const alternatives = await service.generateAlternativePaths(request, 5);
         
         // Convert GraphSage responses to AlternativePath format
         const alternativePaths: AlternativePath[] = alternatives.map((alt, index) => ({
@@ -385,8 +407,12 @@ export const useDynamicTreeStore = create<DynamicTreeStore>()(subscribeWithSelec
     },
 
     cleanup: () => {
-      // Clear any pending operations
-      realTimeGraphSageService.clearCache();
+      // Clear any pending operations - only if service is available
+      const { getToken } = get();
+      if (getToken) {
+        const service = createRealTimeGraphSageService(getToken);
+        service.clearCache();
+      }
       
       set({
         isRecalculating: false,

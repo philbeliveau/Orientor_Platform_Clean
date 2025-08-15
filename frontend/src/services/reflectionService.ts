@@ -165,23 +165,27 @@ class ReflectionService {
         this.getCurrentUserResponses(getToken)
       ]);
 
-      // Vérifier que responses est bien un tableau
+      // ✅ DEFENSIVE PROGRAMMING: Ensure both questions and responses are arrays
+      const questionsArray = Array.isArray(questions) ? questions : [];
       const responseArray = Array.isArray(responses) ? responses : [];
 
       // Créer un map des réponses par question_id
       const responsesMap = new Map<number, ReflectionResponse>();
       responseArray.forEach(response => {
-        responsesMap.set(response.question_id, response);
+        if (response && response.question_id) {
+          responsesMap.set(response.question_id, response);
+        }
       });
 
       // Combiner les questions avec leurs réponses
-      return questions.map(question => ({
+      return questionsArray.map(question => ({
         ...question,
         response: responsesMap.get(question.id)
       }));
     } catch (error) {
       console.error('Erreur lors de la récupération des questions avec réponses:', error);
-      throw error;
+      // Return empty array instead of throwing to prevent crash
+      return [];
     }
   }
 }

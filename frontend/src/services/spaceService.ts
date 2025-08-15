@@ -1,5 +1,7 @@
 import { clerkApiService, getAuthHeader, endpoint } from './api';
 import axios from 'axios';
+import { validateArrayResponse, validateJobRecommendation } from '../utils/validation';
+import { responsePatterns } from '../utils/safeArrayProcessing';
 
 // Type definitions
 export interface Recommendation {
@@ -98,14 +100,59 @@ export interface NoteUpdate {
 }
 
 
+// Simple validation function for recommendations
+const validateRecommendation = (item: any): Recommendation => {
+  if (!item || typeof item !== 'object') {
+    throw new Error('Invalid recommendation: Expected an object');
+  }
+  
+  // Ensure required fields exist
+  return {
+    id: item.id,
+    oasis_code: item.oasis_code || '',
+    label: item.label || item.title || 'Unknown Job',
+    description: item.description || '',
+    main_duties: item.main_duties || '',
+    role_creativity: item.role_creativity,
+    role_leadership: item.role_leadership,
+    role_digital_literacy: item.role_digital_literacy,
+    role_critical_thinking: item.role_critical_thinking,
+    role_problem_solving: item.role_problem_solving,
+    analytical_thinking: item.analytical_thinking,
+    attention_to_detail: item.attention_to_detail,
+    collaboration: item.collaboration,
+    adaptability: item.adaptability,
+    independence: item.independence,
+    evaluation: item.evaluation,
+    decision_making: item.decision_making,
+    stress_tolerance: item.stress_tolerance,
+    saved_at: item.saved_at,
+    skill_comparison: item.skill_comparison,
+    notes: item.notes || [],
+    all_fields: item.all_fields || {},
+    personal_analysis: item.personal_analysis,
+    entry_qualifications: item.entry_qualifications,
+    suggested_improvements: item.suggested_improvements,
+    ...item // Include any additional fields
+  };
+};
+
 // Fetch saved recommendations
-export const fetchSavedRecommendations = async (token: string): Promise<Recommendation[]> => {
+export const fetchSavedRecommendations = async (getToken: () => Promise<string | null>): Promise<Recommendation[]> => {
   try {
     console.log('Fetching saved recommendations from: /api/v1/careers/saved');
-    return await clerkApiService.request<Recommendation[]>('/api/v1/careers/saved', {
-      method: 'GET',
-      token
-    });
+    const headers = await getAuthHeader(getToken);
+    const response = await axios.get<any>(
+      endpoint('/api/v1/careers/saved'),
+      { headers }
+    );
+    
+    // ✅ DEFENSIVE PROGRAMMING: Use response patterns to handle different formats
+    const rawData = responsePatterns.dataWrapper(response.data);
+    const validatedData = validateArrayResponse(rawData, validateRecommendation);
+    console.log(`✅ Validated ${validatedData.length} recommendations successfully`);
+    
+    return validatedData;
   } catch (error) {
     console.error('Error fetching saved recommendations:', error);
     throw error;
@@ -358,12 +405,14 @@ export const generateLLMAnalysis = async (input: LLMAnalysisInput): Promise<LLMA
 };
 
 // Get user skills
-export const getUserSkills = async (token: string): Promise<UserSkills> => {
+export const getUserSkills = async (getToken: () => Promise<string | null>): Promise<UserSkills> => {
   try {
-    return await clerkApiService.request<UserSkills>('/api/v1/space/skills', {
-      method: 'GET',
-      token
-    });
+    const headers = await getAuthHeader(getToken);
+    const response = await axios.get<UserSkills>(
+      endpoint('/space/skills'),
+      { headers }
+    );
+    return response.data;
   } catch (error) {
     console.error('Error fetching user skills:', error);
     throw error;
@@ -403,6 +452,29 @@ export const getSkillComparison = async (getToken: () => Promise<string | null>,
 
 // ===== SAVED JOBS FUNCTIONALITY =====
 
+// Simple validation function for saved jobs
+const validateSavedJob = (item: any): SavedJob => {
+  if (!item || typeof item !== 'object') {
+    throw new Error('Invalid saved job: Expected an object');
+  }
+  
+  return {
+    id: item.id || 0,
+    user_id: item.user_id || 0,
+    esco_id: item.esco_id || '',
+    job_title: item.job_title || 'Unknown Job',
+    skills_required: Array.isArray(item.skills_required) ? item.skills_required : [],
+    discovery_source: item.discovery_source || '',
+    tree_graph_id: item.tree_graph_id,
+    relevance_score: item.relevance_score,
+    saved_at: item.saved_at || new Date().toISOString(),
+    metadata: item.metadata || {},
+    already_saved: Boolean(item.already_saved),
+    graphsage_skills: Array.isArray(item.graphsage_skills) ? item.graphsage_skills : [],
+    ...item // Include any additional fields
+  };
+};
+
 // Fetch saved jobs from tree exploration
 export const fetchSavedJobs = async (getToken: () => Promise<string | null>): Promise<SavedJob[]> => {
   try {
@@ -411,7 +483,13 @@ export const fetchSavedJobs = async (getToken: () => Promise<string | null>): Pr
       endpoint('/jobs/saved'),
       { headers }
     );
-    return response.data.jobs;
+    
+    // ✅ DEFENSIVE PROGRAMMING: Use response patterns to safely extract jobs array
+    const jobsData = responsePatterns.nested(response.data, 'jobs');
+    const validatedJobs = validateArrayResponse(jobsData, validateSavedJob);
+    console.log(`✅ Validated ${validatedJobs.length} saved jobs successfully`);
+    
+    return validatedJobs;
   } catch (error) {
     console.error('Error fetching saved jobs:', error);
     throw error;
