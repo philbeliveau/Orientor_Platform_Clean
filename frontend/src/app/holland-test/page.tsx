@@ -8,6 +8,8 @@ import TestInterface from '@/components/holland-test/TestInterface';
 import ResultScreen from '@/components/holland-test/ResultScreen';
 import { motion } from 'framer-motion';
 import MainLayout from '@/components/layout/MainLayout';
+import { safeTestDuration, safeNumber } from '@/utils/numberUtils';
+import HollandTestErrorBoundary from '@/components/common/HollandTestErrorBoundary';
 
 export default function HollandTestPage() {
   const router = useRouter();
@@ -146,7 +148,8 @@ export default function HollandTestPage() {
   if (testState === 'intro' && testMetadata) {
     return (
       <MainLayout>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+        <HollandTestErrorBoundary>
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
         <motion.div 
           className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
@@ -170,10 +173,10 @@ export default function HollandTestPage() {
               
               <div className="mt-6 space-y-4 text-gray-600 dark:text-gray-400">
                 <p>
-                  <span className="font-medium">Nombre de questions:</span> {testMetadata.question_count}
+                  <span className="font-medium">Nombre de questions:</span> {safeNumber(testMetadata.question_count, 30)}
                 </p>
                 <p>
-                  <span className="font-medium">Durée estimée:</span> {Math.ceil(testMetadata.question_count * 0.5)} minutes
+                  <span className="font-medium">Durée estimée:</span> {safeTestDuration(testMetadata.question_count)}
                 </p>
                 <p>
                   Ce test vous aidera à découvrir votre code Holland (RIASEC), qui reflète vos intérêts professionnels et votre personnalité.
@@ -199,6 +202,7 @@ export default function HollandTestPage() {
           </div>
         </motion.div>
         </div>
+        </HollandTestErrorBoundary>
       </MainLayout>
     );
   }
@@ -207,14 +211,16 @@ export default function HollandTestPage() {
   if (testState === 'testing' && questions.length > 0) {
     return (
       <MainLayout>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-          <TestInterface
-            questions={questions}
-            attemptId={attemptId}
-            onTestComplete={handleTestComplete}
-            onError={handleTestError}
-          />
-        </div>
+        <HollandTestErrorBoundary>
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+            <TestInterface
+              questions={questions}
+              attemptId={attemptId}
+              onTestComplete={handleTestComplete}
+              onError={handleTestError}
+            />
+          </div>
+        </HollandTestErrorBoundary>
       </MainLayout>
     );
   }
@@ -223,9 +229,11 @@ export default function HollandTestPage() {
   if (testState === 'results' && testScore) {
     return (
       <MainLayout>
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4">
-          <ResultScreen score={testScore} onRetakeTest={handleRetakeTest} />
-        </div>
+        <HollandTestErrorBoundary>
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4">
+            <ResultScreen score={testScore} onRetakeTest={handleRetakeTest} />
+          </div>
+        </HollandTestErrorBoundary>
       </MainLayout>
     );
   }

@@ -43,12 +43,15 @@ const SelfReflectionSection: React.FC<SelfReflectionSectionProps> = ({ className
       console.log('[SelfReflection] Loading questions and responses...');
       const token = await getToken();
       const questionsWithResponses = await reflectionService.getQuestionsWithResponses(() => Promise.resolve(token));
-      setQuestions(questionsWithResponses);
+      
+      // ✅ DEFENSIVE PROGRAMMING: Ensure questionsWithResponses is an array
+      const questionsArray = Array.isArray(questionsWithResponses) ? questionsWithResponses : [];
+      setQuestions(questionsArray);
       
       // Initialiser les réponses locales
       const initialResponses: { [key: number]: string } = {};
-      questionsWithResponses.forEach(q => {
-        if (q.response?.response) {
+      questionsArray.forEach(q => {
+        if (q && q.response?.response && q.id) {
           initialResponses[q.id] = q.response.response;
         }
       });

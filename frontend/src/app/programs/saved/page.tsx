@@ -12,23 +12,42 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'react-hot-toast';
-import { schoolProgramsService } from '@/services/schoolProgramsService';
+import { useAuth } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
+import { createSchoolProgramsService } from '@/services/schoolProgramsService';
 import { Program } from '@/components/school-programs/types';
 
 export default function SavedProgramsPage() {
+  const { getToken, isLoaded, isSignedIn } = useAuth();
+  const router = useRouter();
   const [savedPrograms, setSavedPrograms] = useState<Program[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!isLoaded) return;
+    
+    if (!isSignedIn) {
+      router.push('/sign-in');
+      return;
+    }
+    
     loadSavedPrograms();
-  }, []);
+  }, [isLoaded, isSignedIn, router]);
 
   const loadSavedPrograms = async () => {
     try {
       setIsLoading(true);
-      const programs = await schoolProgramsService.getSavedPrograms();
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        return;
+      }
+      
+      const service = createSchoolProgramsService(getToken);
+      const programs = await service.getSavedPrograms();
       setSavedPrograms(programs);
     } catch (error) {
+      console.error('Error loading saved programs:', error);
       toast.error("Failed to load saved programs.");
     } finally {
       setIsLoading(false);
@@ -37,10 +56,18 @@ export default function SavedProgramsPage() {
 
   const handleRemoveProgram = async (programId: string) => {
     try {
-      await schoolProgramsService.removeSavedProgram(programId);
+      const token = await getToken();
+      if (!token) {
+        router.push('/sign-in');
+        return;
+      }
+      
+      const service = createSchoolProgramsService(getToken);
+      await service.removeSavedProgram(programId);
       setSavedPrograms(prev => prev.filter(p => p.id !== programId));
       toast.success("Program removed from your saved list.");
     } catch (error) {
+      console.error('Error removing program:', error);
       toast.error("Failed to remove program.");
     }
   };

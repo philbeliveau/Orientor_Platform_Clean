@@ -19,6 +19,7 @@ import type { Recommendation, SavedJob } from '@/services/spaceService';
 import { toast } from 'react-hot-toast';
 import { useAuth, useUser } from '@clerk/nextjs';
 import { useOnboardingService } from '@/services/onboardingService';
+import DataProcessingErrorBoundary from '@/components/common/DataProcessingErrorBoundary';
 
 export default function SpacePage() {
   const router = useRouter();
@@ -107,26 +108,27 @@ export default function SpacePage() {
   const loadRecommendations = async () => {
     try {
       console.log('🔄 Loading saved recommendations...');
-      const token = await getToken();
-      if (!token) {
-        setError('Authentication required');
-        return;
-      }
-      const data = await fetchSavedRecommendations(token);
+      const data = await fetchSavedRecommendations(getToken);
       console.log('📊 Fetched recommendations:', data);
-      console.log(`📈 Total recommendations found: ${data.length}`);
       
-      if (data.length === 0) {
+      // ✅ DEFENSIVE PROGRAMMING: Ensure data is an array before processing
+      const recommendationsArray = Array.isArray(data) ? data : [data].filter(Boolean);
+      console.log(`📈 Total recommendations found: ${recommendationsArray.length}`);
+      
+      if (recommendationsArray.length === 0) {
         console.log('⚠️ No saved recommendations found. Make sure you have saved some jobs from SwipeRecommendations.');
       } else {
         console.log('✅ Recommendations loaded successfully');
-        data.forEach((rec, index) => {
-          console.log(`${index + 1}. ${rec.label} (ID: ${rec.id})`);
+        recommendationsArray.forEach((rec, index) => {
+          if (rec && rec.label) {
+            console.log(`${index + 1}. ${rec.label} (ID: ${rec.id})`);
+          }
         });
       }
       
       // All saved recommendations are ESCO jobs from home page (they have oasis_code)
-      setRecommendations(data);
+      // ✅ DEFENSIVE PROGRAMMING: Ensure we set an array to state
+      setRecommendations(recommendationsArray);
     } catch (err) {
       console.error('❌ Error fetching recommendations:', err);
       setError('Could not fetch recommendations.');
@@ -143,12 +145,7 @@ export default function SpacePage() {
   useEffect(() => {
     const loadJobs = async () => {
       try {
-        const token = await getToken();
-        if (!token) {
-          setJobsError('Authentication required');
-          return;
-        }
-        const data = await fetchSavedJobs(token);
+        const data = await fetchSavedJobs(getToken);
         // OaSIS jobs from tree exploration are in separate table
         setSavedJobs(data);
       } catch (err) {
@@ -185,7 +182,7 @@ export default function SpacePage() {
         return;
       }
       
-      await deleteRecommendation(token, identifier);
+      await deleteRecommendation(getToken, identifier);
       setRecommendations(prev => prev.filter(r => r.id !== recommendation.id));
       if (selected?.id === recommendation.id) setSelected(null);
       toast.success('Recommendation deleted');
@@ -207,7 +204,7 @@ export default function SpacePage() {
         toast.error('Authentication required');
         return;
       }
-      await deleteSavedJob(token, id);
+      await deleteSavedJob(getToken, id);
       setSavedJobs(prev => prev.filter(j => j.id !== id));
       if (selectedJob?.id === id) setSelectedJob(null);
       toast.success('Job removed');
@@ -226,7 +223,7 @@ export default function SpacePage() {
         toast.error('Authentication required');
         return;
       }
-      const updatedRecommendation = await generateLLMAnalysisForRecommendation(token, selected.id);
+      const updatedRecommendation = await generateLLMAnalysisForRecommendation(getToken, selected.id);
       setSelected(updatedRecommendation);
       setRecommendations(prev => prev.map(r => (r.id === updatedRecommendation.id ? updatedRecommendation : r)));
       toast.success('LLM analysis generated successfully');
@@ -246,7 +243,7 @@ export default function SpacePage() {
         toast.error('Authentication required');
         return;
       }
-      const result = await cleanupTestJobs(token);
+      const result = await cleanupTestJobs(getToken);
       await loadRecommendations(); // Reload the list
       toast.success(`Removed ${result.deleted_count} test jobs`);
     } catch (err) {
@@ -429,23 +426,27 @@ export default function SpacePage() {
                   }}
                 >
                   {activeTab === 'recommendations' ? (
-                    <Sidebar
-                      items={recommendations}
-                      selectedId={selected?.id}
-                      onSelect={handleSelect}
-                      onDelete={handleDelete}
-                      loading={loading}
-                      error={error}
-                    />
+                    <DataProcessingErrorBoundary>
+                      <Sidebar
+                        items={recommendations}
+                        selectedId={selected?.id}
+                        onSelect={handleSelect}
+                        onDelete={handleDelete}
+                        loading={loading}
+                        error={error}
+                      />
+                    </DataProcessingErrorBoundary>
                   ) : (
-                    <SavedJobsList
-                      jobs={savedJobs}
-                      selectedJobId={selectedJob?.id}
-                      onSelect={handleSelectJob}
-                      onDelete={handleDeleteJob}
-                      loading={jobsLoading}
-                      error={jobsError}
-                    />
+                    <DataProcessingErrorBoundary>
+                      <SavedJobsList
+                        jobs={savedJobs}
+                        selectedJobId={selectedJob?.id}
+                        onSelect={handleSelectJob}
+                        onDelete={handleDeleteJob}
+                        loading={jobsLoading}
+                        error={jobsError}
+                      />
+                    </DataProcessingErrorBoundary>
                   )}
                 </div>
               </div>
@@ -463,11 +464,13 @@ export default function SpacePage() {
                 >
                   {activeTab === 'recommendations' ? (
                     selected ? (
-                      <RecommendationDetail
-                        recommendation={selected}
-                        onGenerate={handleGenerate}
-                        generating={generating}
-                      />
+                      <DataProcessingErrorBoundary>
+                        <RecommendationDetail
+                          recommendation={selected}
+                          onGenerate={handleGenerate}
+                          generating={generating}
+                        />
+                      </DataProcessingErrorBoundary>
                     ) : (
                       <div className="text-center mt-20">
                         <div className="mb-4 text-4xl">💾</div>
@@ -477,9 +480,11 @@ export default function SpacePage() {
                     )
                   ) : (
                     selectedJob ? (
-                      <SavedJobDetail
-                        job={selectedJob}
-                      />
+                      <DataProcessingErrorBoundary>
+                        <SavedJobDetail
+                          job={selectedJob}
+                        />
+                      </DataProcessingErrorBoundary>
                     ) : (
                       <div className="text-center mt-20">
                         <div className="mb-4 text-4xl">🌳</div>

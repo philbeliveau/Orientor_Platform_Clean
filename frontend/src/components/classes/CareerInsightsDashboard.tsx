@@ -84,9 +84,18 @@ const CareerInsightsDashboard: React.FC<CareerInsightsDashboardProps> = ({ userI
       
       // Flatten insights from all courses
       const allInsights: PsychologicalInsight[] = [];
-      Object.values(data.insights_by_course).forEach((courseInsights: any) => {
-        allInsights.push(...courseInsights);
-      });
+      // ✅ DEFENSIVE PROGRAMMING: Ensure insights_by_course exists and is an object
+      if (data.insights_by_course && typeof data.insights_by_course === 'object') {
+        Object.values(data.insights_by_course).forEach((courseInsights: any) => {
+          // ✅ DEFENSIVE PROGRAMMING: Ensure courseInsights is an array before spreading
+          if (Array.isArray(courseInsights)) {
+            allInsights.push(...courseInsights);
+          } else if (courseInsights) {
+            // If it's a single item, wrap it in an array
+            allInsights.push(courseInsights);
+          }
+        });
+      }
       setInsights(allInsights);
       
     } catch (err) {

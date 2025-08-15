@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/nextjs';
 import { useClerkApi } from '@/services/api';
 import LoadingSpinner from './LoadingSpinner';
 import styles from './profile-completion-card.module.css';
+import { sanitizeProfileCompletionData, formatPercentage } from '@/utils/safeDataProcessing';
 
 interface ProfileCompletionData {
   overall_percentage: number;
@@ -63,26 +64,29 @@ const ProfileCompletionCard: React.FC<ProfileCompletionCardProps> = ({ className
         method: 'GET'
       });
       
+      // CRITICAL: Validate and sanitize data to prevent NaN display
+      const sanitizedData = sanitizeProfileCompletionData(data);
+      
       // Validate data consistency and log any issues
       console.log('🔍 Profile completion data received:', {
-        percentage: data.overall_percentage,
-        eligible: data.recommendation_eligible,
-        nextActions: data.next_actions?.length || 0,
-        categories: Object.keys(data.category_scores || {}).length
+        percentage: sanitizedData.overall_percentage,
+        eligible: sanitizedData.recommendation_eligible,
+        nextActions: sanitizedData.next_actions?.length || 0,
+        categories: Object.keys(sanitizedData.category_scores || {}).length
       });
       
       // Check for contradictory states
-      if (data.overall_percentage === 0 && data.recommendation_eligible) {
+      if (sanitizedData.overall_percentage === 0 && sanitizedData.recommendation_eligible) {
         console.warn('⚠️ Inconsistent state: 0% completion but marked as eligible for recommendations');
         // Override recommendation_eligible to false for 0% completion
-        data.recommendation_eligible = false;
+        sanitizedData.recommendation_eligible = false;
       }
       
-      if (data.overall_percentage >= 0.9 && !data.recommendation_eligible) {
+      if (sanitizedData.overall_percentage >= 0.9 && !sanitizedData.recommendation_eligible) {
         console.warn('⚠️ Inconsistent state: High completion but not eligible for recommendations');
       }
       
-      setCompletionData(data);
+      setCompletionData(sanitizedData);
       
     } catch (err) {
       console.error('Error fetching completion data:', err);
@@ -190,7 +194,7 @@ const ProfileCompletionCard: React.FC<ProfileCompletionCardProps> = ({ className
             />
           </div>
           <span className={styles.progressText} style={{ color: progressColor }}>
-            {Math.round(overall_percentage * 100)}%
+            {formatPercentage(overall_percentage)}
           </span>
         </div>
         

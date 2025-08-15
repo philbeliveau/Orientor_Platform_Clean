@@ -146,8 +146,14 @@ const EnhancedDynamicCareerTree: React.FC<EnhancedDynamicCareerTreeProps> = ({
     enableAutoRecalculation,
     clearError,
     resetToOriginal,
-    cleanup
+    cleanup,
+    setAuth
   } = useDynamicTreeStore();
+  
+  // Initialize authentication for the store
+  useEffect(() => {
+    setAuth(getToken);
+  }, [setAuth, getToken]);
   
   // URL parameters for loading saved trees
   const searchParams = useSearchParams();

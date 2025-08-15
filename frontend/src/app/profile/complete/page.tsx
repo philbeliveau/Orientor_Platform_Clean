@@ -5,6 +5,7 @@ import { useAuth, useUser } from '@clerk/nextjs';
 import MainLayout from '@/components/layout/MainLayout';
 import CircularProgress from '@/components/ui/CircularProgress';
 import Link from 'next/link';
+import { ClerkApiService } from '@/services/clerkApi';
 
 interface ProfileCompletionData {
   overall_percentage: number;
@@ -53,18 +54,8 @@ const ProfileCompletionHub: React.FC = () => {
         return;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/profiles/completion`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data: ProfileCompletionData = await response.json();
+      const api = new ClerkApiService();
+      const data: ProfileCompletionData = await api.get('/profiles/completion');
       setCompletionData(data);
       
     } catch (err) {
@@ -270,17 +261,51 @@ const ProfileCompletionHub: React.FC = () => {
               Recommended Next Steps
             </h2>
             
-            {next_actions.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-8xl mb-6">🎉</div>
-                <h3 className="text-2xl font-semibold text-white mb-4">
-                  Congratulations! Profile Complete
-                </h3>
-                <p className="text-gray-300 text-lg leading-relaxed max-w-2xl mx-auto">
-                  Your profile is now optimized for personalized recommendations and career insights.
-                </p>
-              </div>
-            ) : (
+            {(() => {
+              const isActuallyComplete = overall_percentage >= 0.95 && next_actions.length === 0;
+              const isNewUser = overall_percentage === 0 && next_actions.length > 0;
+              const isPartiallyComplete = overall_percentage > 0 && overall_percentage < 0.95;
+              
+              if (isActuallyComplete) {
+                return (
+                  <div className="text-center py-12">
+                    <div className="text-8xl mb-6">🎉</div>
+                    <h3 className="text-2xl font-semibold text-white mb-4">
+                      Congratulations! Profile Complete
+                    </h3>
+                    <p className="text-gray-300 text-lg leading-relaxed max-w-2xl mx-auto">
+                      Your profile is now optimized for personalized recommendations and career insights.
+                    </p>
+                  </div>
+                );
+              } else if (isNewUser) {
+                return (
+                  <div className="text-center py-12 mb-8">
+                    <div className="text-8xl mb-6">🚀</div>
+                    <h3 className="text-2xl font-semibold text-white mb-4">
+                      Let's Get Started on Your Profile!
+                    </h3>
+                    <p className="text-gray-300 text-lg leading-relaxed max-w-2xl mx-auto mb-8">
+                      Complete these essential steps to unlock personalized career recommendations and insights.
+                    </p>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="text-center py-12 mb-8">
+                    <div className="text-8xl mb-6">⚡</div>
+                    <h3 className="text-2xl font-semibold text-white mb-4">
+                      Continue Building Your Profile
+                    </h3>
+                    <p className="text-gray-300 text-lg leading-relaxed max-w-2xl mx-auto mb-8">
+                      You're making great progress! Complete these remaining steps to unlock all features.
+                    </p>
+                  </div>
+                );
+              }
+            })()}
+            
+            {next_actions.length > 0 && (
               <div className="space-y-6">
                 {next_actions.map((action, index) => {
                   const priorityColor = getProgressColor(action.weight);
