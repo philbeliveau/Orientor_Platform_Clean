@@ -6,6 +6,7 @@ from pathlib import Path
 
 from uuid import uuid4
 import uuid
+from prisma import Prisma
 from ..models.reflection import HexacoQuestion
 
 # Configuration du logging
@@ -136,7 +137,7 @@ class HexacoService:
             logger.error(f"Erreur lors de la création de la session d'évaluation: {e}")
             raise
     
-    def save_response(self, db, session_id: str, item_id: int, response_value: int, 
+    async def save_response(self, prisma: Prisma, session_id: str, item_id: int, response_value: int, 
                      response_time_ms: Optional[int] = None) -> bool:
         """Sauvegarde une réponse individuelle."""
         try:
@@ -146,7 +147,10 @@ class HexacoService:
                 WHERE session_id = :session_id
             """)
             
-            assessment_result = db.execute(assessment_query, {"session_id": session_id}).fetchone()
+            assessment_result = await prisma.personality_assessments.find_first(
+                where={"session_id": session_id},
+                select={"id": True, "status": True}
+            )
             if not assessment_result:
                 logger.warning(f"Session non trouvée: {session_id}")
                 return False
@@ -211,18 +215,19 @@ class HexacoService:
                 WHERE id = :assessment_id
             """)
             
-            db.execute(update_progress_query, {"assessment_id": assessment_id})
-            db.commit()
+            await prisma.query_raw(
+                update_progress_query.text,
+                assessment_id
+            )
             
             logger.info(f"Réponse sauvegardée: session={session_id}, item={item_id}, value={response_value}")
             return True
             
         except Exception as e:
-            db.rollback()
             logger.error(f"Erreur lors de la sauvegarde de la réponse: {e}")
             return False
     
-    def get_assessment_progress(self, db, session_id: str) -> Optional[Dict[str, Any]]:
+    async def get_assessment_progress(self, prisma: Prisma, session_id: str) -> Optional[Dict[str, Any]]:
         """Retourne le progrès d'une évaluation."""
         try:
             query = text("""
@@ -247,7 +252,7 @@ class HexacoService:
             logger.error(f"Erreur lors de la récupération du progrès: {e}")
             return None
     
-    def complete_assessment(self, db, session_id: str) -> bool:
+    async def complete_assessment(self, prisma: Prisma, session_id: str) -> bool:
         """Marque une évaluation comme complétée."""
         try:
             update_query = text("""
@@ -256,8 +261,10 @@ class HexacoService:
                 WHERE session_id = :session_id AND status = 'in_progress'
             """)
             
-            result = db.execute(update_query, {"session_id": session_id})
-            db.commit()
+            result = await prisma.query_raw(
+                update_query.text,
+                session_id
+            )
             
             if result.rowcount > 0:
                 logger.info(f"Évaluation complétée: {session_id}")
@@ -267,11 +274,10 @@ class HexacoService:
                 return False
                 
         except Exception as e:
-            db.rollback()
             logger.error(f"Erreur lors de la finalisation de l'évaluation: {e}")
             return False
     
-    def get_user_responses(self, db, session_id: str) -> Dict[int, int]:
+    async def get_user_responses(self, prisma: Prisma, session_id: str) -> Dict[int, int]:
         """Récupère toutes les réponses d'un utilisateur pour une session."""
         try:
             query = text("""

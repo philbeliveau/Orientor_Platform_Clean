@@ -8,7 +8,7 @@ This service provides two distinct conversational modes:
 
 import logging
 from typing import Dict, List, Any, Optional, Literal
-from sqlalchemy.orm import Session
+from prisma import Prisma
 from openai import AsyncOpenAI
 import os
 import json
@@ -38,7 +38,18 @@ class SocraticChatService:
         self.openai_client = AsyncOpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
         if ANTHROPIC_AVAILABLE:
             try:
-                self.claude_client = anthropic.AsyncAnthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+                # Initialize Anthropic client with version-compatible parameters
+                api_key = os.environ.get("ANTHROPIC_API_KEY")
+                if api_key:
+                    # Try modern initialization first, fall back to older version
+                    try:
+                        self.claude_client = anthropic.AsyncAnthropic(api_key=api_key)
+                    except TypeError:
+                        # Fallback for older anthropic versions
+                        self.claude_client = anthropic.AsyncAnthropic(api_key=api_key)
+                else:
+                    self.claude_client = None
+                    logger.warning("ANTHROPIC_API_KEY not set. Claude mode will be disabled.")
             except Exception as e:
                 logger.error(f"Failed to initialize Anthropic client: {str(e)}")
                 self.claude_client = None
@@ -52,7 +63,7 @@ class SocraticChatService:
                           message_text: str,
                           mode: ChatMode,
                           conversation_id: Optional[int], 
-                          db: Session) -> Dict[str, Any]:
+                          prisma: Prisma) -> Dict[str, Any]:
         """
         Send a message in the specified chat mode.
         
@@ -61,7 +72,7 @@ class SocraticChatService:
             message_text: User's message
             mode: Chat mode - "socratic" or "claude"
             conversation_id: Optional conversation ID
-            db: Database session
+            prisma: Prisma database client
             
         Returns:
             Response with appropriate styling based on mode
@@ -70,24 +81,24 @@ class SocraticChatService:
             # Get or create conversation
             if conversation_id:
                 conversation = await ConversationService.get_conversation_by_id(
-                    db, conversation_id, user_id
+                    prisma, conversation_id, user_id
                 )
                 if not conversation:
                     raise ValueError("Conversation not found")
             else:
                 # Create conversation with a clean title (mode can be inferred from context)
                 conversation = await ConversationService.create_conversation(
-                    db, user_id, f"{message_text[:50]}..."
+                    prisma, user_id, f"{message_text[:50]}..."
                 )
                 
             # Add user message to conversation
             user_message = await ChatMessageService.add_message(
-                db, conversation.id, "user", message_text
+                prisma, conversation.id, "user", message_text
             )
             
             # Get recent conversation history
             recent_messages = await ChatMessageService.get_conversation_messages(
-                db, conversation.id, limit=20
+                prisma, conversation.id, limit=20
             )
             
             # Debug logging
@@ -95,32 +106,32 @@ class SocraticChatService:
             for i, msg in enumerate(recent_messages[-5:]):  # Log last 5 messages
                 logger.info(f"  Message {i}: {msg.role} - {msg.content[:50]}...")
             
-            # Get user profile for context
-            user_profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
-            user_skills = db.query(UserSkill).filter(UserSkill.user_id == user_id).first()
+            # Get user profile for context using Prisma
+            user_profile_result = await prisma.user_profile.find_first(where={"user_id": user_id})
+            user_skills_result = await prisma.user_skill.find_first(where={"user_id": user_id})
             
             # Generate response based on mode
             if mode == "socratic":
                 response_content = await self._generate_socratic_response(
-                    message_text, recent_messages, user_profile, user_skills
+                    message_text, recent_messages, user_profile_result, user_skills_result
                 )
                 model_used = "gpt-4"
             else:  # claude mode
                 if not ANTHROPIC_AVAILABLE or self.claude_client is None:
                     # Fallback to GPT-4 with Claude-style prompting
                     response_content = await self._generate_claude_fallback_response(
-                        message_text, recent_messages, user_profile, user_skills
+                        message_text, recent_messages, user_profile_result, user_skills_result
                     )
                     model_used = "gpt-4-claude-style"
                 else:
                     response_content = await self._generate_claude_response(
-                        message_text, recent_messages, user_profile, user_skills
+                        message_text, recent_messages, user_profile_result, user_skills_result
                     )
                     model_used = "claude-3-sonnet"
                 
             # Add assistant response to conversation
             assistant_message = await ChatMessageService.add_message(
-                db, conversation.id, "assistant", response_content,
+                prisma, conversation.id, "assistant", response_content,
                 model_used=model_used
             )
             
@@ -376,9 +387,9 @@ Keep responses under 150 words and end with a provocative question."""
                 "traits": ["Direct", "Bold", "Challenging", "Provocative"]
             }
             
-    async def get_mode_introduction(self, mode: ChatMode, user_id: int, db: Session) -> str:
+    async def get_mode_introduction(self, mode: ChatMode, user_id: int, prisma: Prisma) -> str:
         """Get an introduction message for the selected mode."""
-        user_profile = db.query(UserProfile).filter(UserProfile.user_id == user_id).first()
+        user_profile = await prisma.user_profile.find_first(where={"user_id": user_id})
         name = user_profile.name if user_profile and user_profile.name else "there"
         
         if mode == "socratic":

@@ -446,7 +446,7 @@ async def find_compatible_peers(
         
         # Get user's personality data
         prisma = await get_prisma_client()
-        user_personality_result = await prisma.personalityprofile.find_first(
+        user_personality_result = await prisma.personality_profile.find_first(
             where={"user_id": db_user_id},
             order_by={"computed_at": "desc"}
         )
@@ -485,7 +485,7 @@ async def find_compatible_peers(
                     peer_vector = json.loads(peer_vector)
                 
                 # Get peer's personality data
-                peer_personality_result = await prisma.personalityprofile.find_first(
+                peer_personality_result = await prisma.personality_profile.find_first(
                     where={"user_id": peer_id},
                     order_by={"computed_at": "desc"}
                 )

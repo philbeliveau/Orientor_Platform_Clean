@@ -1,8 +1,6 @@
 from typing import List, Optional, Dict, Any, TYPE_CHECKING
 from datetime import datetime
 import time
-from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, text
 
 if TYPE_CHECKING:
     from prisma import Prisma
@@ -32,7 +30,7 @@ class ChatMessageService:
     
     @staticmethod
     async def add_message(
-        db: 'Prisma',
+        prisma: 'Prisma',
         conversation_id: int,
         role: str,
         content: str,
@@ -45,23 +43,27 @@ class ChatMessageService:
         try:
             from datetime import datetime
             
-            # Create message data
+            # Create message data with proper Prisma JSON field handling
             message_data = {
                 "conversation_id": conversation_id,
                 "role": role,
                 "content": content,
-                "message_metadata": metadata or {},
                 "tokens_used": tokens_used,
                 "model_used": model_used,
                 "response_time_ms": response_time_ms,
                 "created_at": datetime.utcnow()
             }
             
+            # Handle JSON metadata field properly for Prisma
+            if metadata is not None:
+                message_data["message_metadata"] = metadata
+            # If metadata is None, don't include the field at all (Prisma will set to null)
+            
             # Create the message
-            message = await db.chatmessage.create(data=message_data)
+            message = await prisma.chatmessage.create(data=message_data)
             
             # Update conversation statistics
-            conversation = await db.conversation.find_first(
+            conversation = await prisma.conversation.find_first(
                 where={"id": conversation_id}
             )
             
@@ -73,7 +75,7 @@ class ChatMessageService:
                 if tokens_used:
                     update_data["total_tokens_used"] = (conversation.total_tokens_used or 0) + tokens_used
                 
-                await db.conversation.update(
+                await prisma.conversation.update(
                     where={"id": conversation_id},
                     data=update_data
                 )
@@ -86,7 +88,7 @@ class ChatMessageService:
     
     @staticmethod
     async def get_conversation_messages(
-        db: 'Prisma',
+        prisma: 'Prisma',
         conversation_id: int,
         limit: int = 50,
         offset: int = 0,
@@ -100,16 +102,13 @@ class ChatMessageService:
             if not include_system:
                 where_clause["role"] = {"not": "system"}
             
-            # Use Prisma syntax for querying (order_by can be added later if needed)
-            messages = await db.chatmessage.find_many(
+            # Query messages with proper ordering
+            messages = await prisma.chatmessage.find_many(
                 where=where_clause,
                 skip=offset,
-                take=limit
+                take=limit,
+                order_by={'created_at': 'asc'}
             )
-            
-            # Sort messages by creation time manually for now
-            if messages:
-                messages.sort(key=lambda x: x.created_at if hasattr(x, 'created_at') else x.id)
             
             return messages
         except Exception as e:
@@ -118,7 +117,7 @@ class ChatMessageService:
     
     @staticmethod
     async def search_messages(
-        db: 'Prisma',
+        prisma: 'Prisma',
         user_id: int,
         query: str,
         filters: Optional[SearchFilters] = None
@@ -127,7 +126,7 @@ class ChatMessageService:
         try:
             # For now, implement basic search without full-text until we can use raw SQL
             # Get user's conversations first
-            conversations = await db.conversation.find_many(
+            conversations = await prisma.conversation.find_many(
                 where={"user_id": user_id}
             )
             
@@ -157,7 +156,7 @@ class ChatMessageService:
                         where_clause["created_at"] = {"lte": filters.date_to}
             
             # Find matching messages
-            messages = await db.chatmessage.find_many(
+            messages = await prisma.chatmessage.find_many(
                 where=where_clause,
                 take=100,
                 order_by={"created_at": "desc"}
@@ -188,13 +187,13 @@ class ChatMessageService:
     
     @staticmethod
     async def get_message_statistics(
-        db: 'Prisma',
+        prisma: 'Prisma',
         conversation_id: int
     ) -> MessageStats:
         """Get statistics for messages in a conversation"""
         try:
             # Get all messages for the conversation
-            messages = await db.chatmessage.find_many(
+            messages = await prisma.chatmessage.find_many(
                 where={"conversation_id": conversation_id}
             )
             
@@ -248,21 +247,21 @@ class ChatMessageService:
     
     @staticmethod
     async def export_conversation(
-        db: 'Prisma',
+        prisma: 'Prisma',
         conversation_id: int,
         format: str = "json"
     ) -> bytes:
         """Export conversation in various formats"""
         try:
             # Get conversation and messages
-            conversation = await db.conversation.find_first(
+            conversation = await prisma.conversation.find_first(
                 where={"id": conversation_id}
             )
             
             if not conversation:
                 raise ValueError("Conversation not found")
             
-            messages = await db.chatmessage.find_many(
+            messages = await prisma.chatmessage.find_many(
                 where={"conversation_id": conversation_id},
                 order_by={"created_at": "asc"}
             )

@@ -9,8 +9,7 @@ import os
 import logging
 import json
 from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from prisma import Prisma
 from openai import OpenAI
 import traceback
 
@@ -51,7 +50,7 @@ class LLMCompetenceService:
             logger.error(f"Failed to initialize OpenAI client: {str(e)}")
             return False
     
-    def get_user_profile_data(self, db: Session, user_id: int) -> Dict[str, Any]:
+    async def get_user_profile_data(self, db: Prisma, user_id: int) -> Dict[str, Any]:
         """
         Gather comprehensive user profile data for skill inference.
         
@@ -64,71 +63,75 @@ class LLMCompetenceService:
         """
         try:
             # Get user profile information
-            profile_query = text("""
+            profile_query = """
                 SELECT 
                     story, interests, career_goals, hobbies, unique_quality,
                     major, industry, education_level, years_experience,
                     name, age, job_title
                 FROM user_profiles 
-                WHERE user_id = :user_id
-            """)
-            profile_result = db.execute(profile_query, {"user_id": user_id}).fetchone()
+                WHERE user_id = $1
+            """
+            profile_result = await db.query_raw(profile_query, user_id)
+            profile_result = profile_result[0] if profile_result else None
             
             # Get user skills ratings
-            skills_query = text("""
+            skills_query = """
                 SELECT 
                     creativity, leadership, digital_literacy, critical_thinking,
                     problem_solving, analytical_thinking, attention_to_detail,
                     collaboration, adaptability, independence, evaluation,
                     decision_making, stress_tolerance
                 FROM user_skills 
-                WHERE user_id = :user_id
-            """)
-            skills_result = db.execute(skills_query, {"user_id": user_id}).fetchone()
+                WHERE user_id = $1
+            """
+            skills_result = await db.query_raw(skills_query, user_id)
+            skills_result = skills_result[0] if skills_result else None
             
             # Get HEXACO personality scores
-            hexaco_query = text("""
+            hexaco_query = """
                 SELECT scores, narrative_description
                 FROM personality_profiles 
-                WHERE user_id = :user_id AND profile_type = 'hexaco'
+                WHERE user_id = $1 AND profile_type = 'hexaco'
                 ORDER BY created_at DESC LIMIT 1
-            """)
-            hexaco_result = db.execute(hexaco_query, {"user_id": user_id}).fetchone()
+            """
+            hexaco_result = await db.query_raw(hexaco_query, user_id)
+            hexaco_result = hexaco_result[0] if hexaco_result else None
             
             # Get Holland RIASEC scores
-            holland_query = text("""
+            holland_query = """
                 SELECT r_score, i_score, a_score, s_score, e_score, c_score, top_3_code
                 FROM gca_results 
-                WHERE user_id = :user_id
+                WHERE user_id = $1
                 ORDER BY created_at DESC LIMIT 1
-            """)
-            holland_result = db.execute(holland_query, {"user_id": user_id}).fetchone()
+            """
+            holland_result = await db.query_raw(holland_query, user_id)
+            holland_result = holland_result[0] if holland_result else None
             
             # Get strengths reflection responses
-            reflection_query = text("""
+            reflection_query = """
                 SELECT prompt_text, response
                 FROM strengths_reflection_responses 
-                WHERE user_id = :user_id
+                WHERE user_id = $1
                 ORDER BY created_at DESC
-            """)
-            reflection_results = db.execute(reflection_query, {"user_id": user_id}).fetchall()
+            """
+            reflection_results = await db.query_raw(reflection_query, user_id)
             
             # Compile profile data
             profile_data = {
                 "narrative": {
-                    "story": profile_result[0] if profile_result and profile_result[0] else "",
-                    "interests": profile_result[1] if profile_result and profile_result[1] else "",
-                    "career_goals": profile_result[2] if profile_result and profile_result[2] else "",
-                    "hobbies": profile_result[3] if profile_result and profile_result[3] else "",
-                    "unique_quality": profile_result[4] if profile_result and profile_result[4] else "",
+                    "story": profile_result.get("story", "") if profile_result else "",
+                    "interests": profile_result.get("interests", "") if profile_result else "",
+                    "career_goals": profile_result.get("career_goals", "") if profile_result else "",
+                    "hobbies": profile_result.get("hobbies", "") if profile_result else "",
+                    "unique_quality": profile_result.get("unique_quality", "") if profile_result else "",
                 },
                 "demographics": {
-                    "age": profile_result[9] if profile_result and profile_result[9] else 25,
-                    "major": profile_result[5] if profile_result and profile_result[5] else "",
-                    "industry": profile_result[6] if profile_result and profile_result[6] else "",
-                    "education_level": profile_result[7] if profile_result and profile_result[7] else "",
-                    "years_experience": profile_result[8] if profile_result and profile_result[8] else 0,
-                    "job_title": profile_result[10] if profile_result and profile_result[10] else "",
+                    "age": profile_result.get("age", 25) if profile_result else 25,
+                    "major": profile_result.get("major", "") if profile_result else "",
+                    "industry": profile_result.get("industry", "") if profile_result else "",
+                    "education_level": profile_result.get("education_level", "") if profile_result else "",
+                    "years_experience": profile_result.get("years_experience", 0) if profile_result else 0,
+                    "job_title": profile_result.get("job_title", "") if profile_result else "",
                 },
                 "skills_ratings": {},
                 "hexaco_scores": {},
@@ -144,34 +147,36 @@ class LLMCompetenceService:
                     "collaboration", "adaptability", "independence", "evaluation",
                     "decision_making", "stress_tolerance"
                 ]
-                for i, field in enumerate(skills_fields):
-                    if skills_result[i] is not None:
-                        profile_data["skills_ratings"][field] = float(skills_result[i])
+                for field in skills_fields:
+                    value = skills_result.get(field)
+                    if value is not None:
+                        profile_data["skills_ratings"][field] = float(value)
             
             # Add HEXACO scores if available
-            if hexaco_result and hexaco_result[0]:
+            if hexaco_result and hexaco_result.get("scores"):
                 try:
-                    profile_data["hexaco_scores"] = json.loads(hexaco_result[0]) if isinstance(hexaco_result[0], str) else hexaco_result[0]
-                    profile_data["hexaco_narrative"] = hexaco_result[1] if hexaco_result[1] else ""
+                    scores = hexaco_result.get("scores")
+                    profile_data["hexaco_scores"] = json.loads(scores) if isinstance(scores, str) else scores
+                    profile_data["hexaco_narrative"] = hexaco_result.get("narrative_description", "")
                 except (json.JSONDecodeError, TypeError):
                     logger.warning(f"Invalid HEXACO scores format for user {user_id}")
             
             # Add Holland scores if available
             if holland_result:
                 profile_data["holland_scores"] = {
-                    "realistic": float(holland_result[0]) if holland_result[0] else 0,
-                    "investigative": float(holland_result[1]) if holland_result[1] else 0,
-                    "artistic": float(holland_result[2]) if holland_result[2] else 0,
-                    "social": float(holland_result[3]) if holland_result[3] else 0,
-                    "enterprising": float(holland_result[4]) if holland_result[4] else 0,
-                    "conventional": float(holland_result[5]) if holland_result[5] else 0,
-                    "top_3_code": holland_result[6] if holland_result[6] else ""
+                    "realistic": float(holland_result.get("r_score", 0)),
+                    "investigative": float(holland_result.get("i_score", 0)),
+                    "artistic": float(holland_result.get("a_score", 0)),
+                    "social": float(holland_result.get("s_score", 0)),
+                    "enterprising": float(holland_result.get("e_score", 0)),
+                    "conventional": float(holland_result.get("c_score", 0)),
+                    "top_3_code": holland_result.get("top_3_code", "")
                 }
             
             # Add reflection responses if available
             if reflection_results:
                 profile_data["reflections"] = [
-                    {"prompt": row[0], "response": row[1]}
+                    {"prompt": row.get("prompt_text", ""), "response": row.get("response", "")}
                     for row in reflection_results
                     if row[1] and row[1].strip()
                 ]
@@ -184,7 +189,7 @@ class LLMCompetenceService:
             logger.error(traceback.format_exc())
             return {}
     
-    def infer_anchor_skills(self, db: Session, user_id: int) -> List[Dict[str, Any]]:
+    async def infer_anchor_skills(self, db: Prisma, user_id: int) -> List[Dict[str, Any]]:
         """
         Infer 5 anchor skills from user profile using LLM.
         
@@ -201,7 +206,7 @@ class LLMCompetenceService:
                 return []
             
             # Gather user profile data
-            profile_data = self.get_user_profile_data(db, user_id)
+            profile_data = await self.get_user_profile_data(db, user_id)
             if not profile_data:
                 logger.error(f"No profile data found for user {user_id}")
                 return []

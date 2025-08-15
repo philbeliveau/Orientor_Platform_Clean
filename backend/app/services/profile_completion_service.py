@@ -6,6 +6,8 @@ and provides recommendations for improving profile completeness.
 """
 
 import logging
+import math
+import asyncio
 from typing import Dict, List, Optional, Tuple, Any
 from datetime import datetime, timezone, timedelta
 from prisma import Prisma
@@ -94,7 +96,7 @@ class ProfileCompletionCalculator:
     MIN_COMPLETION_FOR_RECOMMENDATIONS = 0.60
 
     @classmethod
-    def calculate_completion(cls, db: Prisma, user_id: str) -> ProfileCompletionResult:
+    async def calculate_completion(cls, db: Prisma, user_id: str) -> ProfileCompletionResult:
         """
         Calculate profile completion percentage for a user.
         
@@ -106,46 +108,44 @@ class ProfileCompletionCalculator:
             ProfileCompletionResult with completion analysis
         """
         try:
-            # Convert Clerk user ID to database user ID
-            db_user_id = get_database_user_id_sync(user_id)
+            # Convert Clerk user ID to database user ID - FIXED: Use proper async call
+            db_user_id = await get_database_user_id_sync(user_id)
             if not db_user_id:
                 logger.error(f"User not found for Clerk ID: {user_id}")
                 return cls._get_empty_result()
 
-            # Get user profile
-            import asyncio
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                profile = loop.run_until_complete(
-                    db.user_profile.find_first(where={"user_id": db_user_id})
-                )
-            finally:
-                loop.close()
+            # Get user profile - FIXED: Use existing async context
+            profile = await db.user_profile.find_first(where={"user_id": db_user_id})
             if not profile:
                 logger.info(f"No profile found for user {user_id}")
                 return cls._get_empty_result()
 
-            # Calculate completion for each category
+            # Calculate completion for each category with robust validation
             category_scores = {}
             
             # Basic info completion
-            category_scores["basic_info"] = cls._calculate_basic_info_completion(profile)
+            basic_score = cls._calculate_basic_info_completion(profile)
+            category_scores["basic_info"] = cls._validate_score(basic_score, "basic_info")
             
             # Career info completion
-            category_scores["career_info"] = cls._calculate_career_info_completion(profile)
+            career_score = cls._calculate_career_info_completion(profile)
+            category_scores["career_info"] = cls._validate_score(career_score, "career_info")
             
             # Personality assessments completion
-            category_scores["personality_assessments"] = cls._calculate_assessments_completion(db, db_user_id)
+            assessments_score = await cls._calculate_assessments_completion(db, db_user_id)
+            category_scores["personality_assessments"] = cls._validate_score(assessments_score, "personality_assessments")
             
             # Personal details completion
-            category_scores["personal_details"] = cls._calculate_personal_details_completion(profile)
+            personal_score = cls._calculate_personal_details_completion(profile)
+            category_scores["personal_details"] = cls._validate_score(personal_score, "personal_details")
             
             # Preferences completion
-            category_scores["preferences"] = cls._calculate_preferences_completion(profile)
+            preferences_score = cls._calculate_preferences_completion(profile)
+            category_scores["preferences"] = cls._validate_score(preferences_score, "preferences")
             
             # Skills and goals completion
-            category_scores["skills_goals"] = cls._calculate_skills_goals_completion(profile)
+            skills_score = cls._calculate_skills_goals_completion(profile)
+            category_scores["skills_goals"] = cls._validate_score(skills_score, "skills_goals")
 
             # Calculate overall completion percentage
             overall_percentage = cls._calculate_overall_percentage(category_scores)
@@ -154,7 +154,7 @@ class ProfileCompletionCalculator:
             recommendation_eligible = cls._is_recommendation_eligible(category_scores, overall_percentage)
             
             # Get next recommended actions
-            next_actions = cls._get_next_actions(category_scores, profile, db, db_user_id)
+            next_actions = await cls._get_next_actions(category_scores, profile, db, db_user_id)
             
             # Get missing critical data
             missing_critical_data = cls._get_missing_critical_data(category_scores, profile)
@@ -187,6 +187,36 @@ class ProfileCompletionCalculator:
         return completed_fields / len(fields)
 
     @classmethod
+    def _validate_score(cls, score: float, category: str) -> float:
+        """Validate and sanitize a category score to prevent NaN values."""
+        try:
+            # Check if score is a valid number
+            if not isinstance(score, (int, float)):
+                logger.warning(f"Invalid score type for {category}: {type(score)}, using 0.0")
+                return 0.0
+            
+            # Check for NaN or Infinity
+            if math.isnan(score):
+                logger.warning(f"NaN score detected for {category}, using 0.0")
+                return 0.0
+            
+            if math.isinf(score):
+                logger.warning(f"Infinite score detected for {category}, using 1.0")
+                return 1.0 if score > 0 else 0.0
+            
+            # Ensure score is within valid range [0, 1]
+            validated_score = max(0.0, min(1.0, float(score)))
+            
+            if validated_score != score:
+                logger.debug(f"Score for {category} clamped from {score} to {validated_score}")
+            
+            return validated_score
+            
+        except Exception as e:
+            logger.error(f"Error validating score for {category}: {e}")
+            return 0.0
+
+    @classmethod
     def _calculate_career_info_completion(cls, profile) -> float:
         """Calculate completion for career info fields."""
         fields = cls.COMPLETION_CATEGORIES["career_info"]["fields"]
@@ -200,25 +230,22 @@ class ProfileCompletionCalculator:
         return completed_fields / len(fields)
 
     @classmethod
-    def _calculate_assessments_completion(cls, db: Prisma, db_user_id: int) -> float:
+    async def _calculate_assessments_completion(cls, db: Prisma, db_user_id: int) -> float:
         """Calculate completion for personality assessments."""
-        # Check for recent personality assessments
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=365)  # Consider assessments valid for 1 year
-        
-        import asyncio
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
         try:
-            recent_assessments = loop.run_until_complete(
-                db.personality_profiles.find_many(
-                    where={
-                        "user_id": db_user_id,
-                        "computed_at": {"gte": cutoff_date}
-                    }
-                )
+            # Check for recent personality assessments
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=365)  # Consider assessments valid for 1 year
+            
+            # FIXED: Use proper async call without creating new event loop
+            recent_assessments = await db.personality_profiles.find_many(
+                where={
+                    "user_id": db_user_id,
+                    "computed_at": {"gte": cutoff_date}
+                }
             )
-        finally:
-            loop.close()
+        except Exception as e:
+            logger.error(f"Error fetching personality assessments: {e}")
+            return 0.0
         
         if not recent_assessments:
             return 0.0
@@ -283,17 +310,35 @@ class ProfileCompletionCalculator:
 
     @classmethod
     def _calculate_overall_percentage(cls, category_scores: Dict[str, float]) -> float:
-        """Calculate weighted overall completion percentage."""
+        """Calculate weighted overall completion percentage with robust NaN protection."""
         total_weight = 0
         weighted_sum = 0
         
         for category, score in category_scores.items():
             if category in cls.COMPLETION_CATEGORIES:
+                # Validate score is a valid number
+                if not isinstance(score, (int, float)) or math.isnan(score) or math.isinf(score):
+                    logger.warning(f"Invalid score for category {category}: {score}, using 0.0")
+                    score = 0.0
+                
                 weight = cls.COMPLETION_CATEGORIES[category]["weight"]
                 total_weight += weight
                 weighted_sum += score * weight
         
-        return weighted_sum / total_weight if total_weight > 0 else 0.0
+        # Robust division with NaN protection
+        if total_weight <= 0:
+            logger.warning("Total weight is zero or negative, returning 0.0")
+            return 0.0
+        
+        result = weighted_sum / total_weight
+        
+        # Final validation to prevent NaN output
+        if math.isnan(result) or math.isinf(result):
+            logger.error(f"Calculation resulted in NaN/Inf: weighted_sum={weighted_sum}, total_weight={total_weight}")
+            return 0.0
+        
+        # Ensure result is within valid range [0, 1]
+        return max(0.0, min(1.0, result))
 
     @classmethod
     def _is_recommendation_eligible(cls, category_scores: Dict[str, float], overall_percentage: float) -> bool:
@@ -311,7 +356,7 @@ class ProfileCompletionCalculator:
         return True
 
     @classmethod
-    def _get_next_actions(
+    async def _get_next_actions(
         cls, 
         category_scores: Dict[str, float], 
         profile,
@@ -319,6 +364,11 @@ class ProfileCompletionCalculator:
         db_user_id: int
     ) -> List[CompletionAction]:
         """Get next recommended actions for profile completion."""
+        # Handle new users with empty profiles - show all starter actions
+        if not category_scores or all(score == 0 for score in category_scores.values()):
+            logger.info("New user detected - returning all starter actions")
+            return cls._get_all_starter_actions()
+        
         actions = []
         
         # Prioritize critical categories first
@@ -330,14 +380,14 @@ class ProfileCompletionCalculator:
         for category, config in sorted_categories:
             score = category_scores.get(category, 0)
             if score < 1.0:  # Not fully complete
-                action = cls._get_action_for_category(category, config, score, profile, db, db_user_id)
+                action = await cls._get_action_for_category(category, config, score, profile, db, db_user_id)
                 if action:
                     actions.append(action)
         
-        return actions[:5]  # Return top 5 actions
+        return actions[:5]  # Return top 5 actions  # Return top 5 actions
 
     @classmethod
-    def _get_action_for_category(
+    async def _get_action_for_category(
         cls,
         category: str,
         config: Dict[str, Any],
@@ -369,20 +419,16 @@ class ProfileCompletionCalculator:
             )
         elif category == "personality_assessments":
             # Check which specific assessments are missing
-            import asyncio
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
             try:
-                recent_assessments = loop.run_until_complete(
-                    db.personality_profiles.find_many(
-                        where={
-                            "user_id": db_user_id,
-                            "computed_at": {"gte": datetime.now(timezone.utc) - timedelta(days=365)}
-                        }
-                    )
+                recent_assessments = await db.personality_profiles.find_many(
+                    where={
+                        "user_id": db_user_id,
+                        "computed_at": {"gte": datetime.now(timezone.utc) - timedelta(days=365)}
+                    }
                 )
-            finally:
-                loop.close()
+            except Exception as e:
+                logger.error(f"Error fetching assessments for action: {e}")
+                recent_assessments = []
             
             assessment_types = set()
             for assessment in recent_assessments:
@@ -446,6 +492,62 @@ class ProfileCompletionCalculator:
         return None
 
     @classmethod
+    def _get_all_starter_actions(cls) -> List[CompletionAction]:
+        """Get all possible starter actions for new users with empty profiles."""
+        starter_actions = []
+        
+        # Add all essential completion actions for new users
+        starter_actions.extend([
+            CompletionAction(
+                id="complete_basic_info",
+                title="Complete Basic Information",
+                description="Add your name, age, major, and location details",
+                url="/profile",
+                category="Essential",
+                weight=0.25,
+                estimated_time="2 minutes"
+            ),
+            CompletionAction(
+                id="take_hexaco_test",
+                title="Take Personality Assessment",
+                description="Complete the HEXACO personality test to understand your traits",
+                url="/hexaco-test",
+                category="Essential",
+                weight=0.20,
+                estimated_time="10 minutes"
+            ),
+            CompletionAction(
+                id="take_holland_test",
+                title="Take Career Interest Assessment", 
+                description="Complete the Holland Code test to discover your career interests",
+                url="/holland-test",
+                category="Essential",
+                weight=0.20,
+                estimated_time="8 minutes"
+            ),
+            CompletionAction(
+                id="complete_career_info",
+                title="Complete Career Information",
+                description="Add your job title, industry, and career goals",
+                url="/profile",
+                category="Essential", 
+                weight=0.20,
+                estimated_time="3 minutes"
+            ),
+            CompletionAction(
+                id="define_skills_goals",
+                title="Define Skills & Experience",
+                description="Add your skills, experience level, and academic performance",
+                url="/profile",
+                category="Professional",
+                weight=0.15,
+                estimated_time="4 minutes"
+            )
+        ])
+        
+        return starter_actions
+
+    @classmethod
     def _get_missing_critical_data(cls, category_scores: Dict[str, float], profile) -> List[str]:
         """Get list of missing critical data for recommendations."""
         missing = []
@@ -464,7 +566,7 @@ class ProfileCompletionCalculator:
         return ProfileCompletionResult(
             overall_percentage=0.0,
             category_scores={},
-            next_actions=[],
+            next_actions=cls._get_all_starter_actions(),  # Return starter actions for new users
             recommendation_eligible=False,
             missing_critical_data=["All categories need completion"]
         )

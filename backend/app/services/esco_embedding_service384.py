@@ -3,8 +3,7 @@ import logging
 import importlib.util
 from typing import Optional, Dict, Any, List, Tuple
 import numpy as np
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from prisma import Prisma
 import torch
 from torch_geometric.data import Data
 import sys
@@ -172,7 +171,7 @@ class GraphSAGEModelState:
 # Initialiser l'état du modèle GraphSAGE
 graphsage_model_state = GraphSAGEModelState()
 
-def format_user_profile_esco(db: Session, user_id: int) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
+async def format_user_profile_esco(db: Prisma, user_id: int) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
     """
     Formate le profil utilisateur selon les différents styles ESCO.
     
@@ -192,7 +191,7 @@ def format_user_profile_esco(db: Session, user_id: int) -> Tuple[Optional[str], 
             return None, None, None, None
             
         # Récupérer les données utilisateur
-        user_data = fetch_user_data(db, user_id)
+        user_data = await fetch_user_data(db, user_id)
         if not user_data:
             logger.error(f"Aucune donnée utilisateur trouvée pour l'utilisateur {user_id}")
             return None, None, None, None
@@ -250,7 +249,7 @@ def format_user_profile_esco(db: Session, user_id: int) -> Tuple[Optional[str], 
         logger.error(f"Erreur lors du formatage des profils ESCO: {str(e)}")
         return None, None, None, None
 
-def generate_esco_embeddings(db: Session, user_id: int) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]:
+async def generate_esco_embeddings(db: Prisma, user_id: int) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]:
     """
     Génère des embeddings à partir des profils ESCO formatés.
     
@@ -263,41 +262,40 @@ def generate_esco_embeddings(db: Session, user_id: int) -> Tuple[Optional[np.nda
     """
     try:
         # Formater les profils ESCO
-        occupation_profile, skill_profile, skillgroup_profile, full_profile = format_user_profile_esco(db, user_id)
+        occupation_profile, skill_profile, skillgroup_profile, full_profile = await format_user_profile_esco(db, user_id)
         
         # Stocker les profils ESCO formatés dans la base de données
         try:
             update_parts = []
-            params = {"user_id": user_id}
+            values = []
             
             if occupation_profile:
-                update_parts.append("esco_occupation_profile = :occupation_profile")
-                params["occupation_profile"] = occupation_profile
+                update_parts.append(f"esco_occupation_profile = ${len(values) + 1}")
+                values.append(occupation_profile)
                 
             if skill_profile:
-                update_parts.append("esco_skill_profile = :skill_profile")
-                params["skill_profile"] = skill_profile
+                update_parts.append(f"esco_skill_profile = ${len(values) + 1}")
+                values.append(skill_profile)
                 
             if skillgroup_profile:
-                update_parts.append("esco_skillsgroup_profile = :skillsgroup_profile")
-                params["skillsgroup_profile"] = skillgroup_profile
+                update_parts.append(f"esco_skillsgroup_profile = ${len(values) + 1}")
+                values.append(skillgroup_profile)
                 
             if full_profile:
-                update_parts.append("esco_full_profile = :full_profile")
-                params["full_profile"] = full_profile
+                update_parts.append(f"esco_full_profile = ${len(values) + 1}")
+                values.append(full_profile)
             
             if update_parts:
-                update_query = text(f"""
+                update_query = f"""
                     UPDATE user_profiles
                     SET {', '.join(update_parts)}
-                    WHERE user_id = :user_id
-                """)
-                db.execute(update_query, params)
-                db.commit()
+                    WHERE user_id = ${len(values) + 1}
+                """
+                values.append(user_id)
+                await db.execute_raw(update_query, *values)
                 logger.info(f"Profils ESCO stockés avec succès pour l'utilisateur {user_id}")
         except Exception as e:
             logger.error(f"Erreur lors du stockage des profils ESCO: {str(e)}")
-            db.rollback()
         
         # Générer les embeddings
         occupation_embedding = None
@@ -327,7 +325,7 @@ def generate_esco_embeddings(db: Session, user_id: int) -> Tuple[Optional[np.nda
         logger.error(f"Erreur lors de la génération des embeddings ESCO: {str(e)}")
         return None, None, None, None
 
-def store_direct_esco_embeddings(db: Session, user_id: int, embeddings: Tuple[Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]) -> bool:
+async def store_direct_esco_embeddings(prisma: Prisma, user_id: int, embeddings: Tuple[Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]]) -> bool:
     """
     Store 384-dimensional embeddings directly in the database without GraphSAGE projection.
     
@@ -346,19 +344,19 @@ def store_direct_esco_embeddings(db: Session, user_id: int, embeddings: Tuple[Op
         if occupation_embedding is not None:
             # Convert to list if it's a numpy array, otherwise use as is
             embedding_list = occupation_embedding.tolist() if isinstance(occupation_embedding, np.ndarray) else occupation_embedding
-            success &= store_embedding(db, user_id, embedding_list, column_name="esco_embedding_occupation")
+            success &= await store_embedding(prisma, user_id, embedding_list, column_name="esco_embedding_occupation")
             
         if skill_embedding is not None:
             embedding_list = skill_embedding.tolist() if isinstance(skill_embedding, np.ndarray) else skill_embedding
-            success &= store_embedding(db, user_id, embedding_list, column_name="esco_embedding_skill")
+            success &= await store_embedding(prisma, user_id, embedding_list, column_name="esco_embedding_skill")
             
         if skillgroup_embedding is not None:
             embedding_list = skillgroup_embedding.tolist() if isinstance(skillgroup_embedding, np.ndarray) else skillgroup_embedding
-            success &= store_embedding(db, user_id, embedding_list, column_name="esco_embedding_skillsgroup")
+            success &= await store_embedding(prisma, user_id, embedding_list, column_name="esco_embedding_skillsgroup")
             
         if full_embedding is not None:
             embedding_list = full_embedding.tolist() if isinstance(full_embedding, np.ndarray) else full_embedding
-            success &= store_embedding(db, user_id, embedding_list, column_name="esco_embedding")
+            success &= await store_embedding(prisma, user_id, embedding_list, column_name="esco_embedding")
 
         if success:
             logger.info(f"✅ All 384D embeddings stored successfully for user {user_id}")
@@ -370,12 +368,12 @@ def store_direct_esco_embeddings(db: Session, user_id: int, embeddings: Tuple[Op
         logger.error(f"❌ Error storing direct embeddings: {str(e)}")
         return False
 
-def process_user_esco_embeddings(db: Session, user_id: int) -> bool:
+async def process_user_esco_embeddings(prisma: Prisma, user_id: int) -> bool:
     """
     Process ESCO embeddings for a user - generate and store 384D embeddings directly.
     
     Args:
-        db: Database session
+        prisma: Prisma database client
         user_id: User ID
         
     Returns:
@@ -383,13 +381,13 @@ def process_user_esco_embeddings(db: Session, user_id: int) -> bool:
     """
     try:
         # Generate ESCO embeddings
-        embeddings = generate_esco_embeddings(db, user_id)
+        embeddings = await generate_esco_embeddings(prisma, user_id)
         if all(e is None for e in embeddings):
             logger.error(f"❌ Failed to generate ESCO embeddings for user {user_id}")
             return False
 
         # Store embeddings directly without projection
-        success = store_direct_esco_embeddings(db, user_id, embeddings)
+        success = await store_direct_esco_embeddings(prisma, user_id, embeddings)
         if success:
             logger.info(f"✅ ESCO embeddings processed successfully for user {user_id}")
         else:

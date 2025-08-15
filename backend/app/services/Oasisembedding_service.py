@@ -4,8 +4,12 @@ import logging
 from typing import Optional, Dict, Any, List
 import pandas as pd
 import numpy as np
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from prisma import Prisma
+try:
+    from sqlalchemy.orm import Session
+except ImportError:
+    # Compatibility for Prisma-only environments
+    Session = None
 import torch
 import torch.nn as nn
 from transformers import AutoTokenizer, AutoModel
@@ -325,7 +329,7 @@ esco_model_state = ESCOModelState()
 
 # --- Core Functions ---
 
-def fetch_user_data(db: Session, user_id: int) -> Dict[str, Any]:
+async def fetch_user_data(db: Prisma, user_id: int) -> Dict[str, Any]:
     """
     Fetch user data from multiple tables to create a comprehensive profile.
     
@@ -338,7 +342,7 @@ def fetch_user_data(db: Session, user_id: int) -> Dict[str, Any]:
     """
     try:
         # Fetch basic profile data
-        profile_query = text("""
+        profile_query = """
             SELECT 
                 id, user_id, name, age, sex, major, year, gpa,
                 hobbies, country, state_province, unique_quality,
@@ -347,39 +351,37 @@ def fetch_user_data(db: Session, user_id: int) -> Dict[str, Any]:
                 years_experience, education_level, career_goals,
                 skills, personal_analysis, created_at, updated_at
             FROM user_profiles 
-            WHERE user_id = :user_id
-        """)
-        profile_result = db.execute(profile_query, {"user_id": user_id}).fetchone()
+            WHERE user_id = $1
+        """
+        profile_result = await db.query_raw(profile_query, user_id)
         
         if not profile_result:
             logger.error(f"No profile found for user {user_id}")
             return {}
         
-        # Convert row to dict
-        profile_data = {key: value for key, value in profile_result._mapping.items()}
+        # Get first result as dict
+        profile_data = profile_result[0] if profile_result else {}
         
         # Fetch skills data (direct columns with Likert scale ratings)
-        skills_query = text("""
+        skills_query = """
             SELECT creativity, leadership, digital_literacy, critical_thinking,
                    problem_solving, analytical_thinking, attention_to_detail,
                    collaboration, adaptability, independence, evaluation,
                    decision_making, stress_tolerance
-            FROM user_skills WHERE user_id = :user_id
-        """)
-        skills_result = db.execute(skills_query, {"user_id": user_id}).fetchone()
-        skills_data = {}
-        if skills_result:
-            skills_data = {key: value for key, value in skills_result._mapping.items()}
+            FROM user_skills WHERE user_id = $1
+        """
+        skills_result = await db.query_raw(skills_query, user_id)
+        skills_data = skills_result[0] if skills_result else {}
         
         # Fetch RIASEC personality scores
-        riasec_query = text("""
+        riasec_query = """
             SELECT r_score, i_score, a_score, s_score, e_score, c_score, top_3_code
-            FROM gca_results WHERE user_id = :user_id
-        """)
-        riasec_result = db.execute(riasec_query, {"user_id": user_id}).fetchone()
-        riasec_data = {}
-        if riasec_result:
-            riasec_data = {key: value for key, value in riasec_result._mapping.items()}
+            FROM gca_results WHERE user_id = $1
+        """
+        riasec_result = await db.query_raw(riasec_query, user_id)
+        riasec_data = riasec_result[0] if riasec_result else {}
+        if riasec_data:
+            # riasec_data is already a dict from query_raw
             
             # Map score columns to full RIASEC names for better readability
             riasec_mapping = {
@@ -399,14 +401,14 @@ def fetch_user_data(db: Session, user_id: int) -> Dict[str, Any]:
             riasec_data.update(riasec_data_mapped)
         
         # Optionally fetch saved recommendations for behavioral signals
-        recommendations_query = text("""
-            SELECT label, all_fields FROM saved_recommendations WHERE user_id = :user_id
-        """)
-        recommendations_result = db.execute(recommendations_query, {"user_id": user_id}).fetchall()
+        recommendations_query = """
+            SELECT label, all_fields FROM saved_recommendations WHERE user_id = $1
+        """
+        recommendations_result = await db.query_raw(recommendations_query, user_id)
         saved_recommendations = []
         if recommendations_result:
             saved_recommendations = [
-                {"label": row.label, "fields": row.all_fields}
+                {"label": row.get("label"), "fields": row.get("all_fields")}
                 for row in recommendations_result
             ]
         
@@ -618,7 +620,7 @@ def generate_embedding(db: Session, user_id: int, profile_data: Dict[str, Any] =
         logger.error(f"Error generating embedding: {str(e)}")
         return None
 
-def store_embedding(db: Session, user_id: int, embedding: np.ndarray, column_name: str = "embedding") -> bool:
+async def store_embedding(db: Prisma, user_id: int, embedding: np.ndarray, column_name: str = "embedding") -> bool:
     """
     Store user embedding in the database.
     
@@ -636,18 +638,17 @@ def store_embedding(db: Session, user_id: int, embedding: np.ndarray, column_nam
         embedding_list = embedding.tolist() if isinstance(embedding, np.ndarray) else embedding
         
         # Construire la requête SQL dynamiquement en fonction du nom de colonne
-        query = text(f"""
+        query = f"""
             UPDATE user_profiles
-            SET {column_name} = :embedding
-            WHERE user_id = :user_id
-        """)
+            SET {column_name} = $1
+            WHERE user_id = $2
+        """
         
         # Update the user's profile with the embedding
-        db.execute(
+        await db.execute_raw(
             query,
-            {"embedding": embedding_list, "user_id": user_id}
+            embedding_list, user_id
         )
-        db.commit()
         
         logger.info(f"Successfully stored embedding for user {user_id} in column {column_name}")
         return True

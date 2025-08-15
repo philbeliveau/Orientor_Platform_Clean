@@ -2,8 +2,7 @@ import os
 import logging
 import numpy as np
 from typing import List, Dict, Any, Optional
-from sqlalchemy.orm import Session
-from sqlalchemy import text
+from prisma import Prisma
 import pickle
 import random
 import json
@@ -197,7 +196,7 @@ DEFAULT_USER_EMBEDDINGS = {
     "finance": create_domain_embedding(seed=49)  # Finance focused
 }
 
-def get_user_embedding(db: Session, user_id: int, use_oasis: bool = False) -> Optional[List[float]]:
+async def get_user_embedding(prisma: Prisma, user_id: int, use_oasis: bool = False) -> Optional[List[float]]:
     """
     Get the embedding for a user by first trying to use the stored embedding,
     then falling back to generating it on-the-fly
@@ -214,7 +213,7 @@ def get_user_embedding(db: Session, user_id: int, use_oasis: bool = False) -> Op
         # Si l'utilisation d'OaSIS est demandée, essayer d'abord d'obtenir l'embedding OaSIS
         if use_oasis:
             logger.info(f"Tentative de récupération de l'embedding OaSIS pour l'utilisateur {user_id}")
-            oasis_embedding = get_user_oasis_embedding(db, user_id)
+            oasis_embedding = await get_user_oasis_embedding(prisma, user_id)
             if oasis_embedding is not None:
                 logger.info(f"Embedding OaSIS trouvé pour l'utilisateur {user_id}")
                 return oasis_embedding.tolist()
@@ -222,12 +221,12 @@ def get_user_embedding(db: Session, user_id: int, use_oasis: bool = False) -> Op
                 logger.warning(f"Aucun embedding OaSIS trouvé pour l'utilisateur {user_id}, retour à l'embedding standard")
         
         # First try to get the stored embedding from the database
-        query = text("""
+        query = """
             SELECT embedding, name, job_title, industry, skills, interests
             FROM user_profiles
-            WHERE user_id = :user_id
-        """)
-        result = db.execute(query, {"user_id": user_id}).fetchone()
+            WHERE user_id = $1
+        """
+        result = await prisma.query_raw(query, user_id)
         
         if result:
             logger.info(f"Found user profile for user {user_id}:")
@@ -616,7 +615,7 @@ def get_pinecone_career_recommendations(embedding: List[float], limit: int = 30)
         logger.error(f"Error getting Pinecone career recommendations: {str(e)}")
         return []
 
-def get_career_recommendations_fallback(limit: int = 30, user_id: int = None, db: Session = None) -> List[Dict[str, Any]]:
+async def get_career_recommendations_fallback(limit: int = 30, user_id: int = None, prisma: Prisma = None) -> List[Dict[str, Any]]:
     """
     Get fallback career recommendations when Pinecone is unavailable.
     Uses a combination of user profile data and RIASEC code for personalization.
@@ -646,14 +645,14 @@ def get_career_recommendations_fallback(limit: int = 30, user_id: int = None, db
         if user_id and db:
             try:
                 # Get user profile
-                profile_query = text("""
+                profile_query = """
                     SELECT up.*, gr.top_3_code as riasec_code
                     FROM user_profiles up
                     LEFT JOIN gca_results gr ON up.user_id = gr.user_id
                     WHERE up.user_id = :user_id
                     ORDER BY gr.created_at DESC
                     LIMIT 1
-                """)
+                """
                 user_profile = db.execute(profile_query, {"user_id": user_id}).fetchone()
                 
                 if user_profile:
@@ -851,7 +850,7 @@ def get_career_recommendations_fallback(limit: int = 30, user_id: int = None, db
         logger.error(f"Error getting fallback career recommendations: {str(e)}")
         return []
 
-def get_career_recommendations(db: Session, user_id: int, limit: int = 30, use_oasis: bool = True) -> List[Dict[str, Any]]:
+async def get_career_recommendations(prisma: Prisma, user_id: int, limit: int = 30, use_oasis: bool = True) -> List[Dict[str, Any]]:
     """
     Get personalized career recommendations for a user using their existing embedding.
     If no embedding exists, raises an error.
@@ -876,12 +875,12 @@ def get_career_recommendations(db: Session, user_id: int, limit: int = 30, use_o
         embedding_column = "oasis_embedding" if use_oasis else "embedding"
         
         # Query the user_profiles table for the embedding
-        query = text(f"""
+        query = f"""
             SELECT {embedding_column}
             FROM user_profiles
-            WHERE user_id = :user_id
-        """)
-        result = db.execute(query, {"user_id": user_id}).fetchone()
+            WHERE user_id = $1
+        """
+        result = await prisma.query_raw(query, user_id)
         
         if not result or not getattr(result, embedding_column, None):
             logger.error(f"No {embedding_column} found for user {user_id}")
@@ -927,7 +926,7 @@ def get_career_recommendations(db: Session, user_id: int, limit: int = 30, use_o
         logger.error(f"Error getting career recommendations: {str(e)}")
         raise
 
-def save_career_recommendation(db: Session, user_id: int, career_id: int) -> bool:
+async def save_career_recommendation(prisma: Prisma, user_id: int, career_id: int) -> bool:
     """
     Save a career recommendation for a user with all fields
     
@@ -943,7 +942,7 @@ def save_career_recommendation(db: Session, user_id: int, career_id: int) -> boo
         logger.info(f"Starting save_career_recommendation for user {user_id}, career_id {career_id}")
         
         # Try to get the career details from Pinecone first
-        recommendations = get_career_recommendations(db, user_id, 30)  # Fetch all recommendations
+        recommendations = await get_career_recommendations(prisma, user_id, 30)  # Fetch all recommendations
         logger.info(f"Got {len(recommendations)} recommendations")
         
         career_details = next((c for c in recommendations if c["id"] == career_id), None)
@@ -962,20 +961,20 @@ def save_career_recommendation(db: Session, user_id: int, career_id: int) -> boo
         logger.info(f"Using oasis_code: {oasis_code}")
         
         # Check if already saved
-        query = text("""
+        query = """
             SELECT 1
             FROM saved_recommendations
-            WHERE user_id = :user_id AND oasis_code = :oasis_code
-        """)
+            WHERE user_id = $1 AND oasis_code = $2
+        """
         
-        exists = db.execute(query, {"user_id": user_id, "oasis_code": oasis_code}).fetchone()
+        exists = await prisma.query_raw(query, user_id, oasis_code)
         
         if exists:
             logger.info(f"Career {oasis_code} already saved for user {user_id}")
             return True
         
         # Insert new saved recommendation with all fields
-        query = text("""
+        query = """
             INSERT INTO saved_recommendations (
                 user_id, oasis_code, label, description, main_duties,
                 role_creativity, role_leadership, role_digital_literacy,
@@ -984,14 +983,14 @@ def save_career_recommendation(db: Session, user_id: int, career_id: int) -> boo
                 adaptability, independence, evaluation, decision_making,
                 stress_tolerance, all_fields
             ) VALUES (
-                :user_id, :oasis_code, :label, :description, :main_duties,
-                :role_creativity, :role_leadership, :role_digital_literacy,
-                :role_critical_thinking, :role_problem_solving,
-                :analytical_thinking, :attention_to_detail, :collaboration,
-                :adaptability, :independence, :evaluation, :decision_making,
-                :stress_tolerance, :all_fields
+                $1, $2, $3, $4, $5,
+                $6, $7, $8,
+                $9, $10,
+                $11, $12, $13,
+                $14, $15, $16, $17,
+                $18, $19
             )
-        """)
+        """
         
         # Use the pre-extracted fields from career_details with try_parse_float for numeric fields
         values = {
@@ -1018,26 +1017,32 @@ def save_career_recommendation(db: Session, user_id: int, career_id: int) -> boo
         logger.info(f"Preparing to save career with values: {values}")
         
         try:
-            db.execute(query, values)
-            db.commit()
+            await prisma.query_raw(query, 
+            user_id, oasis_code, values["label"], values["description"], values["main_duties"],
+            values["role_creativity"], values["role_leadership"], values["role_digital_literacy"],
+            values["role_critical_thinking"], values["role_problem_solving"],
+            values["analytical_thinking"], values["attention_to_detail"], values["collaboration"],
+            values["adaptability"], values["independence"], values["evaluation"], values["decision_making"],
+            values["stress_tolerance"], json.dumps(values["all_fields"]))
+            # Prisma handles transactions automatically
             logger.info(f"Successfully saved career {oasis_code} for user {user_id}")
             return True
         except Exception as e:
-            db.rollback()
+            # Prisma handles errors automatically
             logger.error(f"Database error while saving career: {str(e)}")
             raise
             
     except Exception as e:
-        db.rollback()
+        # Prisma handles errors automatically
         logger.error(f"Error in save_career_recommendation: {str(e)}")
         return False
 
-def get_saved_careers(db: Session, user_id: int) -> List[Dict[str, Any]]:
+async def get_saved_careers(prisma: Prisma, user_id: int) -> List[Dict[str, Any]]:
     """
     Get saved career recommendations for a user with all fields
     
     Args:
-        db: Database session
+        prisma: Prisma client
         user_id: ID of the user
         
     Returns:
@@ -1045,7 +1050,7 @@ def get_saved_careers(db: Session, user_id: int) -> List[Dict[str, Any]]:
     """
     try:
         # Get all saved recommendations for the user with all fields
-        query = text("""
+        query = """
             SELECT 
                 sr.id as id,
                 sr.oasis_code as oasis_code,
@@ -1068,11 +1073,11 @@ def get_saved_careers(db: Session, user_id: int) -> List[Dict[str, Any]]:
                 sr.all_fields as all_fields,
                 sr.saved_at as saved_at
             FROM saved_recommendations sr
-            WHERE sr.user_id = :user_id
+            WHERE sr.user_id = $1
             ORDER BY sr.saved_at DESC
-        """)
+        """
         
-        result = db.execute(query, {"user_id": user_id}).fetchall()
+        result = await prisma.query_raw(query, user_id)
         
         saved_careers = []
         for row in result:
