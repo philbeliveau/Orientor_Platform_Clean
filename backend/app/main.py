@@ -1,11 +1,14 @@
-from fastapi import FastAPI, Depends, Request
+from fastapi import FastAPI, Depends, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 import uvicorn
 import os
 import logging
 import time
 import asyncio
+from datetime import datetime
 
 # Import routers directly
 from app.routers.user import router as auth_router
@@ -245,7 +248,7 @@ else:
         allow_origins=origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-        allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+        allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-Clerk-Auth-Token"],
         expose_headers=["Set-Cookie"],
         max_age=600,
     )
@@ -542,6 +545,73 @@ async def preload_all_models():
 
 # if __name__ == "__main__":
 #     uvicorn.run("app.main:app", host="0.0.0.0", port=8000) #, reload=True)
+
+# Enhanced request validation error handler - P1 HIGH priority fix
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Enhanced validation error handler with detailed debugging information
+    Addresses HTTP 422 validation errors identified in comprehensive error analysis
+    """
+    try:
+        # Extract detailed error information
+        error_details = []
+        for error in exc.errors():
+            error_info = {
+                "field": " -> ".join(str(loc) for loc in error.get("loc", [])),
+                "message": error.get("msg", "Unknown validation error"),
+                "type": error.get("type", "validation_error"),
+                "input_value": error.get("input", "Not provided")
+            }
+            error_details.append(error_info)
+        
+        # Build comprehensive error response
+        error_response = {
+            "status": "validation_error",
+            "message": "Request validation failed",
+            "timestamp": datetime.utcnow().isoformat(),
+            "path": str(request.url.path),
+            "method": request.method,
+            "errors": error_details,
+            "error_count": len(error_details)
+        }
+        
+        # Add debugging information for development
+        if os.getenv("ENV", "development") == "development":
+            try:
+                request_body = await request.body()
+                error_response["debug_info"] = {
+                    "request_size": len(request_body) if request_body else 0,
+                    "content_type": request.headers.get("content-type", "unknown"),
+                    "user_agent": request.headers.get("user-agent", "unknown")
+                }
+            except:
+                error_response["debug_info"] = {"note": "Could not extract request body"}
+        
+        # Log validation error for monitoring
+        logger.warning(f"🔍 Request validation failed on {request.method} {request.url.path}: {len(error_details)} errors")
+        for error_detail in error_details[:3]:  # Log first 3 errors to avoid spam
+            logger.warning(f"   • Field '{error_detail['field']}': {error_detail['message']}")
+        
+        return JSONResponse(
+            status_code=422,
+            content=error_response
+        )
+        
+    except Exception as handler_error:
+        # Fallback error response if handler itself fails
+        logger.error(f"❌ Validation error handler failed: {str(handler_error)}")
+        return JSONResponse(
+            status_code=422,
+            content={
+                "status": "validation_error",
+                "message": "Request validation failed with handler error",
+                "timestamp": datetime.utcnow().isoformat(),
+                "path": str(request.url.path),
+                "method": request.method,
+                "handler_error": str(handler_error)
+            }
+        )
 
 # Set default SECRET_KEY for development if not configured
 if not os.getenv("SECRET_KEY"):

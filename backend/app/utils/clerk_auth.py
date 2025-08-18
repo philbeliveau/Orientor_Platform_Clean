@@ -9,7 +9,7 @@ including token verification, user session management, and database integration.
 import os
 import logging
 from typing import Dict, Any, Optional
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import httpx
 import jwt
@@ -74,19 +74,53 @@ async def verify_clerk_token(token: str) -> Dict[str, Any]:
     return await verify_clerk_token_cached(token)
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Optional[Request] = None,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
     db: Prisma = Depends(get_prisma_client)
 ) -> Dict[str, Any]:
     """
-    Get current authenticated user from Clerk token (Legacy wrapper).
+    Get current authenticated user from Clerk token with flexible authentication.
+    Supports both Authorization header (Bearer token) and Cookie (__session) authentication.
     Creates/updates the user in local database if needed.
+    
+    Authentication Methods Supported:
+    1. Authorization: Bearer TOKEN (API calls)
+    2. Cookie: __session=TOKEN (browser requests)
+    3. X-Clerk-Auth-Token: TOKEN (custom header)
     
     Note: This function now uses the advanced caching system from auth_cache.py
     """
-    logger.info("🔄 Using legacy get_current_user - redirecting to cached version")
     from .auth_cache_clean import get_request_cache
-    # Simple cached user fetching without over-engineering
-    token = credentials.credentials
+    from fastapi import Request
+    
+    # Extract token from multiple sources
+    token = None
+    auth_method = None
+    
+    # Method 1: Try Authorization header first (API calls)
+    if credentials and credentials.credentials:
+        token = credentials.credentials
+        auth_method = "bearer_token"
+        logger.debug(f"🔐 Authentication via Bearer token: {token[:20]}...")
+    
+    # Method 2: Fallback to Cookie (browser requests)  
+    elif request and '__session' in request.cookies:
+        token = request.cookies['__session']
+        auth_method = "cookie_session"
+        logger.debug(f"🍪 Authentication via Cookie: {token[:20]}...")
+    
+    # Method 3: Check for custom Clerk headers
+    elif request and 'x-clerk-auth-token' in request.headers:
+        token = request.headers['x-clerk-auth-token']
+        auth_method = "clerk_header"
+        logger.debug(f"🏷️ Authentication via Clerk header: {token[:20]}...")
+    
+    if not token:
+        logger.warning("❌ No authentication token found in any method")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required. Provide token via Authorization header or __session cookie"
+        )
     
     # Use request cache for deduplication within same request
     request_cache = get_request_cache()
@@ -104,6 +138,7 @@ async def get_current_user(
         # Extract user info from token
         user_id = payload.get("sub")
         if not user_id:
+            logger.error(f"❌ Invalid token payload via {auth_method}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token payload"
@@ -133,21 +168,27 @@ async def get_current_user(
         
         # Cache in request cache
         request_cache.set(cache_key, user_data)
-        logger.debug("💾 User data cached in request cache")
+        logger.info(f"✅ Authentication successful via {auth_method} for user {user_id}")
         
         return user_data
         
+    except jwt.InvalidTokenError as e:
+        logger.error(f"❌ Invalid JWT token via {auth_method}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication token"
+        )
     except httpx.HTTPStatusError as e:
-        logger.error(f"Clerk API error: {str(e)}")
+        logger.error(f"❌ Clerk API error via {auth_method}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Unable to fetch user details from Clerk"
         )
     except Exception as e:
-        logger.error(f"User authentication error: {str(e)}")
+        logger.error(f"❌ User authentication error via {auth_method}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials"
+            detail="Authentication failed"
         )
 
 async def clerk_health_check() -> Dict[str, Any]:
@@ -309,25 +350,32 @@ async def ensure_user_profile_exists(user, db: Prisma) -> None:
         raise
 
 async def get_current_user_with_db_sync(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
     db: Prisma = Depends(get_prisma_client)
 ) -> User:
     """
-    Get current authenticated user from Clerk token and return SQLAlchemy User object.
+    Get current authenticated user from Clerk token with flexible authentication support.
+    Supports both Authorization header (Bearer token) and Cookie (__session) authentication.
     This function bridges the gap between Clerk authentication and legacy router expectations.
+    
+    Authentication Methods Supported:
+    1. Authorization: Bearer TOKEN (API calls)
+    2. Cookie: __session=TOKEN (browser requests)
+    3. X-Clerk-Auth-Token: TOKEN (custom header)
     
     Now uses the advanced caching system for improved performance.
     
     Returns:
-        User: SQLAlchemy User object compatible with legacy routers
+        User: Prisma User object compatible with legacy routers
     """
     try:
-        # Get Clerk user data using cached authentication
-        from .auth_cache import get_request_cache, get_current_user_cached
-        request_cache = get_request_cache()
-        clerk_user_data = await get_current_user_cached(credentials, db, request_cache)
+        # Use the flexible authentication method
+        clerk_user_data = await get_current_user(request, credentials, db)
         
         # Check if we have the database user ID cached
+        from .auth_cache_clean import get_request_cache
+        request_cache = get_request_cache()
         db_user_cache_key = f"db_user:{clerk_user_data['id']}"
         cached_user = request_cache.get(db_user_cache_key)
         

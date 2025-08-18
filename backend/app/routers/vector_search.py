@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from dotenv import load_dotenv
 import logging
+from datetime import datetime
 from ..models import SavedRecommendation, User
 from app.utils.clerk_auth import get_current_user_with_db_sync as get_current_user
 from ..schemas.space import SavedRecommendationCreate
@@ -431,20 +432,112 @@ async def save_search_result(
 @router.get("/health")
 async def health_check():
     """
-    Check if the vector search service is healthy
+    Comprehensive vector service health check with detailed component validation
     """
+    health_status = {
+        "status": "unknown",
+        "components": {},
+        "timestamp": datetime.utcnow().isoformat() if 'datetime' in globals() else "N/A"
+    }
+    
     try:
-        logger.info("Checking Pinecone health...")
-        stats = index.describe_index_stats()
-        vector_count = stats.get("total_vector_count", 0)
-        logger.info(f"Pinecone index contains {vector_count} vectors")
-        return {
-            "status": "healthy",
-            "vector_count": vector_count
-        }
+        # Test 1: Pinecone connection and configuration
+        logger.info("🔍 Testing Pinecone configuration...")
+        try:
+            # Check environment variables
+            pinecone_api_key = os.getenv("PINECONE_API_KEY")
+            pinecone_environment = os.getenv("PINECONE_ENVIRONMENT")
+            
+            if not pinecone_api_key:
+                health_status["components"]["pinecone_config"] = {
+                    "status": "unhealthy",
+                    "error": "PINECONE_API_KEY environment variable not set"
+                }
+            elif not pinecone_environment:
+                health_status["components"]["pinecone_config"] = {
+                    "status": "unhealthy", 
+                    "error": "PINECONE_ENVIRONMENT environment variable not set"
+                }
+            else:
+                health_status["components"]["pinecone_config"] = {
+                    "status": "healthy",
+                    "api_key_configured": True,
+                    "environment": pinecone_environment
+                }
+                
+        except Exception as e:
+            health_status["components"]["pinecone_config"] = {
+                "status": "unhealthy",
+                "error": f"Configuration check failed: {str(e)}"
+            }
+        
+        # Test 2: Pinecone index connection
+        logger.info("🔍 Testing Pinecone index connection...")
+        try:
+            index = get_pinecone_index()
+            stats = index.describe_index_stats()
+            vector_count = stats.get("total_vector_count", 0)
+            
+            health_status["components"]["pinecone_index"] = {
+                "status": "healthy",
+                "vector_count": vector_count,
+                "index_name": "oasis-384-custom"
+            }
+            logger.info(f"✅ Pinecone index contains {vector_count} vectors")
+            
+        except Exception as e:
+            health_status["components"]["pinecone_index"] = {
+                "status": "unhealthy",
+                "error": str(e)
+            }
+            logger.error(f"❌ Pinecone index connection failed: {e}")
+        
+        # Test 3: OpenAI client
+        logger.info("🔍 Testing OpenAI client...")
+        try:
+            # Simple test to verify OpenAI client is configured
+            if hasattr(client, 'api_key') or os.getenv("OPENAI_API_KEY"):
+                health_status["components"]["openai_client"] = {
+                    "status": "healthy",
+                    "client_initialized": True
+                }
+            else:
+                health_status["components"]["openai_client"] = {
+                    "status": "degraded",
+                    "error": "OpenAI API key not detected"
+                }
+                
+        except Exception as e:
+            health_status["components"]["openai_client"] = {
+                "status": "unhealthy",
+                "error": str(e)
+            }
+        
+        # Determine overall status
+        component_statuses = [comp["status"] for comp in health_status["components"].values()]
+        if all(status == "healthy" for status in component_statuses):
+            health_status["status"] = "healthy"
+        elif any(status == "healthy" for status in component_statuses):
+            health_status["status"] = "degraded"
+        else:
+            health_status["status"] = "unhealthy"
+        
+        # Return 200 even if degraded, but log issues for monitoring
+        if health_status["status"] != "healthy":
+            logger.warning(f"⚠️ Vector service health issues detected: {health_status}")
+        else:
+            logger.info("✅ Vector service is fully healthy")
+        
+        return health_status
+        
     except Exception as e:
-        logger.error(f"Health check failed: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Vector search service unhealthy: {str(e)}")
+        logger.error(f"❌ Health check completely failed: {e}", exc_info=True)
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat() if 'datetime' in globals() else "N/A",
+            "components": health_status.get("components", {})
+        }
 
 @router.get("/suggested-peers", response_model=SuggestedPeersResponse)
 async def get_suggested_peers(
@@ -489,20 +582,45 @@ async def get_suggested_peers(
 @router.get("/debug")
 async def debug_index():
     """
-    Debug endpoint to check Pinecone index configuration
+    Debug endpoint to check Pinecone index configuration with detailed diagnostics
     """
     try:
+        logger.info("🔍 Starting vector debug diagnostics...")
+        
+        # Get Pinecone index and stats
         index = get_pinecone_index()
         stats = index.describe_index_stats()
-        return {
+        
+        # Convert stats to a serializable format
+        serializable_stats = {}
+        if stats:
+            for key, value in stats.items():
+                try:
+                    # Test if the value is JSON serializable
+                    import json
+                    json.dumps(value)
+                    serializable_stats[key] = value
+                except (TypeError, ValueError):
+                    # If not serializable, convert to string
+                    serializable_stats[key] = str(value)
+        
+        debug_info = {
             "status": "success",
-            "stats": stats,
-            # "index_name": "oasis-minilm-index"
-            "index_name": "oasis-384-custom"
+            "timestamp": datetime.utcnow().isoformat(),
+            "index_name": "oasis-384-custom",
+            "environment": os.getenv("PINECONE_ENVIRONMENT", "unknown"),
+            "stats": serializable_stats,
+            "vector_count": stats.get("total_vector_count", 0) if stats else 0
         }
+        
+        logger.info("✅ Vector debug diagnostics completed successfully")
+        return debug_info
+        
     except Exception as e:
-        logger.error(f"Debug check failed: {str(e)}", exc_info=True)
+        logger.error(f"❌ Debug check failed: {str(e)}", exc_info=True)
         return {
             "status": "error",
-            "error": str(e)
+            "timestamp": datetime.utcnow().isoformat(),
+            "error": str(e),
+            "error_type": type(e).__name__
         } 
