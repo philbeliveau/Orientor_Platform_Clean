@@ -1,0 +1,143 @@
+{
+  "summary": {
+    "total_tests": 10,
+    "passed_tests": 1,
+    "failed_tests": 9,
+    "success_rate": 10.0,
+    "critical_tests": {
+      "total": 10,
+      "passed": 1,
+      "success_rate": 10.0
+    }
+  },
+  "failure_analysis": {
+    "authentication_failures": 9,
+    "server_errors": 0,
+    "other_failures": 0
+  },
+  "test_results": [
+    {
+      "endpoint": "GET /api/v1/profiles/me",
+      "description": "Get current user profile",
+      "status_code": 401,
+      "response_time": 0.016,
+      "success": false,
+      "critical": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/onboarding/status",
+      "description": "Get onboarding status",
+      "status_code": 401,
+      "response_time": 0.004,
+      "success": false,
+      "critical": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/holland/questions",
+      "description": "Get Holland test questions",
+      "status_code": 200,
+      "response_time": 0.171,
+      "success": true,
+      "critical": true,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /api/v1/tests/holland/user-results",
+      "description": "Get Holland test results",
+      "status_code": 401,
+      "response_time": 0.006,
+      "success": false,
+      "critical": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/hexaco/questions",
+      "description": "Get HEXACO test questions",
+      "status_code": 401,
+      "response_time": 0.004,
+      "success": false,
+      "critical": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/careers/saved",
+      "description": "Get saved careers",
+      "status_code": 401,
+      "response_time": 0.003,
+      "success": false,
+      "critical": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/careers/recommendations",
+      "description": "Get career recommendations",
+      "status_code": 401,
+      "response_time": 0.003,
+      "success": false,
+      "critical": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/peers/compatible",
+      "description": "Get compatible peers",
+      "status_code": 401,
+      "response_time": 0.003,
+      "success": false,
+      "critical": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /user-progress/",
+      "description": "Get user progress",
+      "status_code": 401,
+      "response_time": 0.003,
+      "success": false,
+      "critical": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/courses/",
+      "description": "Get user courses",
+      "status_code": 401,
+      "response_time": 0.003,
+      "success": false,
+      "critical": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    }
+  ],
+  "metadata": {
+    "timestamp": "2025-08-18T09:51:40.654931",
+    "base_url": "http://localhost:8000",
+    "token_provided": true,
+    "token_preview": "fake_token_for_demo..."
+  }
+}

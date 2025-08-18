@@ -1,0 +1,3705 @@
+{
+  "methodology": {
+    "approach": "FastAPI-focused comprehensive testing",
+    "authentication": "Real Clerk JWT with multiple auth contexts",
+    "discovery": "OpenAPI schema-based endpoint discovery",
+    "advantages": [
+      "Automatic endpoint discovery from FastAPI OpenAPI schema",
+      "Multiple authentication context testing (header + cookie)",
+      "Enhanced FastAPI-specific metadata extraction",
+      "Systematic coverage without manual endpoint definition"
+    ]
+  },
+  "summary": {
+    "total_tests": 218,
+    "passed_tests": 21,
+    "failed_tests": 197,
+    "success_rate": 9.6,
+    "critical_tests": {
+      "total": 89,
+      "passed": 11,
+      "success_rate": 12.4
+    },
+    "authentication_analysis": {
+      "total_protected": 190,
+      "passed_protected": 0,
+      "auth_success_rate": 0.0
+    }
+  },
+  "failure_analysis": {
+    "authentication_failures": 188,
+    "server_errors": 2,
+    "client_errors": 5,
+    "network_errors": 2
+  },
+  "tag_analysis": {
+    "debugging": {
+      "total": 2,
+      "passed": 2,
+      "success_rate": 100.0
+    },
+    "user": {
+      "total": 3,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "profiles": {
+      "total": 6,
+      "passed": 1,
+      "success_rate": 16.7
+    },
+    "test": {
+      "total": 1,
+      "passed": 1,
+      "success_rate": 100.0
+    },
+    "conversations": {
+      "total": 12,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "chat": {
+      "total": 5,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "share": {
+      "total": 6,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "analytics": {
+      "total": 4,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "peers": {
+      "total": 4,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "messages": {
+      "total": 4,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "space": {
+      "total": 11,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "vector": {
+      "total": 5,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "recommendations": {
+      "total": 2,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "careers": {
+      "total": 5,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "Skill Tree": {
+      "total": 2,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "tree-paths": {
+      "total": 4,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "node-notes": {
+      "total": 5,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "user-progress": {
+      "total": 4,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "jobs": {
+      "total": 5,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "program-recommendations": {
+      "total": 4,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "holland_test": {
+      "total": 7,
+      "passed": 2,
+      "success_rate": 28.6
+    },
+    "hexaco_test": {
+      "total": 12,
+      "passed": 3,
+      "success_rate": 25.0
+    },
+    "insight": {
+      "total": 5,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "competence-tree": {
+      "total": 6,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "career-progression": {
+      "total": 3,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "users": {
+      "total": 2,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "reflection": {
+      "total": 7,
+      "passed": 1,
+      "success_rate": 14.3
+    },
+    "avatar": {
+      "total": 3,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "onboarding": {
+      "total": 8,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "education": {
+      "total": 4,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "School Programs": {
+      "total": 9,
+      "passed": 2,
+      "success_rate": 22.2
+    },
+    "courses": {
+      "total": 11,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "enhanced-chat": {
+      "total": 6,
+      "passed": 1,
+      "success_rate": 16.7
+    },
+    "socratic-chat": {
+      "total": 4,
+      "passed": 1,
+      "success_rate": 25.0
+    },
+    "career-goals": {
+      "total": 7,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "career-advisor": {
+      "total": 1,
+      "passed": 0,
+      "success_rate": 0.0
+    },
+    "orientator": {
+      "total": 9,
+      "passed": 2,
+      "success_rate": 22.2
+    },
+    "authentication": {
+      "total": 4,
+      "passed": 2,
+      "success_rate": 50.0
+    },
+    "Cache Monitoring": {
+      "total": 8,
+      "passed": 1,
+      "success_rate": 12.5
+    },
+    "untagged": {
+      "total": 3,
+      "passed": 2,
+      "success_rate": 66.7
+    },
+    "JWKS Cache Monitoring": {
+      "total": 5,
+      "passed": 0,
+      "success_rate": 0.0
+    }
+  },
+  "endpoint_results": [
+    {
+      "endpoint": "GET /debug/holland-test",
+      "description": "\ud83d\udd0d Enhanced debugging endpoint for Holland test API issues\nHelps diagnose the root causes of empty {} response errors",
+      "tags": [
+        "debugging"
+      ],
+      "status_code": 200,
+      "response_time": 0.006,
+      "success": true,
+      "critical": true,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /debug/api-health",
+      "description": "\ud83c\udfe5 API health check with detailed diagnostics",
+      "tags": [
+        "debugging"
+      ],
+      "status_code": 200,
+      "response_time": 0.003,
+      "success": true,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /user/profile",
+      "description": "Get user profile - Clerk authenticated",
+      "tags": [
+        "user"
+      ],
+      "status_code": 401,
+      "response_time": 0.387,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /user/onboarding-status",
+      "description": "STANDARDIZED onboarding status check - matches onboarding router format",
+      "tags": [
+        "user"
+      ],
+      "status_code": 401,
+      "response_time": 0.008,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /user/me",
+      "description": "Get current authenticated user information",
+      "tags": [
+        "user"
+      ],
+      "status_code": 401,
+      "response_time": 0.008,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/profiles/test",
+      "description": "Test Profiles Route",
+      "tags": [
+        "profiles"
+      ],
+      "status_code": 200,
+      "response_time": 0.004,
+      "success": true,
+      "critical": true,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /api/v1/profiles/me",
+      "description": "Get Profile",
+      "tags": [
+        "profiles"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "PUT /api/v1/profiles/update",
+      "description": "Update Profile",
+      "tags": [
+        "profiles"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/profiles/completion",
+      "description": "Get profile completion analysis for the current user.",
+      "tags": [
+        "profiles"
+      ],
+      "status_code": 401,
+      "response_time": 0.008,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/profiles/completion/recommendations",
+      "description": "Get next recommended actions for profile completion.",
+      "tags": [
+        "profiles"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/profiles/{user_id}",
+      "description": "Get profile information for a specific user.",
+      "tags": [
+        "profiles"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/test/hello",
+      "description": "Test Hello",
+      "tags": [
+        "test"
+      ],
+      "status_code": 200,
+      "response_time": 0.005,
+      "success": true,
+      "critical": true,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /api/v1/conversations",
+      "description": "Get user's conversations with optional filters",
+      "tags": [
+        "conversations"
+      ],
+      "status_code": 401,
+      "response_time": 0.021,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/conversations",
+      "description": "Create a new conversation",
+      "tags": [
+        "conversations"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/conversations/{conversation_id}",
+      "description": "Get a specific conversation",
+      "tags": [
+        "conversations"
+      ],
+      "status_code": 401,
+      "response_time": 0.016,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "PUT /api/v1/conversations/{conversation_id}",
+      "description": "Update conversation properties",
+      "tags": [
+        "conversations"
+      ],
+      "status_code": 401,
+      "response_time": 0.015,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "DELETE /api/v1/conversations/{conversation_id}",
+      "description": "Delete a conversation permanently",
+      "tags": [
+        "conversations"
+      ],
+      "status_code": 401,
+      "response_time": 0.017,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/conversations/{conversation_id}/favorite",
+      "description": "Toggle favorite status of a conversation",
+      "tags": [
+        "conversations"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/conversations/{conversation_id}/archive",
+      "description": "Archive or unarchive a conversation",
+      "tags": [
+        "conversations"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/conversations/{conversation_id}/generate-title",
+      "description": "Generate an automatic title for the conversation",
+      "tags": [
+        "conversations"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/conversations/{conversation_id}/messages",
+      "description": "Get messages for a conversation with unified response format",
+      "tags": [
+        "conversations"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/conversations/{conversation_id}/statistics",
+      "description": "Get statistics for a conversation",
+      "tags": [
+        "conversations"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/conversations/{conversation_id}/export",
+      "description": "Export conversation in various formats",
+      "tags": [
+        "conversations"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/conversations/send/{conversation_id}",
+      "description": "Send a message to an existing conversation",
+      "tags": [
+        "conversations"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/chat/send",
+      "description": "Send Message",
+      "tags": [
+        "chat"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/chat/conversations",
+      "description": "Create a new conversation",
+      "tags": [
+        "chat"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/chat/conversations",
+      "description": "Get user conversations with pagination and filtering",
+      "tags": [
+        "chat"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/chat/conversations/{conversation_id}/messages",
+      "description": "Get messages for a conversation",
+      "tags": [
+        "chat"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/chat/clear",
+      "description": "Clear History",
+      "tags": [
+        "chat"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/chat/share/conversations/{conversation_id}",
+      "description": "Create a share link for a conversation",
+      "tags": [
+        "share"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/chat/share/shared/{share_token}",
+      "description": "Access a shared conversation",
+      "tags": [
+        "share"
+      ],
+      "status_code": 404,
+      "response_time": 0.007,
+      "success": false,
+      "critical": true,
+      "requires_auth": false,
+      "error_message": "Expected 200, got 404: Share not found or expired (using No Auth)",
+      "response_data": {
+        "detail": "Share not found or expired"
+      }
+    },
+    {
+      "endpoint": "PUT /api/v1/chat/share/shares/{share_id}",
+      "description": "Update share settings",
+      "tags": [
+        "share"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "DELETE /api/v1/chat/share/shares/{share_id}",
+      "description": "Revoke a share link",
+      "tags": [
+        "share"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/chat/share/user/shares",
+      "description": "Get all shares created by the current user",
+      "tags": [
+        "share"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/chat/share/shares/{share_id}/analytics",
+      "description": "Get analytics for a share",
+      "tags": [
+        "share"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/chat/analytics/usage",
+      "description": "Get user's chat usage analytics for a specific period",
+      "tags": [
+        "analytics"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/chat/analytics/trends",
+      "description": "Get usage trends over time",
+      "tags": [
+        "analytics"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/chat/analytics/topics",
+      "description": "Get popular conversation topics",
+      "tags": [
+        "analytics"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/chat/analytics/summary",
+      "description": "Get complete analytics summary dashboard",
+      "tags": [
+        "analytics"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/peers/suggested",
+      "description": "Get suggested peers for the current user.",
+      "tags": [
+        "peers"
+      ],
+      "status_code": 401,
+      "response_time": 0.015,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/peers/compatible",
+      "description": "Get compatible peers with detailed explanations.",
+      "tags": [
+        "peers"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/peers/homepage",
+      "description": "Get peer suggestions for homepage display.",
+      "tags": [
+        "peers"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/peers/refresh",
+      "description": "Refresh peer suggestions for the current user.",
+      "tags": [
+        "peers"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/messages",
+      "description": "Send a message to another user.",
+      "tags": [
+        "messages"
+      ],
+      "status_code": 401,
+      "response_time": 0.018,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/messages/conversation/{peer_id}",
+      "description": "Get conversation between current user and another user.",
+      "tags": [
+        "messages"
+      ],
+      "status_code": 401,
+      "response_time": 0.042,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/messages/conversations",
+      "description": "Get all active conversations for the current user.",
+      "tags": [
+        "messages"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/messages/suggested-peers",
+      "description": "Get suggested peers for the current user.",
+      "tags": [
+        "messages"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/space/recommendations",
+      "description": "Get Saved Recommendations",
+      "tags": [
+        "space"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/space/recommendations",
+      "description": "Create Saved Recommendation",
+      "tags": [
+        "space"
+      ],
+      "status_code": 401,
+      "response_time": 0.025,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "DELETE /api/v1/space/recommendations/{identifier}",
+      "description": "Delete Saved Recommendation",
+      "tags": [
+        "space"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/space/notes",
+      "description": "Create Note",
+      "tags": [
+        "space"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/space/notes",
+      "description": "Get Notes",
+      "tags": [
+        "space"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "PUT /api/v1/space/notes/{note_id}",
+      "description": "Update Note",
+      "tags": [
+        "space"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "DELETE /api/v1/space/notes/{note_id}",
+      "description": "Delete Note",
+      "tags": [
+        "space"
+      ],
+      "status_code": 401,
+      "response_time": 0.021,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/space/skills",
+      "description": "Get User Skill",
+      "tags": [
+        "space"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "PUT /api/v1/space/skills",
+      "description": "Update User Skill",
+      "tags": [
+        "space"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/space/recommendations/{oasis_code}/skill-comparison",
+      "description": "Get Skill Comparison",
+      "tags": [
+        "space"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/space/recommendations/{recommendation_id}/generate-analysis",
+      "description": "Generate or regenerate LLM analysis for a saved recommendation.",
+      "tags": [
+        "space"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/vector/search",
+      "description": "Search for OaSIS records using semantic similarity with locally generated MiniLM embeddings",
+      "tags": [
+        "vector"
+      ],
+      "status_code": 422,
+      "response_time": 0.005,
+      "success": false,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": "Expected 200, got 422: [{'type': 'missing', 'loc': ['body', 'query'], 'msg': 'Field required', 'input': {}}] (using No Auth)",
+      "response_data": {
+        "detail": [
+          {
+            "type": "missing",
+            "loc": [
+              "body",
+              "query"
+            ],
+            "msg": "Field required",
+            "input": {}
+          }
+        ]
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/vector/search/save",
+      "description": "Save a search result as a recommendation in the user's space",
+      "tags": [
+        "vector"
+      ],
+      "status_code": 401,
+      "response_time": 0.027,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/vector/health",
+      "description": "Check if the vector search service is healthy",
+      "tags": [
+        "vector"
+      ],
+      "status_code": 500,
+      "response_time": 0.006,
+      "success": false,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": "Expected 200, got 500: Vector search service unhealthy: name 'index' is not defined (using No Auth)",
+      "response_data": {
+        "detail": "Vector search service unhealthy: name 'index' is not defined"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/vector/suggested-peers",
+      "description": "Get suggested peers for the current user",
+      "tags": [
+        "vector"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/vector/debug",
+      "description": "Debug endpoint to check Pinecone index configuration",
+      "tags": [
+        "vector"
+      ],
+      "status_code": 500,
+      "response_time": 3.081,
+      "success": false,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": "Expected 200, got 500 (using No Auth)",
+      "response_data": {
+        "raw_response": "Internal Server Error"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/recommendations",
+      "description": "Get career recommendations for the current user based on their profile embedding.",
+      "tags": [
+        "recommendations"
+      ],
+      "status_code": 401,
+      "response_time": 0.027,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/recommendations/swipe",
+      "description": "Record a swipe action on a career recommendation.",
+      "tags": [
+        "recommendations"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/careers/recommendations",
+      "description": "Get personalized career recommendations for the current user.\nThese are swipeable recommendations in the \"Find Your Way\" tab.",
+      "tags": [
+        "careers"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/careers/save/{career_id}",
+      "description": "Save a career recommendation for the current user.\nThis happens when the user swipes right on a career in the \"Find Your Way\" tab.\nHandles both integer IDs and ESCO occupation codes (e.g., 'occupation::key_15224').",
+      "tags": [
+        "careers"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/careers/saved",
+      "description": "Get saved career recommendations for the current user.\nThese appear in the \"My Space\" section.\n\nReturns both:\n- ESCO jobs: From saved_recommendations table (home page recommendations)  \n- OaSIS jobs: From saved_jobs table (SwipeMyWay/Find Your Way discoveries)\n\nOaSIS jobs get GraphSAGE skill extraction, ESCO jobs show full analysis.",
+      "tags": [
+        "careers"
+      ],
+      "status_code": 401,
+      "response_time": 0.008,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/careers/fit-analysis",
+      "description": "Calculate career fit based on user profile and job requirements.\nAnalyzes skill gaps, cognitive trait alignment, and provides recommendations.",
+      "tags": [
+        "careers"
+      ],
+      "status_code": 401,
+      "response_time": 0.02,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "DELETE /api/v1/careers/cleanup-test-jobs",
+      "description": "Cleanup fake test jobs that start with 'occupation::key_' from saved_recommendations.\nThese are dummy jobs created during development/testing.",
+      "tags": [
+        "careers"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/tree",
+      "description": "Generate a skill-to-career exploration tree based on the provided student profile.\n\n- **profile**: Student profile description (interests, traits, etc.)\n- Returns a structured tree with skills, outcomes, and careers.",
+      "tags": [
+        "Skill Tree"
+      ],
+      "status_code": 422,
+      "response_time": 0.008,
+      "success": false,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": "Expected 200, got 422: [{'type': 'missing', 'loc': ['body', 'profile'], 'msg': 'Field required', 'input': {}}] (using No Auth)",
+      "response_data": {
+        "detail": [
+          {
+            "type": "missing",
+            "loc": [
+              "body",
+              "profile"
+            ],
+            "msg": "Field required",
+            "input": {}
+          }
+        ]
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/tree/skills",
+      "description": "Generate a technical skills tree based on the provided profile and custom prompt.\n\n- **profile**: User technical background and goals\n- **custom_prompt**: Custom prompt for generating a technical skills tree\n- Returns a structured tree with technical skills",
+      "tags": [
+        "Skill Tree"
+      ],
+      "status_code": 422,
+      "response_time": 0.005,
+      "success": false,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": "Expected 200, got 422: [{'type': 'missing', 'loc': ['body', 'profile'], 'msg': 'Field required', 'input': {}}] (using No Auth)",
+      "response_data": {
+        "detail": [
+          {
+            "type": "missing",
+            "loc": [
+              "body",
+              "profile"
+            ],
+            "msg": "Field required",
+            "input": {}
+          }
+        ]
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tree-paths/",
+      "description": "Get User Tree Paths",
+      "tags": [
+        "tree-paths"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/tree-paths/",
+      "description": "Create Tree Path",
+      "tags": [
+        "tree-paths"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tree-paths/{tree_path_id}",
+      "description": "Get Tree Path",
+      "tags": [
+        "tree-paths"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "DELETE /api/v1/tree-paths/{tree_path_id}",
+      "description": "Delete Tree Path",
+      "tags": [
+        "tree-paths"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/node-notes/",
+      "description": "Get User Notes",
+      "tags": [
+        "node-notes"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/node-notes/",
+      "description": "Create Node Note",
+      "tags": [
+        "node-notes"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/node-notes/node/{node_id}",
+      "description": "Get Node Notes",
+      "tags": [
+        "node-notes"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/node-notes/{note_id}",
+      "description": "Get Note",
+      "tags": [
+        "node-notes"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "DELETE /api/v1/node-notes/{note_id}",
+      "description": "Delete Note",
+      "tags": [
+        "node-notes"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/user-progress/",
+      "description": "Get User Progress",
+      "tags": [
+        "user-progress"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/user-progress/update",
+      "description": "Update User Progress",
+      "tags": [
+        "user-progress"
+      ],
+      "status_code": 401,
+      "response_time": 0.043,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /user-progress/",
+      "description": "Get User Progress",
+      "tags": [
+        "user-progress"
+      ],
+      "status_code": 401,
+      "response_time": 0.008,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /user-progress/update",
+      "description": "Update User Progress",
+      "tags": [
+        "user-progress"
+      ],
+      "status_code": 401,
+      "response_time": 0.015,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/jobs/save",
+      "description": "Save a job from tree exploration or other sources.\n\nArgs:\n    request: Job details to save\n    current_user: Current authenticated user\n    db: Database session\n    \nReturns:\n    Saved job details",
+      "tags": [
+        "jobs"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/jobs/saved",
+      "description": "Get all saved jobs for the current user.\n\nArgs:\n    discovery_source: Optional filter by discovery source\n    current_user: Current authenticated user\n    db: Database session\n    \nReturns:\n    List of saved jobs",
+      "tags": [
+        "jobs"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "DELETE /api/v1/jobs/{job_id}",
+      "description": "Delete a saved job.\n\nArgs:\n    job_id: ID of the job to delete\n    current_user: Current authenticated user\n    db: Database session\n    \nReturns:\n    Success message",
+      "tags": [
+        "jobs"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/jobs/{esco_id}/details",
+      "description": "Get detailed information about a job from ESCO.\n\nArgs:\n    esco_id: ESCO occupation ID\n    current_user: Current authenticated user\n    db: Database session\n    \nReturns:\n    Detailed job information",
+      "tags": [
+        "jobs"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/jobs/recommendations/me",
+      "description": "Get personalized job recommendations for the current user.\n\nArgs:\n    top_k: Number of recommendations to return (default: 30)\n    embedding_type: Type of embedding to use for recommendations\n    current_user: Current authenticated user\n    db: Database session\n    \nReturns:\n    List of job recommendations",
+      "tags": [
+        "jobs"
+      ],
+      "status_code": 401,
+      "response_time": 0.018,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/program-recommendations/career-goal/{goal_id}",
+      "description": "Get educational program recommendations for a specific career goal.\n\nArgs:\n    goal_id: Career goal ID\n    limit: Maximum number of recommendations to return\n    current_user: Current authenticated user\n    db: Database session\n    \nReturns:\n    List of program recommendations with match scores",
+      "tags": [
+        "program-recommendations"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/program-recommendations/career-goal/{goal_id}/save",
+      "description": "Save a specific program recommendation for future reference.\n\nArgs:\n    goal_id: Career goal ID\n    program_id: Program ID to save\n    current_user: Current authenticated user\n    db: Database session\n    \nReturns:\n    Success message with saved recommendation ID",
+      "tags": [
+        "program-recommendations"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/program-recommendations/career-goal/{goal_id}/saved",
+      "description": "Get previously saved program recommendations for a career goal.\n\nArgs:\n    goal_id: Career goal ID\n    current_user: Current authenticated user\n    db: Database session\n    \nReturns:\n    List of saved program recommendations",
+      "tags": [
+        "program-recommendations"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/program-recommendations/institutions",
+      "description": "Get list of available educational institutions.\n\nArgs:\n    institution_type: Filter by type (cegep, university)\n    region: Filter by region (default: Quebec)\n    current_user: Current authenticated user\n    \nReturns:\n    List of institutions with basic information",
+      "tags": [
+        "program-recommendations"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/holland/",
+      "description": "Retourne les m\u00e9tadonn\u00e9es du test Holland Code (RIASEC).",
+      "tags": [
+        "holland_test"
+      ],
+      "status_code": 200,
+      "response_time": 0.092,
+      "success": true,
+      "critical": true,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /api/v1/tests/holland/questions",
+      "description": "Retourne toutes les questions et choix du test Holland Code (RIASEC).",
+      "tags": [
+        "holland_test"
+      ],
+      "status_code": 200,
+      "response_time": 0.202,
+      "success": true,
+      "critical": true,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "POST /api/v1/tests/holland/answer",
+      "description": "Sauvegarde une r\u00e9ponse individuelle au test Holland Code (RIASEC).",
+      "tags": [
+        "holland_test"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/holland/score/{attempt_id}",
+      "description": "Calcule et retourne le score RIASEC pour une tentative de test sp\u00e9cifique.",
+      "tags": [
+        "holland_test"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/holland/user-results",
+      "description": "R\u00e9cup\u00e8re les r\u00e9sultats les plus r\u00e9cents du test Holland Code (RIASEC) pour l'utilisateur connect\u00e9.",
+      "tags": [
+        "holland_test"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/holland/profile-description",
+      "description": "G\u00e9n\u00e8re une description personnalis\u00e9e du profil RIASEC de l'utilisateur\nen utilisant un LLM et en int\u00e9grant d'autres donn\u00e9es du profil.\n\nCette route est maintenue pour la compatibilit\u00e9 avec les versions ant\u00e9rieures.\nElle redirige vers le nouvel endpoint avec l'ID utilisateur.",
+      "tags": [
+        "holland_test"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/holland/profile-description/{user_id}",
+      "description": "G\u00e9n\u00e8re une description personnalis\u00e9e du profil RIASEC de l'utilisateur\nen utilisant un LLM et en int\u00e9grant d'autres donn\u00e9es du profil.\n\nArgs:\n    user_id: L'ID de l'utilisateur dont on veut la description\n    regenerate: Si True, force la r\u00e9g\u00e9n\u00e9ration de la description m\u00eame si elle existe d\u00e9j\u00e0\n    \nReturns:\n    Un dictionnaire contenant la description du profil",
+      "tags": [
+        "holland_test"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/hexaco/",
+      "description": "Retourne les m\u00e9tadonn\u00e9es g\u00e9n\u00e9rales du test HEXACO-PI-R.",
+      "tags": [
+        "hexaco_test"
+      ],
+      "status_code": 200,
+      "response_time": 0.004,
+      "success": true,
+      "critical": true,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /api/v1/tests/hexaco/languages",
+      "description": "Retourne les langues disponibles pour le test HEXACO.",
+      "tags": [
+        "hexaco_test"
+      ],
+      "status_code": 200,
+      "response_time": 0.024,
+      "success": true,
+      "critical": true,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /api/v1/tests/hexaco/versions",
+      "description": "Retourne les versions disponibles du test HEXACO, optionnellement filtr\u00e9es par langue.",
+      "tags": [
+        "hexaco_test"
+      ],
+      "status_code": 200,
+      "response_time": 0.004,
+      "success": true,
+      "critical": true,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "POST /api/v1/tests/hexaco/start",
+      "description": "D\u00e9marre une nouvelle session de test HEXACO.",
+      "tags": [
+        "hexaco_test"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/hexaco/questions",
+      "description": "Retourne les questions pour une version sp\u00e9cifique du test HEXACO.",
+      "tags": [
+        "hexaco_test"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/tests/hexaco/answer",
+      "description": "Sauvegarde une r\u00e9ponse individuelle au test HEXACO.",
+      "tags": [
+        "hexaco_test"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/hexaco/progress/{session_id}",
+      "description": "Retourne le progr\u00e8s d'une session de test HEXACO.",
+      "tags": [
+        "hexaco_test"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/hexaco/score/{session_id}",
+      "description": "Calcule et retourne les scores HEXACO pour une session de test.",
+      "tags": [
+        "hexaco_test"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/hexaco/profile/{user_id}",
+      "description": "Retourne le profil HEXACO d'un utilisateur.",
+      "tags": [
+        "hexaco_test"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/hexaco/my-profile",
+      "description": "Retourne le profil HEXACO de l'utilisateur connect\u00e9.",
+      "tags": [
+        "hexaco_test"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/hexaco/analysis/{user_id}",
+      "description": "Retourne l'analyse LLM du profil HEXACO d'un utilisateur.\nR\u00e9cup\u00e8re l'analyse existante ou en g\u00e9n\u00e8re une nouvelle si n\u00e9cessaire.",
+      "tags": [
+        "hexaco_test"
+      ],
+      "status_code": 401,
+      "response_time": 0.008,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/tests/hexaco/my-analysis",
+      "description": "Retourne l'analyse LLM du profil HEXACO de l'utilisateur connect\u00e9.",
+      "tags": [
+        "hexaco_test"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/insight/generate",
+      "description": "G\u00e9n\u00e8re un insight philosophique bas\u00e9 sur le profil utilisateur et les recommandations sauvegard\u00e9es.",
+      "tags": [
+        "insight"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/insight/get",
+      "description": "R\u00e9cup\u00e8re l'insight philosophique existant depuis user_representation.",
+      "tags": [
+        "insight"
+      ],
+      "status_code": 401,
+      "response_time": 0.015,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/insight/regenerate",
+      "description": "R\u00e9g\u00e9n\u00e8re un insight philosophique en for\u00e7ant une nouvelle analyse.",
+      "tags": [
+        "insight"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "PATCH /api/v1/insight/save",
+      "description": "Sauvegarde le texte philosophique dans le profil utilisateur et dans user_representation.",
+      "tags": [
+        "insight"
+      ],
+      "status_code": 0,
+      "response_time": 0.0,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Request failed: All authentication approaches failed"
+    },
+    {
+      "endpoint": "POST /api/v1/insight/rewrite",
+      "description": "R\u00e9\u00e9crit un insight philosophique en tenant compte du feedback de l'utilisateur.",
+      "tags": [
+        "insight"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/competence-tree/generate",
+      "description": "Generate a new competence tree for a user following palmier specification.\n\nFlow:\n1. Infer 5 anchor skills from user profile using LLM\n2. Format skills using ESCO templates\n3. Build tree structure using GraphSAGE traversal\n4. Apply gamification rules (70% hidden nodes)\n5. Save tree with competenceTree JSONB column\n6. Return graph_id for retrieval\n\nArgs:\n    max_depth: Maximum depth of the tree (1-6, default 3)\n    max_nodes: Maximum total nodes in tree (5-30, default 20)\n    current_user: Current authenticated user\n    db: Database session\n    \nReturns:\n    Dict with graph_id for accessing the generated tree",
+      "tags": [
+        "competence-tree"
+      ],
+      "status_code": 401,
+      "response_time": 0.051,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/competence-tree/generate-from-anchors",
+      "description": "Generate a competence tree from 5 specific anchor skills.\n\nThis endpoint allows users to generate a competence tree based on\n5 pre-selected anchor skills (ESCO skill IDs).\n\nArgs:\n    request: Contains anchor_skills list with exactly 5 ESCO skill IDs\n    current_user: Current authenticated user\n    db: Database session\n    \nReturns:\n    Dict with graph_id for accessing the generated tree",
+      "tags": [
+        "competence-tree"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/competence-tree/anchor-skills",
+      "description": "Get user's anchor skills from their latest competence tree.\n\nReturns anchor skills without regenerating the tree if one exists.",
+      "tags": [
+        "competence-tree"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/competence-tree/job/{job_id}/skills-tree",
+      "description": "Generate a skills tree specific to a job/occupation.\n\nThis endpoint creates a skills tree centered around a specific job/occupation,\nshowing the key skills, skill groups, and related competencies needed for that role.\n\nArgs:\n    job_id: ESCO job/occupation ID (e.g., 'occupation::key_15224')\n    max_depth: Maximum depth of the tree (default: 2)\n    max_nodes_per_level: Maximum nodes per level (default: 6)\n    current_user: Current authenticated user\n    db: Database session\n    \nReturns:\n    Dict with job-specific skills tree data",
+      "tags": [
+        "competence-tree"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/competence-tree/{graph_id}",
+      "description": "Get an existing competence tree.",
+      "tags": [
+        "competence-tree"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "PATCH /api/v1/competence-tree/node/{node_id}/complete",
+      "description": "Mark a node challenge as completed following palmier specification.\n\nFlow:\n1. Mark node state as completed\n2. Update user_progress.total_xp\n3. Add completion timestamp\n4. Reveal children nodes (set visible=true)\n5. Update user skill tree in database\n\nArgs:\n    node_id: ESCO node ID to mark as completed\n    current_user: Current authenticated user\n    db: Database session\n    \nReturns:\n    Success status and updated node information",
+      "tags": [
+        "competence-tree"
+      ],
+      "status_code": 0,
+      "response_time": 0.0,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Request failed: All authentication approaches failed"
+    },
+    {
+      "endpoint": "GET /api/v1/career-progression/{occupation_id}",
+      "description": "PHASE 1 & 2: Extract career progression skills using GraphSage recursive traversal.\n\nThis endpoint implements:\n1. Recursive skill extraction from occupation nodes\n2. Tier-based traversal (tier 1: top 5, tier 2: top 5 each, etc.)\n3. GraphSage score-based ranking within tiers\n4. Intelligent skill filtering and deduplication\n5. Optional user profile personalization\n\nParameters:\n- occupation_id: ESCO occupation ID to start progression from\n- depth: Maximum traversal depth (X parameter) - recommended 3-4\n- max_skills_per_tier: Maximum skills to extract per tier (default 5)\n- min_similarity: Minimum GraphSage similarity threshold (default 0.4)\n- personalized: Whether to apply user-specific personalization\n\nReturns:\nTiered career progression with GraphSage scores and intelligent filtering.",
+      "tags": [
+        "career-progression"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/career-progression/{occupation_id}/personalized",
+      "description": "Get fully personalized career progression based on user profile.\n\nThis endpoint automatically applies:\n1. User profile personalization\n2. Enhanced GraphSage scoring\n3. Skill type balancing based on user preferences\n4. Cross-tier deduplication\n5. Performance optimization\n\nReturns:\nFully personalized career progression optimized for the current user.",
+      "tags": [
+        "career-progression"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/career-progression/{occupation_id}/analyze",
+      "description": "Analyze GraphSage performance for career progression extraction.\n\nProvides insights into:\n1. GraphSage model performance metrics\n2. Similarity score distributions\n3. Tier extraction efficiency\n4. Skill type diversity analysis\n5. Optimization recommendations\n\nReturns:\nPerformance analysis and optimization insights.",
+      "tags": [
+        "career-progression"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/users/me",
+      "description": "Get current user information.",
+      "tags": [
+        "users"
+      ],
+      "status_code": 401,
+      "response_time": 0.015,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/users/{user_id}/profile",
+      "description": "Get profile information for a specific user.",
+      "tags": [
+        "users"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/reflection/questions",
+      "description": "R\u00e9cup\u00e8re toutes les questions de r\u00e9flexion depuis la base de donn\u00e9es.",
+      "tags": [
+        "reflection"
+      ],
+      "status_code": 200,
+      "response_time": 0.102,
+      "success": true,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /api/v1/reflection/responses/{user_id}",
+      "description": "R\u00e9cup\u00e8re toutes les r\u00e9ponses sauvegard\u00e9es d'un utilisateur.",
+      "tags": [
+        "reflection"
+      ],
+      "status_code": 401,
+      "response_time": 0.015,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/reflection/responses",
+      "description": "R\u00e9cup\u00e8re toutes les r\u00e9ponses sauvegard\u00e9es de l'utilisateur actuel.",
+      "tags": [
+        "reflection"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/reflection/responses",
+      "description": "Sauvegarde ou met \u00e0 jour une r\u00e9ponse de r\u00e9flexion.",
+      "tags": [
+        "reflection"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "PUT /api/v1/reflection/responses/{response_id}",
+      "description": "Met \u00e0 jour une r\u00e9ponse existante.",
+      "tags": [
+        "reflection"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "DELETE /api/v1/reflection/responses/{response_id}",
+      "description": "Supprime une r\u00e9ponse.",
+      "tags": [
+        "reflection"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/reflection/responses/batch",
+      "description": "Sauvegarde plusieurs r\u00e9ponses en lot.",
+      "tags": [
+        "reflection"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/avatar/generate-avatar/me",
+      "description": "G\u00e9n\u00e8re un avatar personnalis\u00e9 pour l'utilisateur authentifi\u00e9.\n\nArgs:\n    db: Session de base de donn\u00e9es\n    current_user: Utilisateur authentifi\u00e9\n    \nReturns:\n    Dict contenant les informations de l'avatar g\u00e9n\u00e9r\u00e9",
+      "tags": [
+        "avatar"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/avatar/me",
+      "description": "R\u00e9cup\u00e8re l'avatar de l'utilisateur authentifi\u00e9.\n\nArgs:\n    db: Session de base de donn\u00e9es\n    current_user: Utilisateur authentifi\u00e9\n    \nReturns:\n    Dict contenant les informations de l'avatar",
+      "tags": [
+        "avatar"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/avatar/generate-avatar-test/{user_id}",
+      "description": "Version de test pour g\u00e9n\u00e9rer un avatar sans authentification.\n\u00c0 utiliser uniquement en d\u00e9veloppement.",
+      "tags": [
+        "avatar"
+      ],
+      "status_code": 422,
+      "response_time": 0.009,
+      "success": false,
+      "critical": true,
+      "requires_auth": false,
+      "error_message": "Expected 200, got 422: [{'type': 'int_parsing', 'loc': ['path', 'user_id'], 'msg': 'Input should be a valid integer, unable to parse string as an integer', 'input': '{user_id}'}] (using No Auth)",
+      "response_data": {
+        "detail": [
+          {
+            "type": "int_parsing",
+            "loc": [
+              "path",
+              "user_id"
+            ],
+            "msg": "Input should be a valid integer, unable to parse string as an integer",
+            "input": "{user_id}"
+          }
+        ]
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/onboarding/status",
+      "description": "Get the current onboarding status for a user - STANDARDIZED RESPONSE",
+      "tags": [
+        "onboarding"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/onboarding/start",
+      "description": "Start a new onboarding session",
+      "tags": [
+        "onboarding"
+      ],
+      "status_code": 401,
+      "response_time": 0.016,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/onboarding/response",
+      "description": "Save a single onboarding response",
+      "tags": [
+        "onboarding"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/onboarding/complete",
+      "description": "Complete the onboarding process and generate psychological profile",
+      "tags": [
+        "onboarding"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/onboarding/profile",
+      "description": "Get the user's onboarding psychological profile",
+      "tags": [
+        "onboarding"
+      ],
+      "status_code": 401,
+      "response_time": 0.015,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/onboarding/responses",
+      "description": "Get all onboarding responses for a user",
+      "tags": [
+        "onboarding"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "DELETE /api/v1/onboarding/reset",
+      "description": "Reset onboarding progress for a user",
+      "tags": [
+        "onboarding"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/onboarding/skip",
+      "description": "Skip onboarding for a user by creating a default profile",
+      "tags": [
+        "onboarding"
+      ],
+      "status_code": 401,
+      "response_time": 0.017,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/education/programs/search",
+      "description": "Search education programs with filtering and Holland personality matching",
+      "tags": [
+        "education"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/education/programs/{program_id}",
+      "description": "Get detailed information about a specific program",
+      "tags": [
+        "education"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/education/institutions",
+      "description": "Get list of all institutions",
+      "tags": [
+        "education"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/education/metadata",
+      "description": "Get metadata for search filters (available options)",
+      "tags": [
+        "education"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/school-programs/search",
+      "description": "Search for school programs based on criteria.\n\n- **text**: Search text for program titles and descriptions\n- **program_types**: Filter by program types (cegep, university, college)\n- **levels**: Filter by education levels (diploma, bachelor, master, etc.)\n- **location**: Geographic filters (country, province, city)\n- **languages**: Language preferences (en, fr)\n- **duration**: Duration constraints (max_months, min_months)\n- **budget**: Budget constraints (max_tuition, currency)",
+      "tags": [
+        "School Programs"
+      ],
+      "status_code": 401,
+      "response_time": 0.382,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/school-programs/search",
+      "description": "Quick search endpoint for simple queries",
+      "tags": [
+        "School Programs"
+      ],
+      "status_code": 401,
+      "response_time": 0.38,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/school-programs/programs/{program_id}",
+      "description": "Get detailed information about a specific program",
+      "tags": [
+        "School Programs"
+      ],
+      "status_code": 401,
+      "response_time": 0.391,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/school-programs/users/interactions",
+      "description": "Record a user interaction with a program",
+      "tags": [
+        "School Programs"
+      ],
+      "status_code": 401,
+      "response_time": 0.377,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/school-programs/users/saved-programs",
+      "description": "Get user's saved programs",
+      "tags": [
+        "School Programs"
+      ],
+      "status_code": 401,
+      "response_time": 0.368,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/school-programs/users/saved-programs",
+      "description": "Save a program to user's saved list",
+      "tags": [
+        "School Programs"
+      ],
+      "status_code": 401,
+      "response_time": 0.358,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "DELETE /api/v1/school-programs/users/saved-programs/{program_id}",
+      "description": "Remove a program from user's saved list",
+      "tags": [
+        "School Programs"
+      ],
+      "status_code": 401,
+      "response_time": 0.427,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/school-programs/filters",
+      "description": "Get available filter options for the search interface",
+      "tags": [
+        "School Programs"
+      ],
+      "status_code": 200,
+      "response_time": 0.161,
+      "success": true,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /api/v1/school-programs/health",
+      "description": "Health check endpoint for monitoring",
+      "tags": [
+        "School Programs"
+      ],
+      "status_code": 200,
+      "response_time": 0.119,
+      "success": true,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /api/v1/courses/",
+      "description": "Get all courses for the current user with optional filtering.",
+      "tags": [
+        "courses"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/courses/",
+      "description": "Create a new course with automatic subject categorization.",
+      "tags": [
+        "courses"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/courses/{course_id}",
+      "description": "Get a specific course by ID.",
+      "tags": [
+        "courses"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "PUT /api/v1/courses/{course_id}",
+      "description": "Update a course.",
+      "tags": [
+        "courses"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "DELETE /api/v1/courses/{course_id}",
+      "description": "Delete a course and all related data.",
+      "tags": [
+        "courses"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/courses/{course_id}/targeted-analysis",
+      "description": "Trigger career-focused LLM conversation for a specific course.",
+      "tags": [
+        "courses"
+      ],
+      "status_code": 401,
+      "response_time": 0.018,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/courses/conversations/{session_id}/respond",
+      "description": "Process user response and generate follow-up questions or insights.",
+      "tags": [
+        "courses"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/courses/psychological-profile/{user_id}",
+      "description": "Get aggregated psychological insights for career mapping.",
+      "tags": [
+        "courses"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/courses/career-signals/{user_id}",
+      "description": "Extract patterns for ESCO tree traversal.",
+      "tags": [
+        "courses"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/courses/{course_id}/insights",
+      "description": "Get all psychological insights for a specific course.",
+      "tags": [
+        "courses"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/courses/conversations/{session_id}/summary",
+      "description": "Get a summary of insights and recommendations from a conversation session.",
+      "tags": [
+        "courses"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/enhanced-chat/send",
+      "description": "Send a message with GraphSage enhancement and get intelligent response.",
+      "tags": [
+        "enhanced-chat"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/enhanced-chat/skill-explanation",
+      "description": "Get detailed explanation for why a specific skill is relevant for the user.",
+      "tags": [
+        "enhanced-chat"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/enhanced-chat/learning-recommendations",
+      "description": "Get personalized learning recommendations based on GraphSage analysis.",
+      "tags": [
+        "enhanced-chat"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/enhanced-chat/career-path-analysis",
+      "description": "Analyze how well a career path matches the user's skills using GraphSage.",
+      "tags": [
+        "enhanced-chat"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/enhanced-chat/graphsage-insights",
+      "description": "Get general GraphSage insights for the current user.",
+      "tags": [
+        "enhanced-chat"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/enhanced-chat/status",
+      "description": "Get the status of the enhanced chat system and GraphSage integration.",
+      "tags": [
+        "enhanced-chat"
+      ],
+      "status_code": 200,
+      "response_time": 0.016,
+      "success": true,
+      "critical": true,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "POST /api/v1/socratic-chat/send",
+      "description": "Send a message in the selected chat mode.\n\nModes:\n- socratic: Gentle Socratic questioning to help discover insights\n- claude: Bold, direct challenges using Claude API",
+      "tags": [
+        "socratic-chat"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/socratic-chat/introduction",
+      "description": "Get an introduction message for the selected chat mode.",
+      "tags": [
+        "socratic-chat"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/socratic-chat/modes",
+      "description": "Get information about available chat modes.",
+      "tags": [
+        "socratic-chat"
+      ],
+      "status_code": 200,
+      "response_time": 0.008,
+      "success": true,
+      "critical": true,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /api/v1/socratic-chat/status",
+      "description": "Check the status of chat services.",
+      "tags": [
+        "socratic-chat"
+      ],
+      "status_code": 401,
+      "response_time": 0.013,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/career-goals/",
+      "description": "Create a new career goal from any job card in the platform.\nDeactivates previous goals and generates GraphSage timeline.",
+      "tags": [
+        "career-goals"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/career-goals/",
+      "description": "Get all career goals for the current user.",
+      "tags": [
+        "career-goals"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/career-goals/active",
+      "description": "Get the user's currently active career goal with progression data.",
+      "tags": [
+        "career-goals"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "PUT /api/v1/career-goals/{goal_id}",
+      "description": "Update a career goal's details.",
+      "tags": [
+        "career-goals"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "DELETE /api/v1/career-goals/{goal_id}",
+      "description": "Delete a career goal and all its milestones.",
+      "tags": [
+        "career-goals"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/career-goals/{goal_id}/milestones/{milestone_id}/complete",
+      "description": "Mark a milestone as completed and award XP.",
+      "tags": [
+        "career-goals"
+      ],
+      "status_code": 401,
+      "response_time": 0.018,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/career-goals/{goal_id}/milestones",
+      "description": "Get all milestones for a specific goal.",
+      "tags": [
+        "career-goals"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/careers/llm-query",
+      "description": "Process LLM queries about specific careers with user context.\nUses appropriate formatters based on job source (ESCO vs OaSIS).",
+      "tags": [
+        "career-advisor"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/orientator/test-message",
+      "description": "Test endpoint for Orientator AI without authentication.\nReturns mock rich components for frontend testing.",
+      "tags": [
+        "orientator"
+      ],
+      "status_code": 200,
+      "response_time": 5.321,
+      "success": true,
+      "critical": true,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "POST /api/v1/orientator/message",
+      "description": "Process a message with Orientator AI.\n\nThis endpoint handles user messages, invokes appropriate tools,\nand returns AI-generated responses with rich interactive components.\n\nArgs:\n    request: Message request containing user's message and conversation ID\n    current_user: Authenticated user\n    db: Database session\n    \nReturns:\n    OrientatorMessageResponse with AI response and components\n    \nRaises:\n    HTTPException: If conversation not found or user doesn't have access",
+      "tags": [
+        "orientator"
+      ],
+      "status_code": 401,
+      "response_time": 0.016,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/orientator/save-component",
+      "description": "Save a component from chat to My Space.\n\nThis endpoint allows users to save interactive components\n(skill trees, job cards, test results, etc.) to their personal space.\n\nArgs:\n    request: Component save request with component details\n    current_user: Authenticated user\n    db: Database session\n    \nReturns:\n    SaveComponentResponse with save confirmation\n    \nRaises:\n    HTTPException: If conversation not found or user doesn't have access",
+      "tags": [
+        "orientator"
+      ],
+      "status_code": 401,
+      "response_time": 0.015,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/orientator/conversations/{conversation_id}/messages",
+      "description": "Get all messages for a conversation with Orientator components.\n\nThis endpoint retrieves all messages in a conversation including\nany rich components generated by the Orientator AI tools.\n\nArgs:\n    conversation_id: ID of the conversation to retrieve messages for\n    current_user: Authenticated user\n    db: Database session\n    \nReturns:\n    Dictionary with messages array including components\n    \nRaises:\n    HTTPException: If conversation not found or user doesn't have access",
+      "tags": [
+        "orientator"
+      ],
+      "status_code": 401,
+      "response_time": 0.015,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/orientator/journey/{user_id}",
+      "description": "Get aggregated user journey from all conversations.\n\nThis endpoint provides a comprehensive view of the user's career\nexploration journey, including saved items, tools used, milestones,\nand progress across all Orientator conversations.\n\nArgs:\n    user_id: ID of the user to retrieve journey for\n    current_user: Authenticated user\n    db: Database session\n    \nReturns:\n    UserJourneyResponse with aggregated journey data\n    \nRaises:\n    HTTPException: If user doesn't have access to view this journey",
+      "tags": [
+        "orientator"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/orientator/conversations",
+      "description": "Get user's Orientator conversations.\n\nRetrieves all conversations where the user has interacted with\nthe Orientator AI, sorted by most recent activity.\n\nArgs:\n    current_user: Authenticated user\n    db: Database session\n    limit: Maximum number of conversations to return\n    offset: Number of conversations to skip\n    \nReturns:\n    List of conversation summaries with Orientator-specific metadata",
+      "tags": [
+        "orientator"
+      ],
+      "status_code": 401,
+      "response_time": 0.008,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/orientator/tool-analytics",
+      "description": "Get analytics on tool usage for the current user.\n\nProvides insights into which Orientator tools are most used,\nsuccess rates, and usage patterns.\n\nArgs:\n    current_user: Authenticated user\n    db: Database session\n    \nReturns:\n    Dictionary containing tool usage analytics",
+      "tags": [
+        "orientator"
+      ],
+      "status_code": 401,
+      "response_time": 0.008,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/orientator/feedback",
+      "description": "Submit feedback for an Orientator AI response.\n\nAllows users to provide feedback on AI responses to improve\nthe system over time.\n\nArgs:\n    message_id: ID of the AI message to provide feedback for\n    feedback: Text feedback from the user\n    rating: Optional rating from 1-5\n    current_user: Authenticated user\n    db: Database session\n    \nReturns:\n    Confirmation of feedback submission",
+      "tags": [
+        "orientator"
+      ],
+      "status_code": 401,
+      "response_time": 0.012,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/orientator/health",
+      "description": "Health check endpoint for Orientator AI service.\n\nReturns:\n    Service health status",
+      "tags": [
+        "orientator"
+      ],
+      "status_code": 200,
+      "response_time": 0.005,
+      "success": true,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /api/v1/auth/me",
+      "description": "Get current authenticated user information and sync with local database",
+      "tags": [
+        "authentication"
+      ],
+      "status_code": 401,
+      "response_time": 0.014,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/auth/health",
+      "description": "Check authentication service health",
+      "tags": [
+        "authentication"
+      ],
+      "status_code": 200,
+      "response_time": 0.147,
+      "success": true,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "POST /api/v1/auth/logout",
+      "description": "Logout endpoint (client-side handled by Clerk)",
+      "tags": [
+        "authentication"
+      ],
+      "status_code": 200,
+      "response_time": 0.006,
+      "success": true,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /api/v1/auth/protected",
+      "description": "Test protected route to verify authentication",
+      "tags": [
+        "authentication"
+      ],
+      "status_code": 401,
+      "response_time": 0.031,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/cache/stats",
+      "description": "Get comprehensive cache statistics and performance metrics.\n\nThis endpoint provides detailed information about all cache layers:\n- Request-level cache statistics\n- JWT validation cache performance\n- JWKS cache status and refresh information",
+      "tags": [
+        "Cache Monitoring"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/cache/health",
+      "description": "Get comprehensive health check for the authentication cache system.\n\nThis endpoint can be used by monitoring systems to check the health\nof all cache components and identify potential issues.",
+      "tags": [
+        "Cache Monitoring"
+      ],
+      "status_code": 200,
+      "response_time": 0.004,
+      "success": true,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /api/v1/cache/performance",
+      "description": "Get detailed performance metrics from the cache system.\n\nThis endpoint provides metrics suitable for performance dashboards\nand monitoring systems.",
+      "tags": [
+        "Cache Monitoring"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/cache/cleanup",
+      "description": "Trigger cleanup of expired cache entries across all cache layers.\n\nThis endpoint allows administrators to manually trigger cache cleanup\noperations for maintenance purposes.",
+      "tags": [
+        "Cache Monitoring"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/cache/jwks/refresh",
+      "description": "Force a refresh of the JWKS cache.\n\nThis endpoint allows administrators to manually refresh the JWKS cache,\nwhich can be useful when Clerk updates their keys or for troubleshooting.",
+      "tags": [
+        "Cache Monitoring"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/cache/config",
+      "description": "Get current cache configuration and settings.\n\nThis endpoint provides information about cache TTL values,\nrefresh intervals, and other configuration parameters.",
+      "tags": [
+        "Cache Monitoring"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/cache/demo/request-cache",
+      "description": "Demonstrate request-level caching behavior.\n\nThis endpoint shows how the request cache works by making multiple\nauthentication calls within the same request and showing cache hits.",
+      "tags": [
+        "Cache Monitoring"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/cache/test/authentication-speed",
+      "description": "Test authentication speed with and without caching.\n\nThis endpoint provides a benchmark of authentication performance\ndemonstrating the benefits of the caching system.",
+      "tags": [
+        "Cache Monitoring"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/test-token",
+      "description": "Test endpoint to verify Clerk token validation",
+      "tags": [],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": true,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/api/jwks/stats",
+      "description": "Get comprehensive JWKS cache performance statistics.\n\nReturns detailed metrics including:\n- Cache hit rate and performance\n- API call reduction percentage\n- Background refresh statistics\n- Fetch timing metrics",
+      "tags": [
+        "JWKS Cache Monitoring"
+      ],
+      "status_code": 401,
+      "response_time": 0.009,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/api/jwks/health",
+      "description": "Comprehensive health check for JWKS cache system.\n\nValidates:\n- Cache connectivity and validity\n- JWKS endpoint accessibility\n- Background refresh operations\n- Performance benchmarks",
+      "tags": [
+        "JWKS Cache Monitoring"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "POST /api/v1/api/jwks/invalidate",
+      "description": "Manually invalidate JWKS cache.\n\nUse cases:\n- Force refresh after Clerk key rotation\n- Clear cache during debugging\n- Reset metrics for testing\n\nNote: Cache will be automatically refreshed on next authentication request.",
+      "tags": [
+        "JWKS Cache Monitoring"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/api/jwks/performance",
+      "description": "Performance dashboard data for JWKS cache monitoring.\n\nProvides metrics suitable for:\n- Operations dashboards\n- Performance monitoring\n- Cost optimization tracking\n- SLA compliance monitoring",
+      "tags": [
+        "JWKS Cache Monitoring"
+      ],
+      "status_code": 401,
+      "response_time": 0.011,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /api/v1/api/jwks/metrics/export",
+      "description": "Export JWKS cache metrics in a standardized format for external monitoring systems.\n\nCompatible with:\n- Prometheus/Grafana\n- DataDog\n- Custom monitoring solutions",
+      "tags": [
+        "JWKS Cache Monitoring"
+      ],
+      "status_code": 401,
+      "response_time": 0.01,
+      "success": false,
+      "critical": false,
+      "requires_auth": true,
+      "error_message": "Expected 200, got 401: Could not validate credentials (using Authorization Header)",
+      "response_data": {
+        "detail": "Could not validate credentials"
+      }
+    },
+    {
+      "endpoint": "GET /",
+      "description": "Root",
+      "tags": [],
+      "status_code": 200,
+      "response_time": 0.003,
+      "success": true,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": null
+    },
+    {
+      "endpoint": "GET /health",
+      "description": "Health Check",
+      "tags": [],
+      "status_code": 200,
+      "response_time": 0.026,
+      "success": true,
+      "critical": false,
+      "requires_auth": false,
+      "error_message": null
+    }
+  ],
+  "metadata": {
+    "timestamp": "2025-08-18T10:03:56.999762",
+    "base_url": "http://localhost:8000",
+    "token_provided": true,
+    "token_preview": "eyJhbGciOiJSUzI1NiIsImNhdCI6ImNsX0I3ZDRQRDExMUFBQS...",
+    "discovered_endpoints": 218,
+    "testing_framework": "FastAPI-Focused Comprehensive Tester v2.0"
+  }
+}
